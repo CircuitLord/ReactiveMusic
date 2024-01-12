@@ -1,0 +1,175 @@
+embedded: true
+enabled: true
+name: "Adventure Redefined"
+version: "1.0"
+
+entries:
+
+
+  # --- Outside game state/special songs ---
+  -
+  - events: [ "MAIN_MENU" ]
+    songs:
+      - "DuNock-Street-TitleEdit"
+
+
+  - events: ["HOME"]
+    songs:
+      - "KeeperOfTheForest"
+      - "CastleInTheSky"
+      - "CircleOfLife"
+
+
+
+
+
+
+  - events: ["RAIN"]
+    songs:
+      - "WorldUnbound"
+      - "Storm"
+      - "Mufaya-DarkAscension"
+      - "Moonsong"
+      - "KeeperOfTheForest"
+      - "IntoSilenceP1"
+      - "DuNock-Street-TitleEdit"
+      - "CrystalForest"
+      - "FrozenInTime"
+
+  # Sunset songs
+  - events: ["SUNSET"]
+    songs:
+      - "Alvae"
+      - "SiochainShuthain"
+      - "Sombre"
+      - "FallOfTheLeaf"
+
+  # Sunrise songs
+  - events: ["SUNRISE"]
+    songs:
+      - "Alvae"
+      - "SiochainShuthain"
+      - "Sombre"
+
+
+
+
+# Height related songs
+
+  - events: [ "UNDERWATER" ]
+    songs:
+      - "Eventide"
+
+  - events: [ "UNDERGROUND" ]
+    songs:
+      - "WintersBreath"
+      - "IntoSilenceP1"
+
+
+#TODO highup
+
+
+
+
+
+
+  - events: [ "NETHER" ]
+    songs:
+      - "Mufaya-DarkAscension"
+      - "TheShapersRealm"
+      - "Storm"
+      - "CrannNaBeatha"
+      - "WorldUnbound"
+
+
+  - events: [ "END" ]
+    songs:
+      - "DuNock-Street-TitleEdit"
+      - "Mufaya-DarkAscension"
+      - "Storm"
+      - "TheShapersRealm"
+      - "WintersBreath"
+      - "WorldUnbound"
+
+
+
+# --- BIOME SPECIFIC AND TIME GENERIC ---
+
+  # Mountainous songs
+  - events: [ "DAY", "MOUNTAIN" ]
+    songs:
+      - "ForTheKing"
+      - "Freedom"
+      - "BreathOfTheForest"
+      - "IntoTheUnknown"
+      - "Mourning"
+      - "Myth"
+
+
+  - events: ["BEACH"]
+    songs:
+      - "CliffsOfMoher"
+
+
+  # Day songs
+  - events: ["DAY"]
+    songs:
+      - "ACelticTale"
+      - "Alpha"
+      - "ASongFromTheDeep"
+      - "BeautifulDreams"
+      - "CelticLore"
+      - "Deliverance"
+      - "IntoTheUnknown"
+      - "KeeperOfTheForest"
+      - "KingdomOfBards"
+      - "Mourning"
+      - "NeverToReturn"
+      - "OdeToTheFallen"
+      - "Reverie"
+      - "SacredEarth"
+      - "WoodlandTales"
+      - "WhereIBelong"
+      - "WhatLiesBeyond"
+      - "Wanderer"
+      - "UnsungHeroes"
+      - "Mirrormere"
+      - "NightAtTheEolian"
+      - "WildfireP1"
+      - "WildfireP2"
+     # new
+      - "LastLight"
+      - "SpringMorning"
+
+
+  # Night songs
+  - events: [ "NIGHT" ]
+    songs:
+      - "IntoSilenceP1"
+      - "Moonsong"
+      - "CrystalForest"
+      - "Storm"
+      - "Alvae"
+      - "CelticLore"
+      - "FallOfTheLeaf"
+      - "IntoSilenceP2"
+      - "OdeToTheFallen"
+      - "Sleeper"
+      - "Sombre"
+      - "TheShapersRealm"
+
+
+
+
+
+  # Boss songs
+  #- events: ["Boss"]
+  #  songs:
+  #    - "LastStand"
+  #    - "Ruthless"
+
+  # Home songs
+  #- events: ["Home-Snow-Night"]
+  #  songs:
+  #    - "WintersNight"
+
