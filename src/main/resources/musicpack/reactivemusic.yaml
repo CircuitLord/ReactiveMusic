@@ -7,8 +7,9 @@ entries:
 
 
   # --- Outside game state/special songs ---
-  -
   - events: [ "MAIN_MENU" ]
+    alwaysPlay: true
+    alwaysStop: true
     songs:
       - "DuNock-Street-TitleEdit"
 

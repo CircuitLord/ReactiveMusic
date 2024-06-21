@@ -130,7 +130,7 @@ public final class SongPicker {
 
 
 
-	public static Pair<Integer, String[]> getCurrentEntry() {
+	public static SongpackEntry getCurrentEntry() {
 
 
 		for (int i = 0; i < SongLoader.activeSongpack.entries.length; i++) {
@@ -151,14 +151,13 @@ public final class SongPicker {
 			}
 
 			if (eventsMet) {
-
-				return new Pair<>(i, entry.songs);
+				return entry;
 			}
 
 		}
 
 		// Failed
-		return new Pair<>(-1, null);
+		return null;
 	}
 
 

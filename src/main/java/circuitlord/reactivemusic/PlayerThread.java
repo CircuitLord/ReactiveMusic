@@ -7,6 +7,7 @@ import net.minecraft.sound.SoundCategory;
 import javazoom.jl.player.AudioDevice;
 import javazoom.jl.player.JavaSoundAudioDevice;
 import javazoom.jl.player.advanced.AdvancedPlayer;
+import net.minecraft.text.TranslatableTextContent;
 
 import java.io.InputStream;
 
@@ -32,6 +33,11 @@ public class PlayerThread extends Thread {
 	}
 	
 	public volatile static float gainPercentage = 1.0f;
+
+	public static final float QUIET_VOLUME_PERCENTAGE = 0.6f;
+	public static final float QUIET_VOLUME_LERP_RATE = 0.015f;
+	public static float quietPercentage = 1.0f;
+
 	public volatile static float realGain = 0;
 
 	public volatile static String currentSong = null;
@@ -129,15 +135,44 @@ public class PlayerThread extends Thread {
 	
 	public void processRealGain() {
 
+		var client = MinecraftClient.getInstance();
+
 		GameOptions options = MinecraftClient.getInstance().options;
 
+		boolean musicOptionsOpen = false;
+
+		// Try to find the music options menu
+		TranslatableTextContent ScreenTitleContent = null;
+		if (client.currentScreen != null && client.currentScreen.getTitle() != null && client.currentScreen.getTitle().getContent() != null
+			&& client.currentScreen.getTitle().getContent() instanceof TranslatableTextContent) {
+
+			ScreenTitleContent = (TranslatableTextContent) client.currentScreen.getTitle().getContent();
+
+			if (ScreenTitleContent != null) {
+				musicOptionsOpen = ScreenTitleContent.getKey().equals("options.sounds.title");
+			}
+		}
+
+
+		boolean doQuietMusic =  client.isPaused()
+				&& client.isFinishedLoading()
+				&& client.world != null
+				&& !musicOptionsOpen;
+
+
+		float targetQuietMusicPercentage = doQuietMusic ? QUIET_VOLUME_PERCENTAGE : 1.0f;
+        quietPercentage = MyMath.lerpConstant(quietPercentage, targetQuietMusicPercentage, QUIET_VOLUME_LERP_RATE);
+
+		
 		float minecraftGain = options.getSoundVolume(SoundCategory.MUSIC) * options.getSoundVolume(SoundCategory.MASTER);
-		float newRealGain = MIN_GAIN + (MAX_GAIN - MIN_GAIN) * minecraftGain * gainPercentage;
+		float newRealGain = MIN_GAIN + (MAX_GAIN - MIN_GAIN) * minecraftGain * gainPercentage * quietPercentage;
 
 		// Force to basically off if the user sets their volume off
 		if (minecraftGain <= 0) {
 			newRealGain = MIN_POSSIBLE_GAIN;
 		}
+
+
 		
 		realGain = newRealGain;
 		if(player != null) {
@@ -154,6 +189,7 @@ public class PlayerThread extends Thread {
 		//if(musicGain == 0)
 		//	play(null);
 	}
+
 	
 /*	public float getRelativeVolume() {
 		return getRelativeVolume(getGain());

@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class MusicTrackerMixin {
 
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
-    private void bettermusic$tick(CallbackInfo ci) {
+    private void reactivemusic$tick(CallbackInfo ci) {
 
         // Disable minecraft music if we're doing our stuff
         if (SongLoader.enabled) ci.cancel();

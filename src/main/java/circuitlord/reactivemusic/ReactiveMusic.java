@@ -23,7 +23,7 @@ public class ReactiveMusic implements ModInitializer {
 	public static PlayerThread thread;
 
 	static String currentSong;
-	static int currentEntry = -1;
+	static SongpackEntry currentEntry = null;
 	
 	//static String nextSong;
 	static int waitForSwitchTicks = 0;
@@ -74,37 +74,44 @@ public class ReactiveMusic implements ModInitializer {
 
 		slowTickUpdateCounter++;
 
-		if (slowTickUpdateCounter > 40) {
+		if (slowTickUpdateCounter > 20) {
 			SongPicker.tickEventMap();
 
 			slowTickUpdateCounter = 0;
 		}
 
 
-		var entryPair = SongPicker.getCurrentEntry();
+		SongpackEntry newEntry = SongPicker.getCurrentEntry();
 
-		int newEntry = entryPair.getLeft();
-		String[] songs = entryPair.getRight();
 
 		// If a valid event exists
-		if (newEntry >= 0 && songs.length > 0) {
+		if (newEntry != null && newEntry.songs.length > 0) {
 
-			if (newEntry != currentEntry) waitForSwitchTicks++;
+
+			if (currentEntry == null || newEntry.id != currentEntry.id) waitForSwitchTicks++;
 			else waitForSwitchTicks = 0;
 
 
-			// No song is playing, just start one randomly
+			boolean playNewSong = false;
+
+
+			// No song is playing and we've waiting through the silence, just start one randomly
 			if (thread.notQueuedOrPlaying() && silenceTicks > SILENCE_DURATION + additionalSilence) {
-
-				String picked = SongPicker.pickRandomSong(songs);
-				changeCurrentSong(picked, newEntry);
-
-				// Potentially wait for a while
-				additionalSilence = rand.nextInt(2000);
+				playNewSong = true;
 			}
 
-			// If we changed what event is active (with a buffer to prevent quick switches)
-			else if (thread.isPlaying() && newEntry != currentEntry && waitForSwitchTicks > WAIT_FOR_SWITCH_DURATION) {
+			// We're not playing a song and the newEntry is defined to always play, just start it immediately
+			else if (thread.notQueuedOrPlaying() && newEntry.alwaysPlay) {
+				playNewSong = true;
+			}
+
+			// If we changed what event is active, we need to fade out
+			// Wait for a bit to make sure we stay on a different event
+			// Also only fade out if it's specifically defined we should stop/start in the songpack
+			else if (thread.isPlaying() && currentEntry != null && newEntry.id != currentEntry.id
+					&& waitForSwitchTicks > WAIT_FOR_SWITCH_DURATION
+					&& (currentEntry.alwaysStop || newEntry.alwaysPlay)
+			) {
 
 				if (fadeOutTicks < FADE_DURATION) {
 
@@ -113,17 +120,24 @@ public class ReactiveMusic implements ModInitializer {
 					thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
 				}
 				else {
-					String picked = SongPicker.pickRandomSong(songs);
-					changeCurrentSong(picked, newEntry);
-
+					thread.resetPlayer();
 					fadeOutTicks = 0;
 				}
 
 			}
 
+
+			if (playNewSong) {
+				String picked = SongPicker.pickRandomSong(newEntry.songs);
+				changeCurrentSong(picked, newEntry);
+
+				// TODO: uncomment
+				//additionalSilence = rand.nextInt(2000, 5000);
+			}
+
 		}
 		else {
-			currentEntry = -1;
+			currentEntry = null;
 		}
 
 
@@ -133,14 +147,14 @@ public class ReactiveMusic implements ModInitializer {
 
 
 
-	public static void changeCurrentSong(String song, int newEvent) {
+	public static void changeCurrentSong(String song, SongpackEntry newEntry) {
 		currentSong = song;
-		currentEntry = newEvent;
+		currentEntry = newEntry;
 
 		String entryName = "";
 
-		for (int i = 0; i < SongLoader.activeSongpack.entries[newEvent].events.length; i++) {
-			entryName += SongLoader.activeSongpack.entries[newEvent].events[i].toString();
+		for (int i = 0; i < newEntry.events.length; i++) {
+			entryName += newEntry.events[i].toString();
 		}
 
 		LOGGER.info("Changing entry: " + entryName + " Song name: " + song);

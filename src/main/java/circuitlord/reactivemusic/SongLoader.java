@@ -28,7 +28,7 @@
 
                 // Load from resources
                 if (embeddedMode) {
-                    InputStream inputStream = SongLoader.class.getResourceAsStream("/musicpack/bettermusic.yaml");
+                    InputStream inputStream = SongLoader.class.getResourceAsStream("/musicpack/reactivemusic.yaml");
                     songpack = yaml.loadAs(inputStream, SongpackConfig.class);
                 }
 
@@ -36,7 +36,7 @@
                 // Load from user songpack
                 else {
 
-/*                    configFile = new YamlFile(new File(f, "bettermusic.yaml"));
+/*                    configFile = new YamlFile(new File(f, "reactivemusic.yaml"));
 
                     if (!configFile.exists()) {
                         configFile.createNewFile();
@@ -51,6 +51,13 @@
             }
 
             if (songpack == null) return;
+
+
+            for (int i = 0; i < songpack.entries.length; i++) {
+                if (songpack.entries[i] == null) continue;
+
+                songpack.entries[i].id = i;
+            }
 
             enabled = songpack.enabled;
 
@@ -77,7 +84,7 @@
             try {
                 f.createNewFile();
                 BufferedWriter writer = new BufferedWriter(new FileWriter(f));
-                writer.write("# BetterMusic Config\n");
+                writer.write("# ReactiveMusic Config\n");
                 //writer.write("enabled: true\n");
                 writer.write("embedded: true\n");
                 writer.close();

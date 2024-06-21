@@ -23,18 +23,11 @@ public class MinecraftClientMixin {
     @Shadow
     public ClientWorld world;
 
-   // @Unique
-   // private static int dynmus$tickCounter = 0;
-
     @Inject(method = "tick", at = @At("RETURN"))
-    private void bettermusic$tick(CallbackInfo ci) {
-        //dynmus$tickCounter++;
+    private void reactivemusic$tick(CallbackInfo ci) {
 
-        //if (dynmus$tickCounter >= 40 && world != null && player != null) {
-        //    dynmus$tickCounter = 0;
+        ReactiveMusic.tick();
 
-            ReactiveMusic.tick();
-        //}
     }
 
 
