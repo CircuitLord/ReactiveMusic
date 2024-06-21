@@ -1,18 +1,16 @@
-package circuitlord.bettermusic;
+package circuitlord.reactivemusic;
 
 import net.fabricmc.api.ModInitializer;
 
-import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.util.Random;
 
-public class BetterMusic implements ModInitializer {
+public class ReactiveMusic implements ModInitializer {
 
-	public static final String MOD_ID = "adventure_redefined";
-	public static final String MOD_VERSION = "0.1";
+	public static final String MOD_ID = "reactive_music";
+	public static final String MOD_VERSION = "0.2";
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
@@ -47,7 +45,7 @@ public class BetterMusic implements ModInitializer {
 		// Proceed with mild caution.
 
 		LOGGER.info("╔══════════════════════════════════════════╗");
-		LOGGER.info("║   Adventure Redefined initialization...  ║");
+		LOGGER.info("║     Reactive Music initialization...     ║");
 		LOGGER.info("║            ▓▒░ version " + MOD_VERSION +" ░▒▓           ║");
 		LOGGER.info("╚══════════════════════════════════════════╝");
 
@@ -59,6 +57,8 @@ public class BetterMusic implements ModInitializer {
 		//	betterMusicDir.mkdir();
 
 		SongLoader.loadFrom(null);
+
+		SongPicker.initialize();
 
 		if(SongLoader.enabled)
 			thread = new PlayerThread();
@@ -97,11 +97,10 @@ public class BetterMusic implements ModInitializer {
 			if (thread.notQueuedOrPlaying() && silenceTicks > SILENCE_DURATION + additionalSilence) {
 
 				String picked = SongPicker.pickRandomSong(songs);
-
 				changeCurrentSong(picked, newEntry);
 
 				// Potentially wait for a while
-				additionalSilence = rand.nextInt(1000);
+				additionalSilence = rand.nextInt(2000);
 			}
 
 			// If we changed what event is active (with a buffer to prevent quick switches)
@@ -109,22 +108,18 @@ public class BetterMusic implements ModInitializer {
 
 				if (fadeOutTicks < FADE_DURATION) {
 
-					//LOGGER.info("Fading out, fadeOutTicks=" + fadeOutTicks);
-
 					fadeOutTicks++;
 
 					thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
 				}
 				else {
 					String picked = SongPicker.pickRandomSong(songs);
-
 					changeCurrentSong(picked, newEntry);
 
 					fadeOutTicks = 0;
 				}
 
 			}
-
 
 		}
 		else {
@@ -134,9 +129,6 @@ public class BetterMusic implements ModInitializer {
 
 		thread.processRealGain();
 
-
-
-
 	}
 
 
@@ -144,6 +136,14 @@ public class BetterMusic implements ModInitializer {
 	public static void changeCurrentSong(String song, int newEvent) {
 		currentSong = song;
 		currentEntry = newEvent;
+
+		String entryName = "";
+
+		for (int i = 0; i < SongLoader.activeSongpack.entries[newEvent].events.length; i++) {
+			entryName += SongLoader.activeSongpack.entries[newEvent].events[i].toString();
+		}
+
+		LOGGER.info("Changing entry: " + entryName + " Song name: " + song);
 
 		thread.setGainPercentage(1.0f);
 

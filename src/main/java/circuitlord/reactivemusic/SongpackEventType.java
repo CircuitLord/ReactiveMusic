@@ -1,4 +1,4 @@
-package circuitlord.bettermusic;
+package circuitlord.reactivemusic;
 
 public enum SongpackEventType {
 

@@ -1,10 +1,8 @@
-package circuitlord.bettermusic.mixin;
+package circuitlord.reactivemusic.mixin;
 
-import circuitlord.bettermusic.BetterMusic;
-import circuitlord.bettermusic.SongLoader;
+import circuitlord.reactivemusic.SongLoader;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.sound.MusicTracker;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

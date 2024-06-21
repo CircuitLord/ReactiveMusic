@@ -21,6 +21,7 @@ package javazoom.jl.player.advanced;
 
 import java.io.InputStream;
 
+import circuitlord.reactivemusic.ReactiveMusic;
 import javazoom.jl.decoder.Bitstream;
 import javazoom.jl.decoder.BitstreamException;
 import javazoom.jl.decoder.Decoder;
@@ -49,6 +50,9 @@ public class AdvancedPlayer
 	private int lastPosition = 0;
 	/** Listener for the playback process */
 	private PlaybackListener listener;
+
+
+	public boolean queuedToStop = false;
 
 	/**
 	 * Creates a new <code>Player</code> instance.
@@ -86,10 +90,13 @@ public class AdvancedPlayer
 		// report to listener
 		if(listener != null) listener.playbackStarted(createEvent(PlaybackEvent.STARTED));
 
+
 		while (frames-- > 0 && ret)
 		{
 			ret = decodeFrame();
 		}
+
+
 
 //		if (!ret)
 		{
@@ -97,9 +104,7 @@ public class AdvancedPlayer
 			AudioDevice out = audio;
 			if (out != null)
 			{
-//				System.out.println(audio.getPosition());
 				out.flush();
-//				System.out.println(audio.getPosition());
 				synchronized (this)
 				{
 					complete = (!closed);
@@ -146,6 +151,12 @@ public class AdvancedPlayer
 	{
 		try
 		{
+
+			if (queuedToStop) {
+				queuedToStop = false;
+				return false;
+			}
+
 			AudioDevice out = audio;
 			if (out == null) return false;
 
@@ -253,7 +264,8 @@ public class AdvancedPlayer
 	{
 		return audio;
 	}
-	
+
+
 	int frames = 0;
 	public int getFrames() {
 		return frames;

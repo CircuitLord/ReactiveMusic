@@ -1,13 +1,8 @@
-	package circuitlord.bettermusic;
+	package circuitlord.reactivemusic;
 
-    import org.yaml.snakeyaml.LoaderOptions;
     import org.yaml.snakeyaml.Yaml;
-    import org.yaml.snakeyaml.constructor.Constructor;
 
     import java.io.*;
-    import java.util.*;
-
-    import static circuitlord.bettermusic.SongPicker.eventMap;
 
     public final class SongLoader {
 
@@ -52,7 +47,7 @@
                 }
             }
             catch (Exception e) {
-                BetterMusic.LOGGER.error("Failed to load properties! Embedded=" + embeddedMode + " Exception:" + e.toString());
+                ReactiveMusic.LOGGER.error("Failed to load properties! Embedded=" + embeddedMode + " Exception:" + e.toString());
             }
 
             if (songpack == null) return;
@@ -111,7 +106,7 @@
                 try {
                     return new FileInputStream(f);
                 } catch (FileNotFoundException e) {
-                    BetterMusic.LOGGER.error("File " + f + " not found. Fix your config!");
+                    ReactiveMusic.LOGGER.error("File " + f + " not found. Fix your config!");
                     e.printStackTrace();
                     return null;
                 }

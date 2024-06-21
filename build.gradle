@@ -3,7 +3,7 @@ plugins {
 	id 'maven-publish'
 }
 
-version = project.mod_version
+version = project.mod_version + "-" + project.minecraft_version
 group = project.maven_group
 
 base {
@@ -18,30 +18,42 @@ repositories {
 	// for more information about repositories.
 
 	//maven { url 'https://jitpack.io' }
+
 }
 
-fabricApi {
-	configureDataGeneration()
-}
 
 dependencies {
-	// To change the versions see the gradle.properties file
+
+
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	//modImplementation "net.fabricmc:fabric-loader:0.15.3"
 
-	// Fabric API. This is technically optional, but you probably want it anyway.
-	//modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	
-	// Uncomment the following line to enable the deprecated Fabric API modules. 
-	// These are included in the Fabric API production distribution and allow you to update your mod to the latest modules at a later more convenient time.
+	if (project.minecraft_version == "1.21") {
+		mappings "net.fabricmc:yarn:1.21+build.2:v2"
+		modImplementation "net.fabricmc:fabric-loader:0.15.11"
+	}
+	else if (project.minecraft_version == "1.20.2") {
+		mappings "net.fabricmc:yarn:1.20.2+build.4:v2"
+		modImplementation "net.fabricmc:fabric-loader:0.15.3"
+	}
+	else if (project.minecraft_version == "1.20.1") {
+		mappings "net.fabricmc:yarn:1.20.1+build.10:v2"
+		modImplementation "net.fabricmc:fabric-loader:0.15.3"
+	}
+	else if (project.minecraft_version == "1.19.4") {
+		mappings "net.fabricmc:yarn:1.19.4+build.2:v2"
+		modImplementation "net.fabricmc:fabric-loader:0.15.3"
+	}
 
-	// modImplementation "net.fabricmc.fabric-api:fabric-api-deprecated:${project.fabric_version}"
+/*	else if (project.minecraft_version == "1.18.2") {
+		mappings "net.fabricmc:yarn:1.18.2+build.4:v2"
+		modImplementation "net.fabricmc:fabric-loader:0.15.3"
+	}*/
 
 
 	implementation 'org.yaml:snakeyaml:2.2'
 	include("org.yaml:snakeyaml:2.2")
-	//implementation files("src/main/resources/snakeyaml-2.2.jar")
+
 }
 
 processResources {
@@ -49,6 +61,9 @@ processResources {
 
 	filesMatching("fabric.mod.json") {
 		expand "version": project.version
+
+		//replace "supportedMCVersion": minecraft_version
+
 	}
 }
 

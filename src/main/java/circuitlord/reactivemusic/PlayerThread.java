@@ -1,7 +1,6 @@
-package circuitlord.bettermusic;
+package circuitlord.reactivemusic;
 
 
-import javazoom.jl.decoder.JavaLayerException;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.sound.SoundCategory;
@@ -13,13 +12,14 @@ import java.io.InputStream;
 
 public class PlayerThread extends Thread {
 
+	public static final float MIN_POSSIBLE_GAIN = -80F;
 	public static final float MIN_GAIN = -50F;
-	public static final float MAX_GAIN = 0F;
+	public static final float MAX_GAIN = 5F;
 
 	public static float[] fadeGains;
 	
 	static {
-		fadeGains = new float[BetterMusic.FADE_DURATION];
+		fadeGains = new float[ReactiveMusic.FADE_DURATION];
 		float totaldiff = MIN_GAIN - MAX_GAIN;
 		float diff = totaldiff / fadeGains.length;
 		for(int i = 0; i < fadeGains.length; i++)
@@ -55,7 +55,7 @@ public class PlayerThread extends Thread {
 	
 	public PlayerThread() {
 		setDaemon(true);
-		setName("BetterMusic Player Thread");
+		setName("ReactiveMusic Player Thread");
 		start();
 	}
 
@@ -63,23 +63,23 @@ public class PlayerThread extends Thread {
 	public void run() {
 		try {
 			while(!kill) {
+
 				if(queued && currentSong != null) {
 
-					if(player != null)
-						resetPlayer();
 					InputStream stream = SongLoader.getStream();
 					if(stream == null)
 						continue;
 
 					player = new AdvancedPlayer(stream);
 					queued = false;
+
 				}
 
 
-				if(player != null && player.getAudioDevice() != null && realGain > MIN_GAIN) {
+				if(player != null && player.getAudioDevice() != null) {
 
 					processRealGain();
-					BetterMusic.LOGGER.info("Playing " + currentSong);
+					ReactiveMusic.LOGGER.info("Playing " + currentSong);
 					playing = true;
 					player.play();
 
@@ -95,11 +95,11 @@ public class PlayerThread extends Thread {
 
 	public void resetPlayer() {
 		playing = false;
+
 		if(player != null)
-			player.close();
+			player.queuedToStop = true;
 
 		currentSong = null;
-		player = null;
 	}
 
 	public void play(String song) {
@@ -133,6 +133,11 @@ public class PlayerThread extends Thread {
 
 		float minecraftGain = options.getSoundVolume(SoundCategory.MUSIC) * options.getSoundVolume(SoundCategory.MASTER);
 		float newRealGain = MIN_GAIN + (MAX_GAIN - MIN_GAIN) * minecraftGain * gainPercentage;
+
+		// Force to basically off if the user sets their volume off
+		if (minecraftGain <= 0) {
+			newRealGain = MIN_POSSIBLE_GAIN;
+		}
 		
 		realGain = newRealGain;
 		if(player != null) {
@@ -141,7 +146,7 @@ public class PlayerThread extends Thread {
 				try {
 					((JavaSoundAudioDevice) device).setGain(newRealGain);
 				} catch(IllegalArgumentException e) {
-					BetterMusic.LOGGER.error(e.toString());
+					ReactiveMusic.LOGGER.error(e.toString());
 				}
 			}
 		}

@@ -1,6 +1,4 @@
-package circuitlord.bettermusic;
-
-import java.util.List;
+package circuitlord.reactivemusic;
 
 public class SongpackEntry {
     public SongpackEventType[] events;

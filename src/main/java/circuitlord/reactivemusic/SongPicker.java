@@ -1,4 +1,4 @@
-package circuitlord.bettermusic;
+package circuitlord.reactivemusic;
 
 
 import net.minecraft.client.MinecraftClient;
@@ -11,12 +11,12 @@ import net.minecraft.entity.passive.PigEntity;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.entity.vehicle.MinecartEntity;
 
+//import net.minecraft.registry.tag.BiomeTags;
 import net.minecraft.registry.tag.BiomeTags;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockPos;
 
 import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
 
 import java.util.*;
 
@@ -52,7 +52,8 @@ public final class SongPicker {
 
 		boolean underground = !world.isSkyVisible(pos);
 		var indimension = world.getRegistryKey();
-		Entity riding = player.getControllingVehicle();
+
+		Entity riding = VersionHelper.GetRidingEntity(player);
 
 		long time = world.getTimeOfDay() % 24000;
 		boolean night = time > 13300 && time < 23200;
@@ -103,26 +104,38 @@ public final class SongPicker {
 
 
 
+
 		eventMap.put(SongpackEventType.MOUNTAIN, biome.isIn(BiomeTags.IS_MOUNTAIN));
 		eventMap.put(SongpackEventType.FOREST, biome.isIn(BiomeTags.IS_FOREST));
 		eventMap.put(SongpackEventType.BEACH, biome.isIn(BiomeTags.IS_BEACH));
-		eventMap.put(SongpackEventType.DESERT, false);
+		// TODO:
+		//eventMap.put(SongpackEventType.DESERT, false);
 
-		eventMap.put(SongpackEventType.HOME, false);
+		//eventMap.put(SongpackEventType.HOME, false);
 
 		eventMap.put(SongpackEventType.GENERIC, true);
 	}
 
 
 
+	public static void initialize() {
+
+		eventMap.clear();
+
+		for (SongpackEventType eventType : SongpackEventType.values()) {
+			eventMap.put(eventType, false);
+		}
+
+	}
+
 
 
 	public static Pair<Integer, String[]> getCurrentEntry() {
 
-		int entryIndex = 0;
 
-		for (SongpackEntry entry : SongLoader.activeSongpack.entries) {
+		for (int i = 0; i < SongLoader.activeSongpack.entries.length; i++) {
 
+			SongpackEntry entry = SongLoader.activeSongpack.entries[i];
 			if (entry == null) continue;
 
 			boolean eventsMet = true;
@@ -139,12 +152,12 @@ public final class SongPicker {
 
 			if (eventsMet) {
 
-				return new Pair<>(entryIndex, entry.songs);
+				return new Pair<>(i, entry.songs);
 			}
 
-			entryIndex++;
 		}
 
+		// Failed
 		return new Pair<>(-1, null);
 	}
 

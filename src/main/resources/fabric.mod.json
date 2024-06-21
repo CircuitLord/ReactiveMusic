@@ -1,30 +1,30 @@
 {
 	"schemaVersion": 1,
-	"id": "adventureredefined",
+	"id": "reactivemusic",
 	"version": "${version}",
-	"name": "Adventure Redefined",
+	"name": "Reactive Music | Adventure Redefined",
 	"description": "Refactors Minecraft's music to be dynamic and reactive, including new fantasy and celtic tracks to give an air of adventure.",
 	"authors": [
 		"CircuitLord"
 	],
 	"contact": {
 		"homepage": "https://modrinth.com/mod/adventure-redefined",
-		"sources": "n/a"
+		"sources": "https://github.com/CircuitLord/AdventureRedefined"
 	},
 	"license": "GPLv3",
-	"icon": "assets/bettermusic/icon.png",
+	"icon": "assets/reactivemusic/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"circuitlord.bettermusic.BetterMusic"
+			"circuitlord.reactivemusic.ReactiveMusic"
 		]
 	},
 	"mixins": [
-		"bettermusic.mixins.json"
+		"reactivemusic.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.15.3",
-		"minecraft": "1.20.x",
+		"minecraft": "1.21",
 		"java": ">=17"
 	}
 }

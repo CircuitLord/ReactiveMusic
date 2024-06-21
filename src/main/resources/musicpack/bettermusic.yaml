@@ -23,6 +23,16 @@ entries:
 
 
 
+  - events: [ "UNDERWATER" ]
+    songs:
+      - "Eventide"
+
+  - events: [ "UNDERGROUND" ]
+    songs:
+      - "WintersBreath"
+      - "IntoSilenceP1"
+
+
 
   - events: ["RAIN"]
     songs:
@@ -53,17 +63,6 @@ entries:
 
 
 
-
-# Height related songs
-
-  - events: [ "UNDERWATER" ]
-    songs:
-      - "Eventide"
-
-  - events: [ "UNDERGROUND" ]
-    songs:
-      - "WintersBreath"
-      - "IntoSilenceP1"
 
 
 #TODO highup
