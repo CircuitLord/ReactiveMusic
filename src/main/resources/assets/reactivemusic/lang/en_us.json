@@ -1,0 +1,14 @@
+{
+  "reactive_music.title": "Reactive Music",
+  "reactive_music.config.category.general": "General",
+  "reactive_music.config.category.debug": "Debug",
+
+
+  "reactive_music.config.option.music_delay": "Music Delay",
+
+
+  "reactive_music.config.option.debug_mode_enabled": "Debug Mode Enabled"
+
+
+}
+

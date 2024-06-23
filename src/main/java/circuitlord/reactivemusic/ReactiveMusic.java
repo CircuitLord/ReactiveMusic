@@ -1,5 +1,7 @@
 package circuitlord.reactivemusic;
 
+import circuitlord.reactivemusic.config.ModConfig;
+import circuitlord.reactivemusic.config.ModConfigProps;
 import net.fabricmc.api.ModInitializer;
 
 import org.slf4j.Logger;
@@ -33,8 +35,12 @@ public class ReactiveMusic implements ModInitializer {
 
 	static int slowTickUpdateCounter = 0;
 
+	boolean doSilenceForNextQueuedSong = true;
+
 
 	static Random rand = new Random();
+
+	//public static final circuitlord.reactivemusic.ReactiveMusicConfig CONFIG = circuitlord.reactivemusic.ReactiveMusicConfig.createAndLoad();
 
 
 
@@ -44,10 +50,10 @@ public class ReactiveMusic implements ModInitializer {
 		// However, some things (like resources) may still be uninitialized.
 		// Proceed with mild caution.
 
-		LOGGER.info("╔══════════════════════════════════════════╗");
-		LOGGER.info("║     Reactive Music initialization...     ║");
-		LOGGER.info("║            ▓▒░ version " + MOD_VERSION +" ░▒▓           ║");
-		LOGGER.info("╚══════════════════════════════════════════╝");
+		LOGGER.info("--------------------------------------------");
+		LOGGER.info("|     Reactive Music initialization...     |");
+		LOGGER.info("|                version " + MOD_VERSION +"               |");
+		LOGGER.info("--------------------------------------------");
 
 		//File configDir = FabricLoader.getInstance().getConfigDir().toFile();
 
@@ -55,6 +61,9 @@ public class ReactiveMusic implements ModInitializer {
 		//File betterMusicDir = new File(configDir.getParentFile(), "better_music");
 		//if(!betterMusicDir.exists())
 		//	betterMusicDir.mkdir();
+
+
+		ModConfig.loadConfig();
 
 		SongLoader.loadFrom(null);
 
@@ -93,17 +102,27 @@ public class ReactiveMusic implements ModInitializer {
 
 
 			boolean playNewSong = false;
+			boolean doSilenceAfter = true;
 
 
 			// No song is playing and we've waiting through the silence, just start one randomly
-			if (thread.notQueuedOrPlaying() && silenceTicks > SILENCE_DURATION + additionalSilence) {
+			// Skip wait in debug mode
+			if (thread.notQueuedOrPlaying()
+					&& ((silenceTicks > additionalSilence) || ModConfig.props.isDebugModeEnabled)) {
 				playNewSong = true;
 			}
 
-			// We're not playing a song and the newEntry is defined to always play, just start it immediately
+			// the newEntry is defined to always play, just start it immediately
 			else if (thread.notQueuedOrPlaying() && newEntry.alwaysPlay) {
 				playNewSong = true;
 			}
+
+			// if our previous song was defined to stop for this song, then start playing the new event immediately
+			else if (thread.notQueuedOrPlaying() && (currentEntry != null && currentEntry.alwaysStop)) {
+				playNewSong = true;
+			}
+
+			// Fading
 
 			// If we changed what event is active, we need to fade out
 			// Wait for a bit to make sure we stay on a different event
@@ -131,14 +150,29 @@ public class ReactiveMusic implements ModInitializer {
 				String picked = SongPicker.pickRandomSong(newEntry.songs);
 				changeCurrentSong(picked, newEntry);
 
-				// TODO: uncomment
-				//additionalSilence = rand.nextInt(2000, 5000);
+				int minTickSilence = 0;
+				int maxTickSilence = 0;
+
+				switch (ModConfig.props.musicDelay) {
+					case SHORT -> {
+						minTickSilence = 500;
+						maxTickSilence = 1500;
+					}
+					case NORMAL -> {
+						minTickSilence = 1000;
+						maxTickSilence = 5000;
+					}
+					case LONG -> {
+						minTickSilence = 2000;
+						maxTickSilence = 7000;
+					}
+				}
+
+				additionalSilence = rand.nextInt(minTickSilence, maxTickSilence);
 			}
 
 		}
-		else {
-			currentEntry = null;
-		}
+
 
 
 		thread.processRealGain();
@@ -163,5 +197,9 @@ public class ReactiveMusic implements ModInitializer {
 
 		thread.play(song);
 	}
+
+
+
+
 
 }
