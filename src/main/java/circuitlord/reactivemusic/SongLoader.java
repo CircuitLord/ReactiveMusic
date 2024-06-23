@@ -1,123 +1,223 @@
 	package circuitlord.reactivemusic;
 
+    import net.fabricmc.loader.api.FabricLoader;
     import org.yaml.snakeyaml.Yaml;
 
     import java.io.*;
+    import java.nio.file.*;
+    import java.nio.file.attribute.BasicFileAttributes;
+    import java.util.*;
 
     public final class SongLoader {
 
-        public static File mainDir;
+        public static SongpackConfig activeSongpack = null;
+        public static Path activeSongpackPath = null;
 
-        public static boolean enabled = false;
-        public static boolean embeddedMode = true;
-
-
-        public static SongpackConfig activeSongpack;
-
-        public static void loadFrom(File f) {
+        public static boolean activeSongpackEmbedded = false;
 
 
+        public static List<SongpackZip> availableSongpacks = new ArrayList<SongpackZip>();
 
+
+        public static void fetchAvailableSongpacks() {
+
+
+            long startTime = System.currentTimeMillis();
+
+            var gamePath = FabricLoader.getInstance().getGameDir();
+            Path resourcePacksPath = gamePath.resolve("resourcepacks");
+
+
+            availableSongpacks.clear();
+
+            List<Path> potentialPacks = new ArrayList<Path>();
+
+
+            try {
+                Files.walkFileTree(resourcePacksPath,  EnumSet.noneOf(FileVisitOption.class), 1, new SimpleFileVisitor<Path>() {
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException {
+                        potentialPacks.add(file);
+                        return FileVisitResult.CONTINUE;
+                    }
+                });
+
+            } catch (IOException e) {
+                ReactiveMusic.LOGGER.error("Failed while visiting potential packs " + e.getMessage());
+            }
+
+
+
+            for (var packPath : potentialPacks) {
+
+
+
+                SongpackConfig config = null;
+                Path configPath = null;
+
+                if (Files.isDirectory(packPath)) {
+                    configPath = packPath.resolve("ReactiveMusic.yaml");
+
+                    if (Files.exists(configPath)) {
+                        config = loadSongpackConfig(configPath, false);
+                    }
+                }
+                else {
+                    Map<String, String> env = new HashMap<>();
+                    env.put("create", "false");
+
+                    try (FileSystem fs = FileSystems.newFileSystem(packPath, env)) {
+                        configPath = fs.getPath("ReactiveMusic.yaml");
+
+                        if (Files.exists(configPath)) {
+                            config = loadSongpackConfig(configPath, false);
+                        }
+
+                    } catch (Exception e) {
+                        ReactiveMusic.LOGGER.error("Failed while loading potential packs " + e.getMessage());
+                    }
+                }
+
+                if (config != null) {
+                    SongpackZip zip = new SongpackZip();
+                    zip.path = packPath;
+                    zip.config = config;
+                    availableSongpacks.add(zip);
+                }
+
+
+
+            }
+
+
+            ReactiveMusic.LOGGER.info("Took " + (System.currentTimeMillis() - startTime) + "ms to parse available songpacks, found " + availableSongpacks.size() + "!");
+
+
+
+        }
+
+
+
+
+        public static void setActiveSongpack(SongpackZip songpackZip, boolean embeddedMode) {
+
+            if (embeddedMode) {
+
+                // Just reload it from the resources
+                activeSongpack = loadSongpackConfig(null, true);
+                activeSongpackPath = null;
+            }
+            else {
+                activeSongpack = songpackZip.config;
+                activeSongpackPath = songpackZip.path;
+            }
+
+            activeSongpackEmbedded = embeddedMode;
+        }
+
+
+        public static SongpackConfig loadSongpackConfig(Path configPath, boolean embeddedMode) {
             SongpackConfig songpack = null;
 
             Yaml yaml = new Yaml();
 
-
-
             try {
 
-                // Load from resources
+                InputStream inputStream;
+
                 if (embeddedMode) {
-                    InputStream inputStream = SongLoader.class.getResourceAsStream("/musicpack/reactivemusic.yaml");
-                    songpack = yaml.loadAs(inputStream, SongpackConfig.class);
+                    inputStream = SongLoader.class.getResourceAsStream("/musicpack/ReactiveMusic.yaml");
                 }
-
-                // TODO: always prioritize user songpack over embedded in the future?
-                // Load from user songpack
                 else {
-
-/*                    configFile = new YamlFile(new File(f, "reactivemusic.yaml"));
-
-                    if (!configFile.exists()) {
-                        configFile.createNewFile();
-                    }
-
-                    configFile.load();*/
-
+                    // This only works because we have a file stream open to the zip when we call this
+                    // ugly but it's fine i guess
+                    inputStream = Files.newInputStream(configPath);
                 }
+
+                // TODO: add better logging when this fails
+                songpack = yaml.loadAs(inputStream, SongpackConfig.class);
+
             }
             catch (Exception e) {
                 ReactiveMusic.LOGGER.error("Failed to load properties! Embedded=" + embeddedMode + " Exception:" + e.toString());
             }
 
-            if (songpack == null) return;
+            if (songpack != null) {
+                // Load the IDs
+                for (int i = 0; i < songpack.entries.length; i++) {
+                    if (songpack.entries[i] == null) continue;
 
-
-            for (int i = 0; i < songpack.entries.length; i++) {
-                if (songpack.entries[i] == null) continue;
-
-                songpack.entries[i].id = i;
-            }
-
-            enabled = songpack.enabled;
-
-            if (!enabled) return;
-
-
-            activeSongpack = songpack;
-
-/*            File musicDir = new File(f, "music");
-            if(!musicDir.exists())
-                musicDir.mkdir();
-
-            mainDir = musicDir;*/
-        }
-
-        class EventInstanceConfig {
-            public String[] keys;
-
-            public String[] songs;
-        }
-
-
-        public static void initConfig(File f) {
-            try {
-                f.createNewFile();
-                BufferedWriter writer = new BufferedWriter(new FileWriter(f));
-                writer.write("# ReactiveMusic Config\n");
-                //writer.write("enabled: true\n");
-                writer.write("embedded: true\n");
-                writer.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        public static InputStream getStream() {
-            if(PlayerThread.currentSong == null || PlayerThread.currentSong.equals("null"))
-                return null;
-
-            if (embeddedMode) {
-                String path = "/musicpack/music/" + PlayerThread.currentSong + ".mp3";
-                //System.out.println(SongLoader.class.getResource(path));
-
-                InputStream stream = SongLoader.class.getResourceAsStream(path);
-
-                return stream;
-            }
-            else {
-                File f = new File(mainDir, PlayerThread.currentSong + ".mp3");
-                if(f.getName().equals("null.mp3"))
-                    return null;
-
-                try {
-                    return new FileInputStream(f);
-                } catch (FileNotFoundException e) {
-                    ReactiveMusic.LOGGER.error("File " + f + " not found. Fix your config!");
-                    e.printStackTrace();
-                    return null;
+                    songpack.entries[i].id = i;
                 }
             }
+
+
+            return songpack;
+        }
+
+
+
+        public static SongResource getStream(String songName) {
+
+            if (activeSongpack == null) return null;
+
+            if(songName == null || songName.equals("null"))
+                return null;
+
+            SongResource songRes = new SongResource();
+
+            // embedded, use resources
+            if (activeSongpackEmbedded) {
+                String path = "/musicpack/music/" + songName + ".mp3";
+
+                songRes.inputStream = SongLoader.class.getResourceAsStream(path);
+
+            }
+
+            // Folder in resource packs (not zipped, can just read directly)
+            else if (activeSongpackPath.toFile().isDirectory()) {
+
+                Path songPath = activeSongpackPath.resolve("music").resolve(songName + ".mp3");
+
+                if (Files.exists(songPath)) {
+                    try {
+                       songRes.inputStream = new FileInputStream(songPath.toFile());
+                    } catch (FileNotFoundException e) {
+                        ReactiveMusic.LOGGER.error("Failed to load song file " + songName);
+                    }
+                }
+
+            }
+
+            // Zipped file in resource packs
+            else {
+                Map<String, String> env = new HashMap<>();
+                env.put("create", "false");
+
+                FileSystem fs = null;
+
+                try {
+                    fs = FileSystems.newFileSystem(activeSongpackPath, env);
+
+                } catch (IOException e) {
+                    ReactiveMusic.LOGGER.error("Failed while loading song file from zip " + e.getMessage());
+
+                    return null;
+                }
+
+                Path songPath = fs.getPath("music", songName + ".mp3");
+
+                if (Files.exists(songPath)) {
+                    try {
+                        songRes.inputStream = Files.newInputStream(songPath);
+                        songRes.fileSystem = fs;
+                    } catch (IOException e) {
+                        ReactiveMusic.LOGGER.error("Failed while creating inputstream from zip " + e.getMessage());
+                    }
+                }
+            }
+
+            return songRes;
 
         }
 

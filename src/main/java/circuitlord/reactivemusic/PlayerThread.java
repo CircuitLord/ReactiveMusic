@@ -9,6 +9,7 @@ import javazoom.jl.player.JavaSoundAudioDevice;
 import javazoom.jl.player.advanced.AdvancedPlayer;
 import net.minecraft.text.TranslatableTextContent;
 
+import java.io.IOException;
 import java.io.InputStream;
 
 public class PlayerThread extends Thread {
@@ -42,6 +43,8 @@ public class PlayerThread extends Thread {
 
 	public volatile static String currentSong = null;
 	public volatile static String currentSongChoices = null;
+
+	public volatile SongResource currentSongResource = null;
 	
 	AdvancedPlayer player;
 
@@ -72,11 +75,11 @@ public class PlayerThread extends Thread {
 
 				if(queued && currentSong != null) {
 
-					InputStream stream = SongLoader.getStream();
-					if(stream == null)
+					currentSongResource = SongLoader.getStream(currentSong);
+					if(currentSongResource == null || currentSongResource.inputStream == null)
 						continue;
 
-					player = new AdvancedPlayer(stream);
+					player = new AdvancedPlayer(currentSongResource.inputStream);
 					queued = false;
 
 				}
@@ -84,7 +87,10 @@ public class PlayerThread extends Thread {
 
 				if(player != null && player.getAudioDevice() != null) {
 
+					// go to full volume
+					setGainPercentage(1.0f);
 					processRealGain();
+
 					ReactiveMusic.LOGGER.info("Playing " + currentSong);
 					playing = true;
 					player.play();
@@ -106,6 +112,16 @@ public class PlayerThread extends Thread {
 			player.queuedToStop = true;
 
 		currentSong = null;
+
+		if (currentSongResource != null && currentSongResource.fileSystem != null) {
+            try {
+                currentSongResource.fileSystem.close();
+            } catch (IOException e) {
+                ReactiveMusic.LOGGER.error("Failed to close file system input stream " + e.getMessage());
+            }
+        }
+
+		currentSongResource = null;
 	}
 
 	public void play(String song) {

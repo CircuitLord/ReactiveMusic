@@ -1,7 +1,6 @@
 package circuitlord.reactivemusic;
 
 import circuitlord.reactivemusic.config.ModConfig;
-import circuitlord.reactivemusic.config.ModConfigProps;
 import net.fabricmc.api.ModInitializer;
 
 import org.slf4j.Logger;
@@ -65,18 +64,25 @@ public class ReactiveMusic implements ModInitializer {
 
 		ModConfig.loadConfig();
 
-		SongLoader.loadFrom(null);
+
+		SongLoader.fetchAvailableSongpacks();
+
+		//SongLoader.loadFrom(null, true);
+
+		SongLoader.setActiveSongpack(SongLoader.availableSongpacks.get(1), false);
 
 		SongPicker.initialize();
 
-		if(SongLoader.enabled)
-			thread = new PlayerThread();
+
+		thread = new PlayerThread();
 
 	}
 
 	public static void tick() {
 
 		if (thread == null) return;
+
+		if (SongLoader.activeSongpack == null) return;
 
 		if (!thread.isPlaying()) silenceTicks++;
 		else silenceTicks = 0;
@@ -193,9 +199,11 @@ public class ReactiveMusic implements ModInitializer {
 
 		LOGGER.info("Changing entry: " + entryName + " Song name: " + song);
 
-		thread.setGainPercentage(1.0f);
+		// go full quiet while switching songs, we'll go back to 1.0f after we load the new song
+		thread.setGainPercentage(0.0f);
 
 		thread.play(song);
+
 	}
 
 

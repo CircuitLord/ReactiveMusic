@@ -17,7 +17,9 @@ public class MusicTrackerMixin {
     private void reactivemusic$tick(CallbackInfo ci) {
 
         // Disable minecraft music if we're doing our stuff
-        if (SongLoader.enabled) ci.cancel();
+        //if (SongLoader.enabled) ci.cancel();
+        // TODO: new disabler
+        ci.cancel();
 
     }
 
