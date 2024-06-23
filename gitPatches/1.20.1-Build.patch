@@ -1,0 +1,78 @@
+diff --git forkSrcPrefix/src/main/resources/fabric.mod.json forkDstPrefix/src/main/resources/fabric.mod.json
+index 127468dc8533a410e599a97c1c407a351f227cb1..e9b2d3ff7b1edea38bf1211888823a31b937f7ee 100644
+--- forkSrcPrefix/src/main/resources/fabric.mod.json
++++ forkDstPrefix/src/main/resources/fabric.mod.json
+@@ -27,7 +27,7 @@
+ 	],
+ 	"depends": {
+ 		"fabricloader": ">=0.15.11",
+-		"minecraft": "1.21",
+-		"java": ">=21"
++		"minecraft": "~1.20.1",
++		"java": ">=17"
+ 	}
+ }
+\ No newline at end of file
+diff --git forkSrcPrefix/src/main/resources/reactivemusic.mixins.json forkDstPrefix/src/main/resources/reactivemusic.mixins.json
+index 9bd53bd531c52b81e318170a740e10e85d768110..f64933279350552e05452cbb951ce8d1ea6e8643 100644
+--- forkSrcPrefix/src/main/resources/reactivemusic.mixins.json
++++ forkDstPrefix/src/main/resources/reactivemusic.mixins.json
+@@ -1,7 +1,7 @@
+ {
+   "required": true,
+   "package": "circuitlord.reactivemusic.mixin",
+-  "compatibilityLevel": "JAVA_21",
++  "compatibilityLevel": "JAVA_17",
+   "mixins": [
+   ],
+   "injectors": {
+diff --git forkSrcPrefix/build.gradle forkDstPrefix/build.gradle
+index 1cdbec7434c6a13f6cd9aa214697a88d520be3ef..34afe5c6b2cbc279065edfa7c5bda9eb6e9d8c4e 100644
+--- forkSrcPrefix/build.gradle
++++ forkDstPrefix/build.gradle
+@@ -69,7 +69,7 @@ processResources {
+ }
+ 
+ tasks.withType(JavaCompile).configureEach {
+-	it.options.release = 21
++	it.options.release = 17
+ }
+ 
+ java {
+@@ -78,8 +78,8 @@ java {
+ 	// If you remove this line, sources will not be generated.
+ 	withSourcesJar()
+ 
+-	sourceCompatibility = JavaVersion.VERSION_21
+-	targetCompatibility = JavaVersion.VERSION_21
++	sourceCompatibility = JavaVersion.VERSION_17
++	targetCompatibility = JavaVersion.VERSION_17
+ }
+ 
+ jar {
+diff --git forkSrcPrefix/gradle.properties forkDstPrefix/gradle.properties
+index cc99ec03c9a9350825bc226f7eb5ab379c683a05..153a76026227c23b451f2858257fab46b43e61c7 100644
+--- forkSrcPrefix/gradle.properties
++++ forkDstPrefix/gradle.properties
+@@ -6,8 +6,8 @@ org.gradle.parallel=true
+ 
+ # Fabric Properties
+ # check these on https://fabricmc.net/develop
+-minecraft_version=1.21
+-yarn_mappings=1.21+build.2
++minecraft_version=1.20.1
++yarn_mappings=1.20.1+build.10
+ loader_version=0.15.11
+ 
+ mod_version=0.2.0
+@@ -16,7 +16,7 @@ archives_base_name=reactivemusic
+ 
+ 
+ # Dependencies
+-fabric_version=0.100.3+1.21
++fabric_version=0.92.2+1.20.1
+ 
+-modmenu_version=11.0.1
+-clothconfig_version=15.0.127
++modmenu_version=7.2.2
++clothconfig_version=11.1.118
