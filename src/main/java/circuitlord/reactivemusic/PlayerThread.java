@@ -155,7 +155,6 @@ public class PlayerThread extends Thread {
 
 
 		boolean doQuietMusic =  client.isPaused()
-				&& client.isFinishedLoading()
 				&& client.world != null
 				&& !musicOptionsOpen;
 
