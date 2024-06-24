@@ -6,9 +6,9 @@ Songpacks are constructed as folders with a yaml configuration file and a folder
 They're loaded from the `resourcepacks` folder, although they're not actually resource packs and are instead selected from the configuration UI. This is purely to make including songpacks easier.
 
 I HIGHLY recommend downloading the songpack template and using it as a base to make your pack so you understand the structure.
-Download here:
+Download [here](https://raw.githubusercontent.com/CircuitLord/ReactiveMusic/master/docs/ReactiveMusicSongpackTemplate.zip)!
 
-IMPORTANT: When distributing a zipped songpack, it MUST be zipped as uncompressed, (store files). If it is compressed it will not load correctly.
+IMPORTANT: Songpacks can be worked on while unzipped, but when distributing a zipped songpack, it MUST be zipped as uncompressed, (store files). If it is compressed it will not load correctly.
 
 
 
