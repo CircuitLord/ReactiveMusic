@@ -46,6 +46,8 @@ public class ReactiveMusic implements ModInitializer {
 	//public static final circuitlord.reactivemusic.ReactiveMusicConfig CONFIG = circuitlord.reactivemusic.ReactiveMusicConfig.createAndLoad();
 
 
+	static ModConfig config;
+
 
 	@Override
 	public void onInitialize() {
@@ -67,12 +69,14 @@ public class ReactiveMusic implements ModInitializer {
 
 
 		ModConfig.GSON.load();
+		config = ModConfig.getConfig();
 
 		SongLoader.fetchAvailableSongpacks();
 
 		//SongLoader.loadFrom(null, true);
 
-		SongLoader.setActiveSongpack(SongLoader.availableSongpacks.get(1), false);
+		SongLoader.setActiveSongpack(null, true);
+		//SongLoader.setActiveSongpack(SongLoader.availableSongpacks.get(1), false);
 
 		SongPicker.initialize();
 
@@ -133,7 +137,7 @@ public class ReactiveMusic implements ModInitializer {
 			// No song is playing and we've waiting through the silence, just start one randomly
 			// Skip wait in debug mode
 			if (thread.notQueuedOrPlaying()
-					&& ((silenceTicks > additionalSilence) || ModConfig.getConfig().debugModeEnabled)) {
+					&& ((silenceTicks > additionalSilence) || config.debugModeEnabled)) {
 				playNewSong = true;
 			}
 
@@ -154,7 +158,7 @@ public class ReactiveMusic implements ModInitializer {
 			// Also only fade out if it's specifically defined we should stop/start in the songpack
 			else if (thread.isPlaying() && currentEntry != null && newEntry.id != currentEntry.id
 					&& waitForSwitchTicks > WAIT_FOR_SWITCH_DURATION
-					&& (currentEntry.alwaysStop || newEntry.alwaysPlay)
+					&& (currentEntry.alwaysStop || newEntry.alwaysPlay || config.debugModeEnabled)
 			) {
 
 				if (fadeOutTicks < FADE_DURATION) {

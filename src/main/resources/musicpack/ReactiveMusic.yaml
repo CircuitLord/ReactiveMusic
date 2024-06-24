@@ -1,5 +1,3 @@
-embedded: true
-enabled: true
 name: "Adventure Redefined"
 version: "1.0"
 
