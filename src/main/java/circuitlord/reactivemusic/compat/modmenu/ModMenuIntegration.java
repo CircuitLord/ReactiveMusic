@@ -1,8 +1,10 @@
 package circuitlord.reactivemusic.compat.modmenu;
 
 
-import circuitlord.reactivemusic.RMConfigScreen;
+//import circuitlord.reactivemusic.RMConfigScreen;
 import circuitlord.reactivemusic.compat.CompatUtils;
+import circuitlord.reactivemusic.config.ModConfig;
+import circuitlord.reactivemusic.config.YAConfig;
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
 import net.fabricmc.api.EnvType;
@@ -12,6 +14,6 @@ import net.fabricmc.api.Environment;
 public class ModMenuIntegration implements ModMenuApi {
     @Override
     public ConfigScreenFactory<?> getModConfigScreenFactory() {
-        return parent -> CompatUtils.isClothConfigLoaded() ? RMConfigScreen.buildScreen(parent) : parent;
+        return parent -> CompatUtils.isYACLLoaded() ? ModConfig.createScreen(parent) : parent;
     }
 }

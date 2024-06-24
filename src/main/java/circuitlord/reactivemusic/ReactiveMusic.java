@@ -3,6 +3,10 @@ package circuitlord.reactivemusic;
 import circuitlord.reactivemusic.config.ModConfig;
 import net.fabricmc.api.ModInitializer;
 
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.Screen;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,8 +66,7 @@ public class ReactiveMusic implements ModInitializer {
 		//	betterMusicDir.mkdir();
 
 
-		ModConfig.loadConfig();
-
+		ModConfig.GSON.load();
 
 		SongLoader.fetchAvailableSongpacks();
 
@@ -75,6 +78,22 @@ public class ReactiveMusic implements ModInitializer {
 
 
 		thread = new PlayerThread();
+
+
+
+
+
+
+		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(ClientCommandManager.literal("reactivemusic")
+				.executes(context -> {
+							MinecraftClient mc = context.getSource().getClient();
+							Screen screen = ModConfig.createScreen(mc.currentScreen);
+							mc.send(() -> mc.setScreen(screen));
+							return 1;
+						}
+				)));
+
+
 
 	}
 
@@ -114,7 +133,7 @@ public class ReactiveMusic implements ModInitializer {
 			// No song is playing and we've waiting through the silence, just start one randomly
 			// Skip wait in debug mode
 			if (thread.notQueuedOrPlaying()
-					&& ((silenceTicks > additionalSilence) || ModConfig.props.isDebugModeEnabled)) {
+					&& ((silenceTicks > additionalSilence) || ModConfig.getConfig().debugModeEnabled)) {
 				playNewSong = true;
 			}
 
@@ -159,7 +178,7 @@ public class ReactiveMusic implements ModInitializer {
 				int minTickSilence = 0;
 				int maxTickSilence = 0;
 
-				switch (ModConfig.props.musicDelay) {
+				switch (ModConfig.getConfig().musicDelayLength) {
 					case SHORT -> {
 						minTickSilence = 500;
 						maxTickSilence = 1500;
@@ -203,6 +222,14 @@ public class ReactiveMusic implements ModInitializer {
 		thread.setGainPercentage(0.0f);
 
 		thread.play(song);
+
+	}
+
+
+	public static void refreshSongpack() {
+
+		thread.resetPlayer();
+		additionalSilence = 0;
 
 	}
 
