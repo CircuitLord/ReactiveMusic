@@ -15,7 +15,7 @@ import java.util.Random;
 public class ReactiveMusic implements ModInitializer {
 
 	public static final String MOD_ID = "reactive_music";
-	public static final String MOD_VERSION = "0.2";
+	public static final String MOD_VERSION = "0.3";
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
@@ -51,21 +51,12 @@ public class ReactiveMusic implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		// This code runs as soon as Minecraft is in a mod-load-ready state.
-		// However, some things (like resources) may still be uninitialized.
-		// Proceed with mild caution.
 
 		LOGGER.info("--------------------------------------------");
 		LOGGER.info("|     Reactive Music initialization...     |");
 		LOGGER.info("|                version " + MOD_VERSION +"               |");
 		LOGGER.info("--------------------------------------------");
 
-		//File configDir = FabricLoader.getInstance().getConfigDir().toFile();
-
-		// TODO: user songpacks
-		//File betterMusicDir = new File(configDir.getParentFile(), "better_music");
-		//if(!betterMusicDir.exists())
-		//	betterMusicDir.mkdir();
 
 
 		ModConfig.GSON.load();
@@ -73,10 +64,26 @@ public class ReactiveMusic implements ModInitializer {
 
 		SongLoader.fetchAvailableSongpacks();
 
-		//SongLoader.loadFrom(null, true);
+		boolean loadedUserSongpack = false;
 
-		SongLoader.setActiveSongpack(null, true);
-		//SongLoader.setActiveSongpack(SongLoader.availableSongpacks.get(1), false);
+		// try to load a saved songpack
+		if (!config.loadedUserSongpack.isEmpty()) {
+
+			for (var songpack : SongLoader.availableSongpacks) {
+				if (!songpack.config.name.equals(config.loadedUserSongpack)) continue;
+
+				SongLoader.setActiveSongpack(songpack, false);
+				loadedUserSongpack = true;
+
+				break;
+			}
+		}
+
+		// load the default one
+		if (!loadedUserSongpack) {
+			SongLoader.setActiveSongpack(null, true);
+		}
+
 
 		SongPicker.initialize();
 

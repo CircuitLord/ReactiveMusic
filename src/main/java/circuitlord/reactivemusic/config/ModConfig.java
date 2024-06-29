@@ -5,6 +5,7 @@ import circuitlord.reactivemusic.ReactiveMusic;
 import circuitlord.reactivemusic.SongLoader;
 import circuitlord.reactivemusic.SongpackZip;
 import com.google.gson.GsonBuilder;
+import com.terraformersmc.modmenu.ModMenu;
 import dev.isxander.yacl3.api.*;
 import dev.isxander.yacl3.api.controller.DropdownStringControllerBuilder;
 import dev.isxander.yacl3.api.controller.EnumControllerBuilder;
@@ -13,10 +14,12 @@ import dev.isxander.yacl3.config.v2.api.ConfigClassHandler;
 import dev.isxander.yacl3.config.v2.api.SerialEntry;
 import dev.isxander.yacl3.config.v2.api.serializer.GsonConfigSerializerBuilder;
 import dev.isxander.yacl3.gui.controllers.BooleanController;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -52,12 +55,81 @@ public class ModConfig {
     @SerialEntry
     public double confirmationResetDelay = 1.0;
 
+    @SerialEntry
+    public String loadedUserSongpack = "";
 
 
 
     public static Screen createScreen(Screen parent) {
 
+        SongLoader.fetchAvailableSongpacks();
+
         return YetAnotherConfigLib.create(ModConfig.GSON, ((defaults, config, builder) -> {
+
+
+
+            var songpacksBuilder = ConfigCategory.createBuilder();
+            songpacksBuilder.name(Text.literal("Songpacks"));
+
+
+            boolean arIsLoaded = Objects.equals(SongLoader.activeSongpack.name, "Adventure Redefined");
+
+            songpacksBuilder.option(ButtonOption.createBuilder()
+                    .name(Text.literal("Adventure Redefined (Default)"))
+                    .description(
+                            OptionDescription.createBuilder()
+                                    .text(Text.literal("The included songpack with Reactive Music."))
+                                    .build()
+                    )
+
+                    .available(!arIsLoaded)
+                    .text(Text.literal(arIsLoaded ? "Loaded" : "Load"))
+                    .action((yaclScreen, buttonOption) -> {
+                        setActiveSongpack(null, true);
+                        ReactiveMusic.refreshSongpack();
+                        MinecraftClient.getInstance().setScreen(ModConfig.createScreen(parent));
+                    })
+
+                    .build());
+
+
+            for (var songpackZip : SongLoader.availableSongpacks) {
+
+                boolean isLoaded = Objects.equals(SongLoader.activeSongpack.name, songpackZip.config.name);
+
+
+                songpacksBuilder.option(ButtonOption.createBuilder()
+                        .name(Text.literal(songpackZip.config.name))
+                        .description(
+                                OptionDescription.createBuilder()
+                                        .text(Text.literal("TODO"))
+                                        .build()
+                        )
+
+                        .available(!isLoaded)
+
+                        .text(Text.literal(isLoaded ? "Loaded" : "Load"))
+
+
+                        .action((yaclScreen, buttonOption) -> {
+                            setActiveSongpack(songpackZip, false);
+                            ReactiveMusic.refreshSongpack();
+                            MinecraftClient.getInstance().setScreen(ModConfig.createScreen(parent));
+                        })
+
+
+
+                        .build());
+
+
+            }
+
+
+            builder.category(songpacksBuilder.build());
+
+
+
+
 
             builder
                     .title(Text.literal("Reactive Music"))
@@ -98,46 +170,6 @@ public class ModConfig {
             .build();
 
 
-            var songpacksBuilder = ConfigCategory.createBuilder();
-            songpacksBuilder.name(Text.literal("Songpacks"));
-
-/*            songpacksBuilder.option(Option.<String>createBuilder()
-                    .name(net.minecraft.network.chat.literal("String Dropdown"))
-                    .binding(
-                            defaults.stringOptions,
-                            () -> config.stringOptions,
-                            (value) -> config.stringOptions = value
-                    )
-                    .controller(opt -> DropdownStringControllerBuilder.create(opt)
-                            .values("Apple", "Banana", "Cherry", "Date")
-                            .
-                    )
-                    .build())*/
-
-            for (var songpackZip : SongLoader.availableSongpacks) {
-
-                songpacksBuilder.option(ButtonOption.createBuilder()
-                        .name(Text.literal(songpackZip.config.name))
-                        .description(
-                                OptionDescription.createBuilder()
-                                        .text(Text.literal("Cool songpack"))
-                                        .build()
-                        )
-
-
-                        .action((yaclScreen, buttonOption) -> {
-                            setActiveSongpack(songpackZip);
-                            ReactiveMusic.refreshSongpack();
-                        })
-
-
-                        .build());
-
-
-            }
-
-
-            builder.category(songpacksBuilder.build());
 
 
 
@@ -150,8 +182,20 @@ public class ModConfig {
 
 
 
-    public static void setActiveSongpack(SongpackZip zip) {
-        SongLoader.setActiveSongpack(zip, false);
+    public static void setActiveSongpack(SongpackZip zip, boolean embeddedMode) {
+
+        if (embeddedMode) {
+            getConfig().loadedUserSongpack = "";
+            ReactiveMusic.LOGGER.info("Loading embedded songpack!");
+        }
+        else {
+            getConfig().loadedUserSongpack = zip.config.name;
+            ReactiveMusic.LOGGER.info("Loading songpack: " + zip.config.name);
+        }
+
+        GSON.save();
+
+        SongLoader.setActiveSongpack(zip, embeddedMode);
 
 
     }
