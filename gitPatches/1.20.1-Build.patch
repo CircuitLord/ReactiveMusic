@@ -1,32 +1,5 @@
-diff --git forkSrcPrefix/gradle.properties forkDstPrefix/gradle.properties
-index 959eb85ca88279bde4e8fd6938f9c818ad211ec7..815799e04aba174dc06d91e285049ea67b13891c 100644
---- forkSrcPrefix/gradle.properties
-+++ forkDstPrefix/gradle.properties
-@@ -6,8 +6,8 @@ org.gradle.parallel=true
- 
- # Fabric Properties
- # check these on https://fabricmc.net/develop
--minecraft_version=1.21
--yarn_mappings=1.21+build.2
-+minecraft_version=1.20.1
-+yarn_mappings=1.20.1+build.10
- loader_version=0.15.11
- 
- mod_version=0.3.0
-@@ -16,7 +16,8 @@ archives_base_name=reactivemusic
- 
- 
- # Dependencies
--fabric_version=0.100.3+1.21
-+fabric_version=0.92.2+1.20.1
-+
-+modmenu_version=7.2.2
-+yacl_version=3.5.0+1.20.1-fabric
- 
--modmenu_version=11.0.1
--yacl_version=3.5.0+1.21-fabric
 diff --git forkSrcPrefix/src/main/resources/fabric.mod.json forkDstPrefix/src/main/resources/fabric.mod.json
-index 144c31f449951a7ce56729437d7c8183fa77c2a6..5726af6b08e6d620db04c41bb470b02fdf9e445d 100644
+index 0b8cd713c009d040e634915380472999f07b0961..7829e8f6d4c6b16135a334f1a85f450359d64e08 100644
 --- forkSrcPrefix/src/main/resources/fabric.mod.json
 +++ forkDstPrefix/src/main/resources/fabric.mod.json
 @@ -27,8 +27,8 @@
@@ -34,12 +7,13 @@ index 144c31f449951a7ce56729437d7c8183fa77c2a6..5726af6b08e6d620db04c41bb470b02f
  	"depends": {
  		"fabricloader": ">=0.15.11",
 -		"minecraft": "1.21",
--		"java": ">=21"
+-		"java": ">=21",
 +		"minecraft": "1.20.1",
-+		"java": ">=17"
- 	},
- 	"dependencies": {
++		"java": ">=17",
  		"yet_another_config_lib_v3": "*"
+ 	}
+ }
+\ No newline at end of file
 diff --git forkSrcPrefix/src/main/resources/reactivemusic.mixins.json forkDstPrefix/src/main/resources/reactivemusic.mixins.json
 index 9bd53bd531c52b81e318170a740e10e85d768110..f64933279350552e05452cbb951ce8d1ea6e8643 100644
 --- forkSrcPrefix/src/main/resources/reactivemusic.mixins.json
@@ -77,3 +51,30 @@ index 9954f1e76bb3227c5ad2cf4e5507d45c3326ed1c..c34a65d336287a2c3a1facb3f9aaed21
  }
  
  jar {
+diff --git forkSrcPrefix/gradle.properties forkDstPrefix/gradle.properties
+index 959eb85ca88279bde4e8fd6938f9c818ad211ec7..815799e04aba174dc06d91e285049ea67b13891c 100644
+--- forkSrcPrefix/gradle.properties
++++ forkDstPrefix/gradle.properties
+@@ -6,8 +6,8 @@ org.gradle.parallel=true
+ 
+ # Fabric Properties
+ # check these on https://fabricmc.net/develop
+-minecraft_version=1.21
+-yarn_mappings=1.21+build.2
++minecraft_version=1.20.1
++yarn_mappings=1.20.1+build.10
+ loader_version=0.15.11
+ 
+ mod_version=0.3.0
+@@ -16,7 +16,8 @@ archives_base_name=reactivemusic
+ 
+ 
+ # Dependencies
+-fabric_version=0.100.3+1.21
++fabric_version=0.92.2+1.20.1
++
++modmenu_version=7.2.2
++yacl_version=3.5.0+1.20.1-fabric
+ 
+-modmenu_version=11.0.1
+-yacl_version=3.5.0+1.21-fabric
