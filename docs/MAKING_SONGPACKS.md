@@ -1,7 +1,7 @@
 
 # Making Songpacks
 
-`NOTE: This is all still very early so please forgive missing features/debug tools.`
+NOTE: You can find a video version of this wiki page [here](https://www.youtube.com/watch?v=6vgtpL0cQSA)!
 
 Songpacks are constructed as folders with a yaml configuration file and a folder with mp3 music files.
 
@@ -13,13 +13,10 @@ Download [here](https://raw.githubusercontent.com/CircuitLord/ReactiveMusic/mast
 IMPORTANT: Songpacks can be worked on while unzipped, but when distributing a zipped songpack, it MUST be zipped as uncompressed, (store files). If it is compressed it will not load correctly.
 
 
-## (TEMP) Testing Songpacks
-
+## Testing Songpacks
 
 Currently you can load songpacks from the `Songpacks` section in the UI. Click on the button for your songpack name and it'll start playing.
-This also works for reloading a songpack if you've made changes you want to try. This UI is still in progress so bear with me.
-
-NOTE: Currently in the dev version this does not save on launch and you'll need to click it to switch to your songpack each time you open.
+This also works for reloading a songpack if you've made changes you want to try. 
 
 I also highly recommend turning debug mode on in the Debug section,
 this will make songs switch whenever their events become valid and removes silence gaps entirely to make it easier to test.
