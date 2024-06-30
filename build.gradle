@@ -48,8 +48,9 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 
-	implementation 'org.yaml:snakeyaml:2.2'
-	include("org.yaml:snakeyaml:2.2")
+	//implementation 'org.yaml:snakeyaml:2.2'
+	//include("org.yaml:snakeyaml:2.2")
+
 
 
 	modApi "com.terraformersmc:modmenu:${project.modmenu_version}"
