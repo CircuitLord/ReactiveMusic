@@ -102,7 +102,7 @@ public class ModConfig {
                         .name(Text.literal(songpackZip.config.name))
                         .description(
                                 OptionDescription.createBuilder()
-                                        .text(Text.literal("TODO"))
+                                        .text(Text.literal(songpackZip.config.description + "\n\nCredits:\n" + songpackZip.config.credits))
                                         .build()
                         )
 
