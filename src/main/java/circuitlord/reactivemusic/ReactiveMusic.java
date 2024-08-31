@@ -15,7 +15,7 @@ import java.util.Random;
 public class ReactiveMusic implements ModInitializer {
 
 	public static final String MOD_ID = "reactive_music";
-	public static final String MOD_VERSION = "0.3";
+	public static final String MOD_VERSION = "0.3.1";
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
