@@ -4,13 +4,12 @@ package circuitlord.reactivemusic;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.sound.SoundCategory;
-import javazoom.jl.player.AudioDevice;
-import javazoom.jl.player.JavaSoundAudioDevice;
-import javazoom.jl.player.advanced.AdvancedPlayer;
+import rm_javazoom.jl.player.AudioDevice;
+import rm_javazoom.jl.player.JavaSoundAudioDevice;
+import rm_javazoom.jl.player.advanced.AdvancedPlayer;
 import net.minecraft.text.TranslatableTextContent;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 public class PlayerThread extends Thread {
 
