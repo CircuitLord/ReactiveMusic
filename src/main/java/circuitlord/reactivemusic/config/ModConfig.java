@@ -98,29 +98,47 @@ public class ModConfig {
                 boolean isLoaded = Objects.equals(SongLoader.activeSongpack.name, songpackZip.config.name);
 
 
-                songpacksBuilder.option(ButtonOption.createBuilder()
-                        .name(Text.literal(songpackZip.config.name))
-                        .description(
-                                OptionDescription.createBuilder()
-                                        .text(Text.literal(songpackZip.config.description + "\n\nCredits:\n" + songpackZip.config.credits))
-                                        .build()
-                        )
+                if (!songpackZip.config.errorString.isEmpty()) {
+                    songpacksBuilder.option(ButtonOption.createBuilder()
+                            .name(Text.literal("FAILED LOADING: " + songpackZip.config.name))
+                            .description(
+                                    OptionDescription.createBuilder()
+                                            .text(Text.literal("Encountered errors while loading:\n\n" + songpackZip.config.errorString))
+                                            .build()
+                            )
 
-                        .available(!isLoaded)
+                            .available(false)
+                            .text(Text.literal(""))
+                            .action((yaclScreen, buttonOption) -> {
 
-                        .text(Text.literal(isLoaded ? "Loaded" : "Load"))
+                            })
+                            .build());
+
+                }
+                else {
+                    songpacksBuilder.option(ButtonOption.createBuilder()
+                            .name(Text.literal(songpackZip.config.name))
+                            .description(
+                                    OptionDescription.createBuilder()
+                                            .text(Text.literal(songpackZip.config.description + "\n\nCredits:\n" + songpackZip.config.credits))
+                                            .build()
+                            )
+
+                            .available(!isLoaded)
+
+                            .text(Text.literal(isLoaded ? "Loaded" : "Load"))
 
 
-                        .action((yaclScreen, buttonOption) -> {
-                            setActiveSongpack(songpackZip, false);
-                            ReactiveMusic.refreshSongpack();
-                            MinecraftClient.getInstance().setScreen(ModConfig.createScreen(parent));
-                        })
+                            .action((yaclScreen, buttonOption) -> {
+                                setActiveSongpack(songpackZip, false);
+                                ReactiveMusic.refreshSongpack();
+                                MinecraftClient.getInstance().setScreen(ModConfig.createScreen(parent));
+                            })
 
 
 
-                        .build());
-
+                            .build());
+                }
 
             }
 
@@ -155,6 +173,9 @@ public class ModConfig {
 
                             .option(Option.<Boolean>createBuilder()
                                     .name(Text.literal("Debug Mode Enabled"))
+                                    .description(OptionDescription.createBuilder()
+                                            .text(Text.literal("Enables some developer functionality such as always switching between songs when events change."))
+                                            .build())
                                     .binding(defaults.debugModeEnabled, () -> config.debugModeEnabled, newVal -> config.debugModeEnabled = newVal )
                                     .controller(TickBoxControllerBuilder::create)
                                     .build())

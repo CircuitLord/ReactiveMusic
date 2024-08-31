@@ -97,8 +97,6 @@
         }
 
 
-
-
         public static void setActiveSongpack(SongpackZip songpackZip, boolean embeddedMode) {
 
             if (embeddedMode) {
@@ -117,7 +115,9 @@
 
 
         public static SongpackConfig loadSongpackConfig(Path configPath, boolean embeddedMode) {
-            SongpackConfig songpack = null;
+            SongpackConfig songpack = new SongpackConfig();
+
+            songpack.configPath = configPath;
 
             Yaml yaml = new Yaml();
 
@@ -139,10 +139,14 @@
 
             }
             catch (Exception e) {
+
+                songpack.name = configPath.getName(configPath.getNameCount() - 2).toString();
+                songpack.errorString = e.toString();
+
                 ReactiveMusic.LOGGER.error("Failed to load properties! Embedded=" + embeddedMode + " Exception:" + e.toString());
             }
 
-            if (songpack != null) {
+            if (songpack.entries != null) {
                 // Load the IDs
                 for (int i = 0; i < songpack.entries.length; i++) {
                     if (songpack.entries[i] == null) continue;
