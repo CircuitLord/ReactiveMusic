@@ -79,14 +79,39 @@
                 }
 
                 if (config != null) {
+                    
+                    // Verify the songs
+
+                    for (int i = 0; i < config.entries.length; i++) {
+
+                        if (config.entries[i] == null || config.entries[i].songs == null)
+                            continue;
+
+                        for (int j = 0; j < config.entries[i].songs.length; j++) {
+
+                            SongResource songRes = getStream(packPath, false, config.entries[i].songs[j]);
+
+                            if (songRes == null) {
+
+                                String eventName = "";
+
+                                for (int k = 0; k < config.entries[i].events.length; k++) {
+                                    eventName += config.entries[i].events[k].toString();
+                                }
+
+                                config.errorString += "Failed finding song: \"" + config.entries[i].songs[j] + "\" for event: \"" + eventName + "\"\n\n";
+                            }
+
+                        }
+                    }
+                    
                     SongpackZip zip = new SongpackZip();
                     zip.path = packPath;
                     zip.config = config;
+
                     availableSongpacks.add(zip);
                 }
-
-
-
+                
             }
 
 
@@ -141,7 +166,7 @@
             catch (Exception e) {
 
                 songpack.name = configPath.getName(configPath.getNameCount() - 2).toString();
-                songpack.errorString = e.toString();
+                songpack.errorString = e.toString() + "\n\n";
 
                 ReactiveMusic.LOGGER.error("Failed to load properties! Embedded=" + embeddedMode + " Exception:" + e.toString());
             }
@@ -155,23 +180,22 @@
                 }
             }
 
-
             return songpack;
         }
 
 
 
-        public static SongResource getStream(String songName) {
+        public static SongResource getStream(Path songpackPath, boolean embedded, String songName) {
 
-            if (activeSongpack == null) return null;
+            //if (songpackPath == null) return null;
 
-            if(songName == null || songName.equals("null"))
+            if(songName == null || songName.isEmpty() || songName.equals("null"))
                 return null;
 
             SongResource songRes = new SongResource();
 
             // embedded, use resources
-            if (activeSongpackEmbedded) {
+            if (embedded) {
                 String path = "/musicpack/music/" + songName + ".mp3";
 
                 songRes.inputStream = SongLoader.class.getResourceAsStream(path);
@@ -179,16 +203,20 @@
             }
 
             // Folder in resource packs (not zipped, can just read directly)
-            else if (activeSongpackPath.toFile().isDirectory()) {
+            else if (songpackPath.toFile().isDirectory()) {
 
-                Path songPath = activeSongpackPath.resolve("music").resolve(songName + ".mp3");
+                Path songPath = songpackPath.resolve("music").resolve(songName + ".mp3");
 
                 if (Files.exists(songPath)) {
                     try {
                        songRes.inputStream = new FileInputStream(songPath.toFile());
                     } catch (FileNotFoundException e) {
                         ReactiveMusic.LOGGER.error("Failed to load song file " + songName);
+                        return null;
                     }
+                }
+                else {
+                    return null;
                 }
 
             }
@@ -201,7 +229,7 @@
                 FileSystem fs = null;
 
                 try {
-                    fs = FileSystems.newFileSystem(activeSongpackPath, env);
+                    fs = FileSystems.newFileSystem(songpackPath, env);
 
                 } catch (IOException e) {
                     ReactiveMusic.LOGGER.error("Failed while loading song file from zip " + e.getMessage());
@@ -217,7 +245,11 @@
                         songRes.fileSystem = fs;
                     } catch (IOException e) {
                         ReactiveMusic.LOGGER.error("Failed while creating inputstream from zip " + e.getMessage());
+                        return null;
                     }
+                }
+                else {
+                    return null;
                 }
             }
 

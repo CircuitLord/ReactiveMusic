@@ -133,6 +133,9 @@ public class Constructor extends SafeConstructor {
     return s;
   }
 
+
+  public static String errorString = "";
+
   /**
    * Construct mapping instance (Map, JavaBean) when the runtime class is known.
    */
@@ -278,9 +281,15 @@ public class Constructor extends SafeConstructor {
         } catch (DuplicateKeyException e) {
           throw e;
         } catch (Exception e) {
-          throw new ConstructorException(
-              "Cannot create property=" + key + " for JavaBean=" + object, node.getStartMark(),
-              e.getMessage(), valueNode.getStartMark(), e);
+          System.out.println("ReactiveMusic: Failed loading songpack, cannot create property=" + key + " " + e.getMessage());
+
+          errorString = e.getMessage();
+          return null;
+
+                  //    e.getMessage());
+          //throw new ConstructorException(
+          //    "Cannot create property=" + key + " for JavaBean=" + object, node.getStartMark(),
+          //    e.getMessage(), valueNode.getStartMark(), e);
         }
       }
       return object;

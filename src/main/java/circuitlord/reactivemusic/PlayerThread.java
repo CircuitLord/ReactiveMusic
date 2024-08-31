@@ -75,7 +75,7 @@ public class PlayerThread extends Thread {
 
 				if(queued && currentSong != null) {
 
-					currentSongResource = SongLoader.getStream(currentSong);
+					currentSongResource = SongLoader.getStream(SongLoader.activeSongpackPath, SongLoader.activeSongpackEmbedded, currentSong);
 					if(currentSongResource == null || currentSongResource.inputStream == null)
 						continue;
 
