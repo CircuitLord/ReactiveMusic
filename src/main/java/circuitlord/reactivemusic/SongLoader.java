@@ -1,6 +1,7 @@
 	package circuitlord.reactivemusic;
 
     import net.fabricmc.loader.api.FabricLoader;
+    import net.minecraft.world.biome.Biome;
     import org.yaml.snakeyaml.Yaml;
 
     import java.io.*;
@@ -82,28 +83,35 @@
                     
                     // Verify the songs
 
-                    for (int i = 0; i < config.entries.length; i++) {
 
-                        if (config.entries[i] == null || config.entries[i].songs == null)
-                            continue;
+                    if (config.entries == null) {
+                        config.errorString = "Entries are null or not formatted correctly! Make sure you indent each entry.";
+                    }
+                    else {
+                        for (int i = 0; i < config.entries.length; i++) {
 
-                        for (int j = 0; j < config.entries[i].songs.length; j++) {
+                            if (config.entries[i] == null || config.entries[i].songs == null)
+                                continue;
 
-                            SongResource songRes = getStream(packPath, false, config.entries[i].songs[j]);
+                            for (int j = 0; j < config.entries[i].songs.length; j++) {
 
-                            if (songRes == null) {
+                                SongResource songRes = getStream(packPath, false, config.entries[i].songs[j]);
 
-                                String eventName = "";
+                                if (songRes == null) {
 
-                                for (int k = 0; k < config.entries[i].events.length; k++) {
-                                    eventName += config.entries[i].events[k].toString();
+                                    String eventName = "";
+
+                                    for (int k = 0; k < config.entries[i].events.length; k++) {
+                                        eventName += config.entries[i].events[k].toString();
+                                    }
+
+                                    config.errorString += "Failed finding song: \"" + config.entries[i].songs[j] + "\" for event: \"" + eventName + "\"\n\n";
                                 }
 
-                                config.errorString += "Failed finding song: \"" + config.entries[i].songs[j] + "\" for event: \"" + eventName + "\"\n\n";
                             }
-
                         }
                     }
+
                     
                     SongpackZip zip = new SongpackZip();
                     zip.path = packPath;
@@ -177,8 +185,81 @@
                     if (songpack.entries[i] == null) continue;
 
                     songpack.entries[i].id = i;
+
+                    // Loop over all events and expand them out into songpack events and biome tag events
+                    for (int j = 0; j < songpack.entries[i].events.length; j++) {
+
+                        String val = songpack.entries[i].events[j].toLowerCase();
+                        if (val.isEmpty()) continue;
+
+
+                        // try to figure out if it's a biome=
+                        if (val.startsWith("biome=")) {
+                            String biomeTagName = val.substring(6);
+
+                            // remove the IS_ to match the check below
+                            biomeTagName = biomeTagName.replace("is_", "");
+
+                            boolean foundTag = false;
+
+                            for (int k = 0; k < SongPicker.BIOME_TAG_FIELDS.length; k++) {
+
+                                // i love creating GC
+                                String fieldName = SongPicker.BIOME_TAG_FIELDS[k].getName().toLowerCase();
+
+                                // remove the IS_ stuff in ConventionalBiomeTags v2
+                                fieldName = fieldName.replace("is_", "");
+
+                                if (fieldName.equals(biomeTagName)) {
+
+                                    var biomeTag = SongPicker.getBiomeTagFromField(SongPicker.BIOME_TAG_FIELDS[k]);
+
+                                    if (biomeTag != null) {
+                                        songpack.entries[i].biomeTagEvents.add(biomeTag);
+
+                                        foundTag = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // go to next event
+                            if (foundTag) continue;
+                        }
+
+                        // last case -- try casting to songpack event enum
+                        else {
+
+                            try {
+                                // try to cast to SongpackEvent
+                                // needs upcase for enum names
+                                SongpackEventType eventType = Enum.valueOf(SongpackEventType.class, val.toUpperCase());
+
+                                // it's a songpack event
+                                if (eventType != SongpackEventType.NONE) {
+                                    songpack.entries[i].songpackEvents.add(eventType);
+
+                                    continue;
+                                }
+                            } catch (Exception e) {
+                                //e.printStackTrace();
+                            }
+                        }
+
+                        songpack.errorString += "Unknown event type: " + val + "\n\n";
+
+                    }
+
+                    // done checking all events
+
+                    // TODO: still allow loading if not all events are found (old versions may not have same biome tags or changed names)
+                    // remove if no events were found
+
                 }
             }
+
+
+
 
             return songpack;
         }

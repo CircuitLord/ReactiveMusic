@@ -1,6 +1,7 @@
 package circuitlord.reactivemusic;
 
 
+import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.CreditsScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -12,24 +13,55 @@ import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.entity.vehicle.MinecartEntity;
 
 //import net.minecraft.registry.tag.BiomeTags;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.BiomeTags;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockPos;
 
 import net.minecraft.world.World;
+import net.minecraft.world.biome.Biome;
 
+import java.lang.reflect.Field;
 import java.util.*;
 
 public final class SongPicker {
 
 
-	public static Map<SongpackEventType, Boolean> eventMap = new EnumMap<>(SongpackEventType.class);
+	public static Map<SongpackEventType, Boolean> songpackEventMap = new EnumMap<>(SongpackEventType.class);
+
+	public static Map<TagKey<Biome>, Boolean> biomeTagEventMap = new HashMap<>();
 
 
-	public static final Random rand = new Random();
+	private static final Random rand = new Random();
 
-	public static List<String> recentlyPickedSongs = new ArrayList<>();
+	private static List<String> recentlyPickedSongs = new ArrayList<>();
 
+	public static final Field[] BIOME_TAG_FIELDS = ConventionalBiomeTags.class.getDeclaredFields();
+	public static final List<TagKey<Biome>> BIOME_TAGS = new ArrayList<>();
+
+	static {
+
+		for (Field field : BIOME_TAG_FIELDS) {
+			TagKey<Biome> biomeTag = getBiomeTagFromField(field);
+
+			BIOME_TAGS.add(biomeTag);
+			biomeTagEventMap.put(biomeTag, false);
+		}
+	}
+
+	public static TagKey<Biome> getBiomeTagFromField(Field field) {
+		if (field.getType() == TagKey.class) {
+			try {
+				@SuppressWarnings("unchecked")
+				TagKey<Biome> tag = (TagKey<Biome>) field.get(null);
+				return tag;
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			}
+		}
+		return null;
+	}
 
 
 	public static void tickEventMap() {
@@ -40,8 +72,8 @@ public final class SongPicker {
 		World world = mc.world;
 
 
-		eventMap.put(SongpackEventType.MAIN_MENU, player == null || world == null);
-		eventMap.put(SongpackEventType.CREDITS, mc.currentScreen instanceof CreditsScreen);
+		songpackEventMap.put(SongpackEventType.MAIN_MENU, player == null || world == null);
+		songpackEventMap.put(SongpackEventType.CREDITS, mc.currentScreen instanceof CreditsScreen);
 
 		// Early out if not in-game
 		if (player == null || world == null) return;
@@ -61,69 +93,64 @@ public final class SongPicker {
 		boolean sunrise = time > 23000;
 
 		// Time
-		eventMap.put(SongpackEventType.DAY, !night);
-		eventMap.put(SongpackEventType.NIGHT, night);
-		eventMap.put(SongpackEventType.SUNSET, sunset);
-		eventMap.put(SongpackEventType.SUNRISE, sunrise);
+		songpackEventMap.put(SongpackEventType.DAY, !night);
+		songpackEventMap.put(SongpackEventType.NIGHT, night);
+		songpackEventMap.put(SongpackEventType.SUNSET, sunset);
+		songpackEventMap.put(SongpackEventType.SUNRISE, sunrise);
 
 
 		// Actions
 
-		eventMap.put(SongpackEventType.DYING, player.getHealth() < 7);
-		eventMap.put(SongpackEventType.FISHING, player.fishHook != null);
+		songpackEventMap.put(SongpackEventType.DYING, player.getHealth() < 7);
+		songpackEventMap.put(SongpackEventType.FISHING, player.fishHook != null);
 
-		eventMap.put(SongpackEventType.MINECART, riding instanceof MinecartEntity);
-		eventMap.put(SongpackEventType.BOAT, riding instanceof BoatEntity);
-		eventMap.put(SongpackEventType.HORSE, riding instanceof HorseEntity);
-		eventMap.put(SongpackEventType.PIG, riding instanceof PigEntity);
-
-
-		eventMap.put(SongpackEventType.OVERWORLD, indimension == World.OVERWORLD);
-		eventMap.put(SongpackEventType.NETHER, indimension == World.NETHER);
-		eventMap.put(SongpackEventType.END, indimension == World.END);
+		songpackEventMap.put(SongpackEventType.MINECART, riding instanceof MinecartEntity);
+		songpackEventMap.put(SongpackEventType.BOAT, riding instanceof BoatEntity);
+		songpackEventMap.put(SongpackEventType.HORSE, riding instanceof HorseEntity);
+		songpackEventMap.put(SongpackEventType.PIG, riding instanceof PigEntity);
 
 
+		songpackEventMap.put(SongpackEventType.OVERWORLD, indimension == World.OVERWORLD);
+		songpackEventMap.put(SongpackEventType.NETHER, indimension == World.NETHER);
+		songpackEventMap.put(SongpackEventType.END, indimension == World.END);
 
 
-		eventMap.put(SongpackEventType.UNDERGROUND, indimension == World.OVERWORLD && underground && pos.getY() < 55);
-		eventMap.put(SongpackEventType.DEEP_UNDERGROUND, indimension == World.OVERWORLD && underground && pos.getY() < 15);
-		eventMap.put(SongpackEventType.HIGH_UP, indimension == World.OVERWORLD && !underground && pos.getY() > 128);
 
-		eventMap.put(SongpackEventType.UNDERWATER, player.isSubmergedInWater());
+
+		songpackEventMap.put(SongpackEventType.UNDERGROUND, indimension == World.OVERWORLD && underground && pos.getY() < 55);
+		songpackEventMap.put(SongpackEventType.DEEP_UNDERGROUND, indimension == World.OVERWORLD && underground && pos.getY() < 15);
+		songpackEventMap.put(SongpackEventType.HIGH_UP, indimension == World.OVERWORLD && !underground && pos.getY() > 128);
+
+		songpackEventMap.put(SongpackEventType.UNDERWATER, player.isSubmergedInWater());
 
 
 
 		// Weather
-
-		eventMap.put(SongpackEventType.RAIN, world.isRaining());
-		// TODO: snow
-		//eventMap.put(SongpackEventType.SNOW, world.sno)
+		songpackEventMap.put(SongpackEventType.RAIN, world.isRaining());
 
 
+		// TODO: WILL BE REMOVED, use biomeTagEventMap
+		songpackEventMap.put(SongpackEventType.MOUNTAIN, biome.isIn(BiomeTags.IS_MOUNTAIN));
+		songpackEventMap.put(SongpackEventType.FOREST, biome.isIn(BiomeTags.IS_FOREST));
+		songpackEventMap.put(SongpackEventType.BEACH, biome.isIn(BiomeTags.IS_BEACH));
 
 
+		// Update all ConventionalBiomeTags
+		for (TagKey<Biome> tag : BIOME_TAGS) {
+			biomeTagEventMap.put(tag, biome.isIn(tag));
+		}
 
-
-
-		eventMap.put(SongpackEventType.MOUNTAIN, biome.isIn(BiomeTags.IS_MOUNTAIN));
-		eventMap.put(SongpackEventType.FOREST, biome.isIn(BiomeTags.IS_FOREST));
-		eventMap.put(SongpackEventType.BEACH, biome.isIn(BiomeTags.IS_BEACH));
-		// TODO:
-		//eventMap.put(SongpackEventType.DESERT, false);
-
-		//eventMap.put(SongpackEventType.HOME, false);
-
-		eventMap.put(SongpackEventType.GENERIC, true);
+		songpackEventMap.put(SongpackEventType.GENERIC, true);
 	}
 
 
 
 	public static void initialize() {
 
-		eventMap.clear();
+		songpackEventMap.clear();
 
 		for (SongpackEventType eventType : SongpackEventType.values()) {
-			eventMap.put(eventType, false);
+			songpackEventMap.put(eventType, false);
 		}
 
 	}
@@ -140,14 +167,25 @@ public final class SongPicker {
 
 			boolean eventsMet = true;
 
-			for (SongpackEventType event : entry.events) {
+			for (SongpackEventType songpackEvent : entry.songpackEvents) {
 
-				if (!eventMap.containsKey(event)) continue;
+				if (!songpackEventMap.containsKey(songpackEvent)) continue;
 
-				if (eventMap.get(event) == false) {
+				if (!songpackEventMap.get(songpackEvent)) {
 					eventsMet = false;
 					break;
 				}
+			}
+
+			for (TagKey<Biome> biomeTagEvent : entry.biomeTagEvents) {
+
+				if (!biomeTagEventMap.containsKey(biomeTagEvent)) continue;
+
+				if (!biomeTagEventMap.get(biomeTagEvent)) {
+					eventsMet = false;
+					break;
+				}
+
 			}
 
 			if (eventsMet) {
@@ -159,6 +197,9 @@ public final class SongPicker {
 		// Failed
 		return null;
 	}
+
+
+
 
 
 

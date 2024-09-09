@@ -191,8 +191,8 @@ public class ReactiveMusic implements ModInitializer {
 
 				switch (ModConfig.getConfig().musicDelayLength) {
 					case SHORT -> {
-						minTickSilence = 500;
-						maxTickSilence = 1500;
+						minTickSilence = 250;
+						maxTickSilence = 1000;
 					}
 					case NORMAL -> {
 						minTickSilence = 1000;
