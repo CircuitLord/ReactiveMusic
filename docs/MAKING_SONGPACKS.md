@@ -8,15 +8,15 @@ Songpacks are constructed as folders with a yaml configuration file and a folder
 They're loaded from the `resourcepacks` folder, although they're not actually resource packs and are instead selected from the configuration UI. This is purely to make including songpacks easier.
 
 I HIGHLY recommend downloading the songpack template and using it as a base to make your pack so you understand the structure.
-Download [here](https://raw.githubusercontent.com/CircuitLord/ReactiveMusic/master/docs/ReactiveMusicSongpackTemplate.zip)!
+Download [here](https://raw.githubusercontent.com/CircuitLord/ReactiveMusic/master/docs/ReactiveMusicSongpackTemplate-v3.zip)!
 
 IMPORTANT: Songpacks can be worked on while unzipped, but when distributing a zipped songpack, it MUST be zipped as uncompressed, (store files). If it is compressed it will not load correctly.
 
 
 ## Testing Songpacks
 
-Currently you can load songpacks from the `Songpacks` section in the UI. Click on the button for your songpack name and it'll start playing.
-This also works for reloading a songpack if you've made changes you want to try. 
+You can load songpacks from the `Songpacks` section in the UI. Click on the button for your songpack name and it'll start playing.
+This also works for reloading a songpack if you've made changes you want to try without restarting your game.
 
 I also highly recommend turning debug mode on in the Debug section,
 this will make songs switch whenever their events become valid and removes silence gaps entirely to make it easier to test.
@@ -61,10 +61,23 @@ Here's an example songpack entry:
 - `(Boolean) alwaysPlay` (default false) Does this event always immediately start when it's events become valid?
 - `(String[]) songs` The list of song files to pick from when this event plays. These are picked from the `music` sub-folder.
 
+
+### IMPORTANT: Spacing matters! Use tabs to properly indent the entries and their properties.
+A proper entry looks like this!
+```
+(tab) - events: [ "DAY" ]
+(tab)(tab)alwaysPlay: true
+(tab)(tab)songs:
+(tab)(tab)(tab) - "MyAwesomeSong"
+(tab)(tab)(tab) - "MyOtherCoolSong"
+```
+
+---
+
 You can also combine multiple events for more specific songs.
 
 ```
-  - events: [ "DAY", "MOUNTAIN" ]
+  - events: [ "DAY", "BIOME=MOUNTAIN" ]
     songs:
       - "ForTheKing"
       - "Freedom"
@@ -112,9 +125,28 @@ This lists all the available songpack events you have available.
 - `DYING` (TODO)
 
 
-### Biomes
-- `FOREST`
-- `MOUNTAIN`
-- `DESERT` (TODO)
-- `BEACH`
+## Biome Tag Events
+
+You can access any biome tag from Fabric's ConventionalBiomeTags in Reactive Music! See a full list of tags [here](https://maven.fabricmc.net/docs/fabric-api-0.100.3+1.21/net/fabricmc/fabric/api/tag/convention/v2/ConventionalBiomeTags.html).
+
+For example:
+```
+  - events: [ "DAY", "BIOME=IS_HOT" ]
+    songs:
+      - "ForTheKing"
+      - "Freedom"
+
+  - events: [ "BIOME=IS_ICY" ]
+    songs:
+      - "Eventide"
+```
+
+Using `IS_` is completely optional and is handled the same internally. (`BIOME=MOUNTAIN` and `BIOME=IS_MOUNTAIN` both point to the `IS_MOUNTAIN` biome tag)
+
+
+---
+
+
+
+
 
