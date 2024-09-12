@@ -15,7 +15,7 @@ import java.util.Random;
 public class ReactiveMusic implements ModInitializer {
 
 	public static final String MOD_ID = "reactive_music";
-	public static final String MOD_VERSION = "0.3.1";
+	public static final String MOD_VERSION = "0.4.0";
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
@@ -54,7 +54,7 @@ public class ReactiveMusic implements ModInitializer {
 
 		LOGGER.info("--------------------------------------------");
 		LOGGER.info("|     Reactive Music initialization...     |");
-		LOGGER.info("|                version " + MOD_VERSION +"               |");
+		LOGGER.info("|                version " + MOD_VERSION +"              |");
 		LOGGER.info("--------------------------------------------");
 
 
@@ -196,7 +196,7 @@ public class ReactiveMusic implements ModInitializer {
 					}
 					case NORMAL -> {
 						minTickSilence = 1000;
-						maxTickSilence = 5000;
+						maxTickSilence = 4000;
 					}
 					case LONG -> {
 						minTickSilence = 2000;

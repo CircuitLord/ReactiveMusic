@@ -110,6 +110,7 @@ public class PlayerThread extends Thread {
 		if(player != null)
 			player.queuedToStop = true;
 
+		queued = false;
 		currentSong = null;
 
 		if (currentSongResource != null && currentSongResource.fileSystem != null) {

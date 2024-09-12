@@ -85,7 +85,8 @@
 
 
                     if (config.entries == null) {
-                        config.errorString = "Entries are null or not formatted correctly! Make sure you indent each entry.";
+                        config.errorString = "Entries are null or not formatted correctly! Make sure you indent each entry with a TAB.\n\n";
+                        config.blockLoading = true;
                     }
                     else {
                         for (int i = 0; i < config.entries.length; i++) {
@@ -133,14 +134,21 @@
         public static void setActiveSongpack(SongpackZip songpackZip, boolean embeddedMode) {
 
             if (embeddedMode) {
+                ReactiveMusic.LOGGER.info("Loading embedded songpack!");
 
                 // Just reload it from the resources
                 activeSongpack = loadSongpackConfig(null, true);
                 activeSongpackPath = null;
             }
             else {
+                ReactiveMusic.LOGGER.info("Loading songpack: " + songpackZip.config.name);
+
                 activeSongpack = songpackZip.config;
                 activeSongpackPath = songpackZip.path;
+            }
+
+            if (!SongLoader.activeSongpack.errorString.isEmpty()) {
+                ReactiveMusic.LOGGER.error("ERRORS while loading songpack:\n\n" + SongLoader.activeSongpack.errorString);
             }
 
             activeSongpackEmbedded = embeddedMode;
@@ -175,8 +183,9 @@
 
                 songpack.name = configPath.getName(configPath.getNameCount() - 2).toString();
                 songpack.errorString = e.toString() + "\n\n";
+                songpack.blockLoading = true;
 
-                ReactiveMusic.LOGGER.error("Failed to load properties! Embedded=" + embeddedMode + " Exception:" + e.toString());
+                //ReactiveMusic.LOGGER.error("Failed to load properties! Embedded=" + embeddedMode + " Exception:" + e.toString());
             }
 
             if (songpack.entries != null) {

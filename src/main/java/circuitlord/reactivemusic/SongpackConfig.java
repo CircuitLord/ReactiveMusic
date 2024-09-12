@@ -19,6 +19,8 @@ public class SongpackConfig {
 
     public String errorString = "";
 
+    public boolean blockLoading = false;
+
 
 
 

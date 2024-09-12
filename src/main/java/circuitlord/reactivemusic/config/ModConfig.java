@@ -98,12 +98,12 @@ public class ModConfig {
                 boolean isLoaded = Objects.equals(SongLoader.activeSongpack.name, songpackZip.config.name);
 
 
-                if (!songpackZip.config.errorString.isEmpty()) {
+                if (songpackZip.config.blockLoading) {
                     songpacksBuilder.option(ButtonOption.createBuilder()
                             .name(Text.literal("FAILED LOADING: " + songpackZip.config.name))
                             .description(
                                     OptionDescription.createBuilder()
-                                            .text(Text.literal("Encountered errors while loading:\n\n" + songpackZip.config.errorString))
+                                            .text(Text.literal("Failed to load songpack:\n\n" + songpackZip.config.errorString))
                                             .build()
                             )
 
@@ -116,11 +116,20 @@ public class ModConfig {
 
                 }
                 else {
+
+                    String name = songpackZip.config.name;
+                    String description = songpackZip.config.description + "\n\nCredits:\n" + songpackZip.config.credits;
+
+                    if (!songpackZip.config.errorString.isEmpty()) {
+                        name = "ERRORS: " + name;
+                        description = "Encountered errors while loading:\n\n" + songpackZip.config.errorString + "----------\n\n" + description;
+                    }
+
                     songpacksBuilder.option(ButtonOption.createBuilder()
-                            .name(Text.literal(songpackZip.config.name))
+                            .name(Text.literal(name))
                             .description(
                                     OptionDescription.createBuilder()
-                                            .text(Text.literal(songpackZip.config.description + "\n\nCredits:\n" + songpackZip.config.credits))
+                                            .text(Text.literal(description))
                                             .build()
                             )
 
@@ -207,17 +216,14 @@ public class ModConfig {
 
         if (embeddedMode) {
             getConfig().loadedUserSongpack = "";
-            ReactiveMusic.LOGGER.info("Loading embedded songpack!");
         }
         else {
             getConfig().loadedUserSongpack = zip.config.name;
-            ReactiveMusic.LOGGER.info("Loading songpack: " + zip.config.name);
         }
 
         GSON.save();
 
         SongLoader.setActiveSongpack(zip, embeddedMode);
-
 
     }
 
