@@ -129,6 +129,9 @@ This lists all the available songpack events you have available.
 
 You can access any biome tag from Fabric's ConventionalBiomeTags in Reactive Music! See a full list of tags [here](https://maven.fabricmc.net/docs/fabric-api-0.100.3+1.21/net/fabricmc/fabric/api/tag/convention/v2/ConventionalBiomeTags.html).
 
+NOTE: if you're using 1.20.x or below you need to instead use [this list of tags](https://maven.fabricmc.net/docs/fabric-api-0.79.2+1.20/net/fabricmc/fabric/api/tag/convention/v1/ConventionalBiomeTags.html).
+
+
 For example:
 ```
   - events: [ "DAY", "BIOME=IS_HOT" ]
