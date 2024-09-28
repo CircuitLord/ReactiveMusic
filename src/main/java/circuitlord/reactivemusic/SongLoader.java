@@ -85,7 +85,7 @@
 
 
                     if (config.entries == null) {
-                        config.errorString = "Entries are null or not formatted correctly! Make sure you indent each entry with a TAB.\n\n";
+                        config.errorString += "Entries are null or not formatted correctly! Make sure you indent each entry with a TAB.\n\n";
                         config.blockLoading = true;
                     }
                     else {
