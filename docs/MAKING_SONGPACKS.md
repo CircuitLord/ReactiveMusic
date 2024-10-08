@@ -122,7 +122,7 @@ This lists all the available songpack events you have available.
 
 ### Actions
 - `FISHING`
-- `DYING` (TODO)
+- `DYING`
 
 
 ## Biome Tag Events
