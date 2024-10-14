@@ -54,6 +54,13 @@ public enum SongpackEventType {
     BEACH,
 
 
+    // MOBS
+
+    BOSS,
+    VILLAGE,
+    HOSTILE_MOBS,
+
+
     GENERIC
 
 }

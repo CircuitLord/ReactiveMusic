@@ -3,22 +3,25 @@ package circuitlord.reactivemusic;
 
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.hud.BossBarHud;
+import net.minecraft.client.gui.hud.ClientBossBar;
 import net.minecraft.client.gui.screen.CreditsScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 
+import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.passive.HorseEntity;
 import net.minecraft.entity.passive.PigEntity;
+import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.entity.vehicle.MinecartEntity;
 
 //import net.minecraft.registry.tag.BiomeTags;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.BiomeTags;
 import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockPos;
 
+import net.minecraft.util.math.Box;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 
@@ -40,6 +43,8 @@ public final class SongPicker {
 	public static final Field[] BIOME_TAG_FIELDS = ConventionalBiomeTags.class.getDeclaredFields();
 	public static final List<TagKey<Biome>> BIOME_TAGS = new ArrayList<>();
 
+	public static Field BOSS_BAR_FIELD;
+
 	static {
 
 		for (Field field : BIOME_TAG_FIELDS) {
@@ -48,7 +53,14 @@ public final class SongPicker {
 			BIOME_TAGS.add(biomeTag);
 			biomeTagEventMap.put(biomeTag, false);
 		}
-	}
+
+        try {
+            BOSS_BAR_FIELD = BossBarHud.class.getDeclaredField("bossBars");
+			BOSS_BAR_FIELD.setAccessible(true);
+        } catch (NoSuchFieldException e) {
+            //throw new RuntimeException(e);
+        }
+    }
 
 	public static TagKey<Biome> getBiomeTagFromField(Field field) {
 		if (field.getType() == TagKey.class) {
@@ -68,6 +80,9 @@ public final class SongPicker {
 
 
 		MinecraftClient mc = MinecraftClient.getInstance();
+		if (mc == null)
+			return;
+
 		ClientPlayerEntity player = mc.player;
 		World world = mc.world;
 
@@ -139,6 +154,62 @@ public final class SongPicker {
 		for (TagKey<Biome> tag : BIOME_TAGS) {
 			biomeTagEventMap.put(tag, biome.isIn(tag));
 		}
+
+
+
+		// Search for nearby entities that could be relevant to music
+		int villagerCount = 0;
+		int aggroMobsCount = 0;
+
+		double radius = 30.0;
+
+		Box box = new Box(player.getX() - radius, player.getY() - radius, player.getZ() - radius,
+				player.getX() + radius, player.getY() + radius, player.getZ() + radius);
+
+		List<Entity> nearbyEntities = world.getEntitiesByClass(Entity.class, box, entity -> entity != player);
+
+		for (Entity entity : nearbyEntities) {
+
+			if (entity instanceof VillagerEntity villagerEntity) {
+				villagerCount++;
+			}
+
+			if (entity instanceof HostileEntity hostileEntity) {
+
+				// TODO: need to do GetTarget to see if they're aggrod on player
+
+				if (hostileEntity.isAngryAt(player)) {
+					aggroMobsCount++;
+				}
+
+			}
+
+		}
+
+		songpackEventMap.put(SongpackEventType.VILLAGE, villagerCount > 0);
+		//songpackEventMap.put(SongpackEventType.HOSTILE_MOBS, aggroMobsCount >= 4);
+
+		//System.out.println("Villager count: " + villagerCount + ", Aggro mobs count: " + aggroMobsCount);
+
+
+		// try to get boss bars
+		boolean bossBarActive = false;
+
+		if (mc.inGameHud != null && mc.inGameHud.getBossBarHud() != null) {
+			try {
+
+				var bossBars = (Map<UUID, ClientBossBar>) BOSS_BAR_FIELD.get(mc.inGameHud.getBossBarHud());
+
+				if (!bossBars.isEmpty()) {
+					bossBarActive = true;
+				}
+			} catch (IllegalAccessException e) {
+				//e.printStackTrace();
+			}
+		}
+
+		songpackEventMap.put(SongpackEventType.BOSS, bossBarActive);
+
 
 		songpackEventMap.put(SongpackEventType.GENERIC, true);
 	}
