@@ -10,6 +10,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 
 import net.minecraft.entity.mob.HostileEntity;
+import net.minecraft.entity.mob.Monster;
 import net.minecraft.entity.passive.HorseEntity;
 import net.minecraft.entity.passive.PigEntity;
 import net.minecraft.entity.passive.VillagerEntity;
@@ -31,286 +32,367 @@ import java.util.*;
 public final class SongPicker {
 
 
-	public static Map<SongpackEventType, Boolean> songpackEventMap = new EnumMap<>(SongpackEventType.class);
+    public static Map<SongpackEventType, Boolean> songpackEventMap = new EnumMap<>(SongpackEventType.class);
 
-	public static Map<TagKey<Biome>, Boolean> biomeTagEventMap = new HashMap<>();
+    public static Map<TagKey<Biome>, Boolean> biomeTagEventMap = new HashMap<>();
+
+    public static Map<Entity, Long> recentEntityDamageSources = new HashMap<>();
 
 
-	private static final Random rand = new Random();
+    private static final Random rand = new Random();
 
-	private static List<String> recentlyPickedSongs = new ArrayList<>();
+    private static List<String> recentlyPickedSongs = new ArrayList<>();
 
-	public static final Field[] BIOME_TAG_FIELDS = ConventionalBiomeTags.class.getDeclaredFields();
-	public static final List<TagKey<Biome>> BIOME_TAGS = new ArrayList<>();
+    public static final Field[] BIOME_TAG_FIELDS = ConventionalBiomeTags.class.getDeclaredFields();
+    public static final List<TagKey<Biome>> BIOME_TAGS = new ArrayList<>();
 
-	public static Field BOSS_BAR_FIELD;
+    public static Field BOSS_BAR_FIELD;
 
-	static {
+    public static Long TIME_FOR_FORGET_DAMAGE_SOURCE = 200L;
 
-		for (Field field : BIOME_TAG_FIELDS) {
-			TagKey<Biome> biomeTag = getBiomeTagFromField(field);
+    static {
 
-			BIOME_TAGS.add(biomeTag);
-			biomeTagEventMap.put(biomeTag, false);
-		}
+        for (Field field : BIOME_TAG_FIELDS) {
+            TagKey<Biome> biomeTag = getBiomeTagFromField(field);
+
+            BIOME_TAGS.add(biomeTag);
+            biomeTagEventMap.put(biomeTag, false);
+        }
 
         try {
             BOSS_BAR_FIELD = BossBarHud.class.getDeclaredField("bossBars");
-			BOSS_BAR_FIELD.setAccessible(true);
+            BOSS_BAR_FIELD.setAccessible(true);
         } catch (NoSuchFieldException e) {
             //throw new RuntimeException(e);
         }
     }
 
-	public static TagKey<Biome> getBiomeTagFromField(Field field) {
-		if (field.getType() == TagKey.class) {
-			try {
-				@SuppressWarnings("unchecked")
-				TagKey<Biome> tag = (TagKey<Biome>) field.get(null);
-				return tag;
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
-			}
-		}
-		return null;
-	}
+    public static TagKey<Biome> getBiomeTagFromField(Field field) {
+        if (field.getType() == TagKey.class) {
+            try {
+                @SuppressWarnings("unchecked")
+                TagKey<Biome> tag = (TagKey<Biome>) field.get(null);
+                return tag;
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
 
 
-	public static void tickEventMap() {
+    public static void tickEventMap() {
 
 
-		MinecraftClient mc = MinecraftClient.getInstance();
-		if (mc == null)
-			return;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc == null)
+            return;
 
-		ClientPlayerEntity player = mc.player;
-		World world = mc.world;
+        ClientPlayerEntity player = mc.player;
+        World world = mc.world;
 
 
-		songpackEventMap.put(SongpackEventType.MAIN_MENU, player == null || world == null);
-		songpackEventMap.put(SongpackEventType.CREDITS, mc.currentScreen instanceof CreditsScreen);
+        songpackEventMap.put(SongpackEventType.MAIN_MENU, player == null || world == null);
+        songpackEventMap.put(SongpackEventType.CREDITS, mc.currentScreen instanceof CreditsScreen);
 
-		// Early out if not in-game
-		if (player == null || world == null) return;
+        // Early out if not in-game
+        if (player == null || world == null) return;
 
-		// World processing
-		BlockPos pos = new BlockPos(player.getBlockPos());
-		var biome = world.getBiome(pos);
+        // World processing
+        BlockPos pos = new BlockPos(player.getBlockPos());
+        var biome = world.getBiome(pos);
 
-		boolean underground = !world.isSkyVisible(pos);
-		var indimension = world.getRegistryKey();
+        boolean underground = !world.isSkyVisible(pos);
+        var indimension = world.getRegistryKey();
 
-		Entity riding = VersionHelper.GetRidingEntity(player);
+        Entity riding = VersionHelper.GetRidingEntity(player);
 
-		long time = world.getTimeOfDay() % 24000;
-		boolean night = time > 13300 && time < 23200;
-		boolean sunset = time > 12000 && time < 13000;
-		boolean sunrise = time > 23000;
+        long time = world.getTimeOfDay() % 24000;
+        boolean night = time > 13300 && time < 23200;
+        boolean sunset = time > 12000 && time < 13000;
+        boolean sunrise = time > 23000;
 
-		// Time
-		songpackEventMap.put(SongpackEventType.DAY, !night);
-		songpackEventMap.put(SongpackEventType.NIGHT, night);
-		songpackEventMap.put(SongpackEventType.SUNSET, sunset);
-		songpackEventMap.put(SongpackEventType.SUNRISE, sunrise);
+        // Time
+        songpackEventMap.put(SongpackEventType.DAY, !night);
+        songpackEventMap.put(SongpackEventType.NIGHT, night);
+        songpackEventMap.put(SongpackEventType.SUNSET, sunset);
+        songpackEventMap.put(SongpackEventType.SUNRISE, sunrise);
 
 
-		// Actions
+        // Actions
 
-		songpackEventMap.put(SongpackEventType.DYING, player.getHealth() < 7);
-		songpackEventMap.put(SongpackEventType.FISHING, player.fishHook != null);
+        songpackEventMap.put(SongpackEventType.DYING, player.getHealth() < 7);
+        songpackEventMap.put(SongpackEventType.FISHING, player.fishHook != null);
 
-		songpackEventMap.put(SongpackEventType.MINECART, riding instanceof MinecartEntity);
-		songpackEventMap.put(SongpackEventType.BOAT, riding instanceof BoatEntity);
-		songpackEventMap.put(SongpackEventType.HORSE, riding instanceof HorseEntity);
-		songpackEventMap.put(SongpackEventType.PIG, riding instanceof PigEntity);
+        songpackEventMap.put(SongpackEventType.MINECART, riding instanceof MinecartEntity);
+        songpackEventMap.put(SongpackEventType.BOAT, riding instanceof BoatEntity);
+        songpackEventMap.put(SongpackEventType.HORSE, riding instanceof HorseEntity);
+        songpackEventMap.put(SongpackEventType.PIG, riding instanceof PigEntity);
 
 
-		songpackEventMap.put(SongpackEventType.OVERWORLD, indimension == World.OVERWORLD);
-		songpackEventMap.put(SongpackEventType.NETHER, indimension == World.NETHER);
-		songpackEventMap.put(SongpackEventType.END, indimension == World.END);
+        songpackEventMap.put(SongpackEventType.OVERWORLD, indimension == World.OVERWORLD);
+        songpackEventMap.put(SongpackEventType.NETHER, indimension == World.NETHER);
+        songpackEventMap.put(SongpackEventType.END, indimension == World.END);
 
 
+        songpackEventMap.put(SongpackEventType.UNDERGROUND, indimension == World.OVERWORLD && underground && pos.getY() < 55);
+        songpackEventMap.put(SongpackEventType.DEEP_UNDERGROUND, indimension == World.OVERWORLD && underground && pos.getY() < 15);
+        songpackEventMap.put(SongpackEventType.HIGH_UP, indimension == World.OVERWORLD && !underground && pos.getY() > 128);
 
+        songpackEventMap.put(SongpackEventType.UNDERWATER, player.isSubmergedInWater());
 
-		songpackEventMap.put(SongpackEventType.UNDERGROUND, indimension == World.OVERWORLD && underground && pos.getY() < 55);
-		songpackEventMap.put(SongpackEventType.DEEP_UNDERGROUND, indimension == World.OVERWORLD && underground && pos.getY() < 15);
-		songpackEventMap.put(SongpackEventType.HIGH_UP, indimension == World.OVERWORLD && !underground && pos.getY() > 128);
 
-		songpackEventMap.put(SongpackEventType.UNDERWATER, player.isSubmergedInWater());
+        // Weather
+        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining());
 
 
+        // TODO: WILL BE REMOVED, use biomeTagEventMap
+        songpackEventMap.put(SongpackEventType.MOUNTAIN, biome.isIn(BiomeTags.IS_MOUNTAIN));
+        songpackEventMap.put(SongpackEventType.FOREST, biome.isIn(BiomeTags.IS_FOREST));
+        songpackEventMap.put(SongpackEventType.BEACH, biome.isIn(BiomeTags.IS_BEACH));
 
-		// Weather
-		songpackEventMap.put(SongpackEventType.RAIN, world.isRaining());
+        // Update all ConventionalBiomeTags
+        for (TagKey<Biome> tag : BIOME_TAGS) {
+            biomeTagEventMap.put(tag, biome.isIn(tag));
+        }
 
+/*        var biomeTagsList = biome.streamTags().toList();
 
-		// TODO: WILL BE REMOVED, use biomeTagEventMap
-		songpackEventMap.put(SongpackEventType.MOUNTAIN, biome.isIn(BiomeTags.IS_MOUNTAIN));
-		songpackEventMap.put(SongpackEventType.FOREST, biome.isIn(BiomeTags.IS_FOREST));
-		songpackEventMap.put(SongpackEventType.BEACH, biome.isIn(BiomeTags.IS_BEACH));
+        for (var tag : biomeTagsList) {
+            System.out.println(tag.id().toString());
+        }*/
 
 
-		// Update all ConventionalBiomeTags
-		for (TagKey<Biome> tag : BIOME_TAGS) {
-			biomeTagEventMap.put(tag, biome.isIn(tag));
-		}
+        // process recent damage sources
 
+        // remove past sources
+        recentEntityDamageSources.entrySet().removeIf(entry -> entry.getKey() == null || !entry.getKey().isAlive() || world.getTime() - entry.getValue() > TIME_FOR_FORGET_DAMAGE_SOURCE);
 
+        // add new damage sources
+        var recentDamage = player.getRecentDamageSource();
 
-		// Search for nearby entities that could be relevant to music
-		int villagerCount = 0;
-		int aggroMobsCount = 0;
+        if (recentDamage != null && recentDamage.getSource() != null) {
+            recentEntityDamageSources.put(recentDamage.getSource(), world.getTime());
+        }
 
-		double radius = 30.0;
 
-		Box box = new Box(player.getX() - radius, player.getY() - radius, player.getZ() - radius,
-				player.getX() + radius, player.getY() + radius, player.getZ() + radius);
 
-		List<Entity> nearbyEntities = world.getEntitiesByClass(Entity.class, box, entity -> entity != player);
 
-		for (Entity entity : nearbyEntities) {
+        // Search for nearby entities that could be relevant to music
 
-			if (entity instanceof VillagerEntity villagerEntity) {
-				villagerCount++;
-			}
+        {
+            int villagerCount = 0;
 
-			if (entity instanceof HostileEntity hostileEntity) {
+            double radiusXZ = 30.0;
+            double radiusY = 15.0;
 
-				// TODO: need to do GetTarget to see if they're aggrod on player
+            Box box = new Box(player.getX() - radiusXZ, player.getY() - radiusY, player.getZ() - radiusXZ,
+                    player.getX() + radiusXZ, player.getY() + radiusY, player.getZ() + radiusXZ);
 
-				if (hostileEntity.isAngryAt(player)) {
-					aggroMobsCount++;
-				}
+            List<VillagerEntity> nearbyVillagerCheck = world.getEntitiesByClass(VillagerEntity.class, box, entity -> entity != null);
 
-			}
+            for (VillagerEntity villagerEntity : nearbyVillagerCheck) {
+                villagerCount++;
+            }
 
-		}
+            songpackEventMap.put(SongpackEventType.VILLAGE, villagerCount > 0);
 
-		songpackEventMap.put(SongpackEventType.VILLAGE, villagerCount > 0);
-		//songpackEventMap.put(SongpackEventType.HOSTILE_MOBS, aggroMobsCount >= 4);
+        }
 
-		//System.out.println("Villager count: " + villagerCount + ", Aggro mobs count: " + aggroMobsCount);
+        {
+            List<HostileEntity> nearbyHostile = world.getEntitiesByClass(HostileEntity.class,
+                    GetBoxAroundPlayer(player, 12.f, 6.f),
+                    entity -> entity != null);
 
+            songpackEventMap.put(SongpackEventType.NEARBY_MOBS, nearbyHostile.size() >= 1);
 
-		// try to get boss bars
-		boolean bossBarActive = false;
+        }
 
-		if (mc.inGameHud != null && mc.inGameHud.getBossBarHud() != null) {
-			try {
 
-				var bossBars = (Map<UUID, ClientBossBar>) BOSS_BAR_FIELD.get(mc.inGameHud.getBossBarHud());
+        //songpackEventMap.put(SongpackEventType.HOSTILE_MOBS, aggroMobsCount >= 4);
 
-				if (!bossBars.isEmpty()) {
-					bossBarActive = true;
-				}
-			} catch (IllegalAccessException e) {
-				//e.printStackTrace();
-			}
-		}
+        //System.out.println("Villager count: " + villagerCount + ", Aggro mobs count: " + aggroMobsCount);
 
-		songpackEventMap.put(SongpackEventType.BOSS, bossBarActive);
 
+        // try to get boss bars
+        boolean bossBarActive = false;
 
-		songpackEventMap.put(SongpackEventType.GENERIC, true);
-	}
+        if (mc.inGameHud != null && mc.inGameHud.getBossBarHud() != null) {
+            try {
 
+                var bossBars = (Map<UUID, ClientBossBar>) BOSS_BAR_FIELD.get(mc.inGameHud.getBossBarHud());
 
+                if (!bossBars.isEmpty()) {
+                    bossBarActive = true;
+                }
+            } catch (IllegalAccessException e) {
+                //e.printStackTrace();
+            }
+        }
 
-	public static void initialize() {
+        songpackEventMap.put(SongpackEventType.BOSS, bossBarActive);
 
-		songpackEventMap.clear();
 
-		for (SongpackEventType eventType : SongpackEventType.values()) {
-			songpackEventMap.put(eventType, false);
-		}
+        songpackEventMap.put(SongpackEventType.GENERIC, true);
+    }
 
-	}
 
+    private static Box GetBoxAroundPlayer(ClientPlayerEntity player, float radiusXZ, float radiusY) {
 
+        return new Box(player.getX() - radiusXZ, player.getY() - radiusY, player.getZ() - radiusXZ,
+                player.getX() + radiusXZ, player.getY() + radiusY, player.getZ() + radiusXZ);
 
-	public static SongpackEntry getCurrentEntry() {
+    }
 
 
-		for (int i = 0; i < SongLoader.activeSongpack.entries.length; i++) {
+    public static void initialize() {
 
-			SongpackEntry entry = SongLoader.activeSongpack.entries[i];
-			if (entry == null) continue;
+        songpackEventMap.clear();
 
-			boolean eventsMet = true;
+        for (SongpackEventType eventType : SongpackEventType.values()) {
+            songpackEventMap.put(eventType, false);
+        }
 
-			for (SongpackEventType songpackEvent : entry.songpackEvents) {
+    }
 
-				if (!songpackEventMap.containsKey(songpackEvent)) continue;
 
-				if (!songpackEventMap.get(songpackEvent)) {
-					eventsMet = false;
-					break;
-				}
-			}
+  /*  public static SongpackEntry getCurrentEntry() {
 
-			for (TagKey<Biome> biomeTagEvent : entry.biomeTagEvents) {
 
-				if (!biomeTagEventMap.containsKey(biomeTagEvent)) continue;
+        for (int i = 0; i < SongLoader.activeSongpack.entries.length; i++) {
 
-				if (!biomeTagEventMap.get(biomeTagEvent)) {
-					eventsMet = false;
-					break;
-				}
+            SongpackEntry entry = SongLoader.activeSongpack.entries[i];
+            if (entry == null) continue;
 
-			}
+            boolean eventsMet = true;
 
-			if (eventsMet) {
-				return entry;
-			}
+            for (SongpackEventType songpackEvent : entry.songpackEvents) {
 
-		}
+                if (!songpackEventMap.containsKey(songpackEvent)) continue;
 
-		// Failed
-		return null;
-	}
+                if (!songpackEventMap.get(songpackEvent)) {
+                    eventsMet = false;
+                    break;
+                }
+            }
 
+            for (TagKey<Biome> biomeTagEvent : entry.biomeTagEvents) {
 
+                if (!biomeTagEventMap.containsKey(biomeTagEvent)) continue;
 
+                if (!biomeTagEventMap.get(biomeTagEvent)) {
+                    eventsMet = false;
+                    break;
+                }
 
+            }
 
+            if (eventsMet) {
+                return entry;
+            }
 
+        }
 
+        // Failed
+        return null;
+    }*/
 
+    private static final List<SongpackEntry> reusableValidEntries = new ArrayList<>();
 
-	static String pickRandomSong(String[] songArr) {
 
-		List<String> songs = new ArrayList<>(Arrays.stream(songArr).toList());
-		songs.removeAll(recentlyPickedSongs);
+    public static List<SongpackEntry> getAllValidEntries() {
 
+        reusableValidEntries.clear();
 
-		String picked;
+        for (int i = 0; i < SongLoader.activeSongpack.entries.length; i++) {
 
-		// If there's remaining songs, pick one of those
-		if (!songs.isEmpty()) {
-			int randomIndex = rand.nextInt(songs.size());
-			picked = songs.get(randomIndex);
-		}
+            SongpackEntry entry = SongLoader.activeSongpack.entries[i];
+            if (entry == null) continue;
 
-		// Else we've played all these recently so just pick a new random one
-		else {
-			int randomIndex = rand.nextInt(songArr.length);
-			picked = songArr[randomIndex];
-		}
+            boolean eventsMet = true;
 
+            for (SongpackEventType songpackEvent : entry.songpackEvents) {
 
-		// only track the past X songs
-		if (recentlyPickedSongs.size() > 5) {
-			recentlyPickedSongs.remove(0);
-		}
+                if (!songpackEventMap.containsKey(songpackEvent))
+                    continue;
 
-		recentlyPickedSongs.add(picked);
+                if (!songpackEventMap.get(songpackEvent)) {
+                    eventsMet = false;
+                    break;
+                }
+            }
 
+            for (TagKey<Biome> biomeTagEvent : entry.biomeTagEvents) {
 
-		return picked;
-	}
+                if (!biomeTagEventMap.containsKey(biomeTagEvent))
+                    continue;
 
+                if (!biomeTagEventMap.get(biomeTagEvent)) {
+                    eventsMet = false;
+                    break;
+                }
+            }
 
-	public static String getSongName(String song) {
-		return song == null ? "" : song.replaceAll("([^A-Z])([A-Z])", "$1 $2");
-	}
+            if (eventsMet) {
+                reusableValidEntries.add(entry);
+            }
+        }
+
+        return reusableValidEntries;
+    }
+
+
+    static boolean hasSongNotPlayedRecently(String[] songs) {
+        for (String song : songs) {
+            if (!recentlyPickedSongs.contains(song)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    static List<String> getNotRecentlyPlayedSongs(String[] songs) {
+        List<String> notRecentlyPlayed = new ArrayList<>(Arrays.asList(songs));
+        notRecentlyPlayed.removeAll(recentlyPickedSongs);
+        return notRecentlyPlayed;
+    }
+
+
+    static String pickRandomSong(String[] songArr) {
+
+        List<String> songs = new ArrayList<>(Arrays.stream(songArr).toList());
+        songs.removeAll(recentlyPickedSongs);
+
+
+        String picked;
+
+        // If there's remaining songs, pick one of those
+        if (!songs.isEmpty()) {
+            int randomIndex = rand.nextInt(songs.size());
+            picked = songs.get(randomIndex);
+        }
+
+        // Else we've played all these recently so just pick a new random one
+        else {
+            int randomIndex = rand.nextInt(songArr.length);
+            picked = songArr[randomIndex];
+        }
+
+
+        // only track the past X songs
+        if (recentlyPickedSongs.size() >= 10) {
+            recentlyPickedSongs.remove(0);
+        }
+
+        recentlyPickedSongs.add(picked);
+
+
+        return picked;
+    }
+
+
+    public static String getSongName(String song) {
+        return song == null ? "" : song.replaceAll("([^A-Z])([A-Z])", "$1 $2");
+    }
 }

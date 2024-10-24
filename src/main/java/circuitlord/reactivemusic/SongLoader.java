@@ -188,6 +188,7 @@
                 //ReactiveMusic.LOGGER.error("Failed to load properties! Embedded=" + embeddedMode + " Exception:" + e.toString());
             }
 
+
             if (songpack.entries != null) {
                 // Load the IDs
                 for (int i = 0; i < songpack.entries.length; i++) {
@@ -206,18 +207,23 @@
                         if (val.startsWith("biome=")) {
                             String biomeTagName = val.substring(6);
 
+                            biomeTagName = CleanBiomeTagString(biomeTagName);
+
                             // remove the IS_ to match the check below
-                            biomeTagName = biomeTagName.replace("is_", "");
+                            //biomeTagName = biomeTagName.replace("is_", "");
 
                             boolean foundTag = false;
 
                             for (int k = 0; k < SongPicker.BIOME_TAG_FIELDS.length; k++) {
 
                                 // i love creating GC
-                                String fieldName = SongPicker.BIOME_TAG_FIELDS[k].getName().toLowerCase();
+                                String fieldName = SongPicker.BIOME_TAG_FIELDS[k].getName();
+
+                                // TODO: cache this in song picker?
+                                fieldName = CleanBiomeTagString(fieldName);
 
                                 // remove the IS_ stuff in ConventionalBiomeTags v2
-                                fieldName = fieldName.replace("is_", "");
+                                //fieldName = fieldName.replace("is_", "");
 
                                 if (fieldName.equals(biomeTagName)) {
 
@@ -272,6 +278,23 @@
 
             return songpack;
         }
+
+
+        public static String CleanBiomeTagString(String input) {
+            input = input.toLowerCase();
+
+            // handle cases where the start of the tag changed
+            input = input.replace("is_", "");
+            input = input.replace("in_", "");
+            input = input.replace("climate_", "");
+
+            // converting to 1.21 format with biometag v2
+            input = input.replace("tree_coniferous", "coniferous_tree");
+
+            return input;
+
+        }
+
 
 
 

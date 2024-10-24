@@ -10,6 +10,8 @@ import net.minecraft.client.gui.screen.Screen;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class ReactiveMusic implements ModInitializer {
@@ -33,7 +35,7 @@ public class ReactiveMusic implements ModInitializer {
 	//static String nextSong;
 	static int waitForSwitchTicks = 0;
 	static int fadeOutTicks = 0;
-	static int fadeInTicks = 0;
+	//static int fadeInTicks = 0;
 	static int silenceTicks = 0;
 
 	static int slowTickUpdateCounter = 0;
@@ -47,6 +49,11 @@ public class ReactiveMusic implements ModInitializer {
 
 
 	static ModConfig config;
+
+
+	// Add this static list to the class
+	private static List<SongpackEntry> validEntries = new ArrayList<>();
+
 
 
 	@Override
@@ -126,8 +133,29 @@ public class ReactiveMusic implements ModInitializer {
 		}
 
 
-		SongpackEntry newEntry = SongPicker.getCurrentEntry();
+		validEntries = SongPicker.getAllValidEntries();
 
+		SongpackEntry newEntry = null;
+
+		// Try to find the highest entry with a song we haven't played recently
+		for (var entry : validEntries) {
+
+			// if this is the same entry and we're still playing the song we picked, keep it
+			if (currentEntry == entry && thread.isPlaying()) {
+				newEntry = currentEntry;
+				break;
+			}
+
+			if (SongPicker.hasSongNotPlayedRecently(entry.songs)) {
+				newEntry = entry;
+				break;
+			}
+		}
+
+		// if we didn't find any entries, just use the highest priority one
+		if (newEntry == null && !validEntries.isEmpty()) {
+			newEntry = validEntries.getFirst();
+		}
 
 		// If a valid event exists
 		if (newEntry != null && newEntry.songs.length > 0) {
@@ -135,6 +163,15 @@ public class ReactiveMusic implements ModInitializer {
 
 			if (currentEntry == null || newEntry.id != currentEntry.id) waitForSwitchTicks++;
 			else waitForSwitchTicks = 0;
+
+
+			// if we started fading out, and the event became valid again, we need to fade back in
+			if (thread.isPlaying() && currentEntry.id == newEntry.id && fadeOutTicks > 0) {
+				// Copy the behavior from below where it fades out
+				thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
+
+				fadeOutTicks--;
+			}
 
 
 			boolean playNewSong = false;

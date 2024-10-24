@@ -58,7 +58,10 @@ public enum SongpackEventType {
 
     BOSS,
     VILLAGE,
-    HOSTILE_MOBS,
+
+    NEARBY_MOBS,
+
+
 
 
     GENERIC
