@@ -1,30 +1,46 @@
-Subject: [PATCH] 1.20.1
+Subject: [PATCH] 1.20.1 build config
 ---
-Index: src/main/resources/reactivemusic.mixins.json
+Index: gradle.properties
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
+<+>ISO-8859-1
 ===================================================================
-diff --git a/src/main/resources/reactivemusic.mixins.json b/src/main/resources/reactivemusic.mixins.json
---- a/src/main/resources/reactivemusic.mixins.json	(revision f0197f4b53e34b9edd7d8362000cf50d4b83686f)
-+++ b/src/main/resources/reactivemusic.mixins.json	(date 1726121635702)
-@@ -1,7 +1,7 @@
- {
-   "required": true,
-   "package": "circuitlord.reactivemusic.mixin",
--  "compatibilityLevel": "JAVA_21",
-+  "compatibilityLevel": "JAVA_17",
-   "mixins": [
-   ],
-   "injectors": {
+diff --git a/gradle.properties b/gradle.properties
+--- a/gradle.properties	(revision 17b933744db3dd216aec4e7b0d58f496891b16fc)
++++ b/gradle.properties	(date 1730586412799)
+@@ -6,18 +6,18 @@
+ 
+ # Fabric Properties
+ # check these on https://fabricmc.net/develop
+-minecraft_version=1.21
+-yarn_mappings=1.21+build.2
++minecraft_version=1.20.1
++yarn_mappings=1.20.1+build.10
+ loader_version=0.15.11
+ 
+-mod_version=0.4.0
++mod_version=0.5.0
+ maven_group=circuitlord.reactivemusic
+ archives_base_name=reactivemusic
+ 
+ 
+ # Dependencies
+-fabric_version=0.100.3+1.21
++fabric_version=0.92.2+1.20.1
+ 
+-modmenu_version=11.0.1
+-yacl_version=3.5.0+1.21-fabric
++modmenu_version=7.2.2
++yacl_version=3.5.0+1.20.1-fabric
+ 
 Index: src/main/java/circuitlord/reactivemusic/SongPicker.java
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/src/main/java/circuitlord/reactivemusic/SongPicker.java b/src/main/java/circuitlord/reactivemusic/SongPicker.java
---- a/src/main/java/circuitlord/reactivemusic/SongPicker.java	(revision f0197f4b53e34b9edd7d8362000cf50d4b83686f)
-+++ b/src/main/java/circuitlord/reactivemusic/SongPicker.java	(date 1726121807351)
+--- a/src/main/java/circuitlord/reactivemusic/SongPicker.java	(revision 17b933744db3dd216aec4e7b0d58f496891b16fc)
++++ b/src/main/java/circuitlord/reactivemusic/SongPicker.java	(date 1730590639833)
 @@ -1,7 +1,10 @@
  package circuitlord.reactivemusic;
  
@@ -35,16 +51,33 @@ diff --git a/src/main/java/circuitlord/reactivemusic/SongPicker.java b/src/main/
 +
 +
  import net.minecraft.client.MinecraftClient;
- import net.minecraft.client.gui.screen.CreditsScreen;
- import net.minecraft.client.network.ClientPlayerEntity;
+ import net.minecraft.client.gui.hud.BossBarHud;
+ import net.minecraft.client.gui.hud.ClientBossBar;
+Index: src/main/resources/reactivemusic.mixins.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/resources/reactivemusic.mixins.json b/src/main/resources/reactivemusic.mixins.json
+--- a/src/main/resources/reactivemusic.mixins.json	(revision 17b933744db3dd216aec4e7b0d58f496891b16fc)
++++ b/src/main/resources/reactivemusic.mixins.json	(date 1730586098944)
+@@ -1,7 +1,7 @@
+ {
+   "required": true,
+   "package": "circuitlord.reactivemusic.mixin",
+-  "compatibilityLevel": "JAVA_21",
++  "compatibilityLevel": "JAVA_17",
+   "mixins": [
+   ],
+   "injectors": {
 Index: build.gradle
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/build.gradle b/build.gradle
---- a/build.gradle	(revision f0197f4b53e34b9edd7d8362000cf50d4b83686f)
-+++ b/build.gradle	(date 1726121604899)
+--- a/build.gradle	(revision 17b933744db3dd216aec4e7b0d58f496891b16fc)
++++ b/build.gradle	(date 1730586098926)
 @@ -78,7 +78,7 @@
  }
  
@@ -71,47 +104,16 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/src/main/resources/fabric.mod.json b/src/main/resources/fabric.mod.json
---- a/src/main/resources/fabric.mod.json	(revision f0197f4b53e34b9edd7d8362000cf50d4b83686f)
-+++ b/src/main/resources/fabric.mod.json	(date 1726121771508)
+--- a/src/main/resources/fabric.mod.json	(revision 17b933744db3dd216aec4e7b0d58f496891b16fc)
++++ b/src/main/resources/fabric.mod.json	(date 1730586653017)
 @@ -27,8 +27,8 @@
  	],
  	"depends": {
  		"fabricloader": ">=0.15.11",
 -		"minecraft": ["~1.21"],
 -		"java": ">=21",
-+		"minecraft": ["1.20.1"],
++		"minecraft": ["1.20", "1.20.1"],
 +		"java": ">=17",
  		"yet_another_config_lib_v3": "*"
  	},
  	"custom": {
-Index: gradle.properties
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>ISO-8859-1
-===================================================================
-diff --git a/gradle.properties b/gradle.properties
---- a/gradle.properties	(revision f0197f4b53e34b9edd7d8362000cf50d4b83686f)
-+++ b/gradle.properties	(date 1726121878623)
-@@ -6,8 +6,8 @@
- 
- # Fabric Properties
- # check these on https://fabricmc.net/develop
--minecraft_version=1.21
--yarn_mappings=1.21+build.2
-+minecraft_version=1.20.1
-+yarn_mappings=1.20.1+build.10
- loader_version=0.15.11
- 
- mod_version=0.4.0
-@@ -16,8 +16,8 @@
- 
- 
- # Dependencies
--fabric_version=0.100.3+1.21
-+fabric_version=0.92.2+1.20.1
- 
--modmenu_version=11.0.1
--yacl_version=3.5.0+1.21-fabric
-+modmenu_version=7.2.2
-+yacl_version=3.5.0+1.20.1-fabric
- 
