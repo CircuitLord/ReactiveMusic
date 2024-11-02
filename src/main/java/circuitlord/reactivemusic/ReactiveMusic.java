@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +31,7 @@ public class ReactiveMusic implements ModInitializer {
 
 	public static PlayerThread thread;
 
-	static String currentSong;
+	static String currentSong = null;
 	static SongpackEntry currentEntry = null;
 	
 	//static String nextSong;
@@ -40,6 +41,8 @@ public class ReactiveMusic implements ModInitializer {
 	static int silenceTicks = 0;
 
 	static int slowTickUpdateCounter = 0;
+
+	static boolean currentDimBlacklisted = false;
 
 	boolean doSilenceForNextQueuedSong = true;
 
@@ -110,8 +113,47 @@ public class ReactiveMusic implements ModInitializer {
 							mc.send(() -> mc.setScreen(screen));
 							return 1;
 						}
-				)));
+				)
 
+				.then(ClientCommandManager.literal("blacklistDimension")
+						.executes(context -> {
+
+							String key = context.getSource().getClient().world.getRegistryKey().getValue().toString();
+
+							if (config.blacklistedDimensions.contains(key)) {
+								context.getSource().sendFeedback(Text.literal("ReactiveMusic: " + key + " was already in blacklist."));
+								return 1;
+							}
+
+							context.getSource().sendFeedback(Text.literal("ReactiveMusic: Added " + key + " to blacklist."));
+
+							config.blacklistedDimensions.add(key);
+							ModConfig.saveConfig();
+
+							return 1;
+						})
+				)
+
+				.then(ClientCommandManager.literal("unblacklistDimension")
+						.executes(context -> {
+							String key = context.getSource().getClient().world.getRegistryKey().getValue().toString();
+
+							if (!config.blacklistedDimensions.contains(key)) {
+								context.getSource().sendFeedback(Text.literal("ReactiveMusic: " + key + " was not in blacklist."));
+								return 1;
+							}
+
+							context.getSource().sendFeedback(Text.literal("ReactiveMusic: Removed " + key + " from blacklist."));
+
+							config.blacklistedDimensions.remove(key);
+							ModConfig.saveConfig();
+
+							return 1;
+						})
+				)
+
+			)
+		);
 
 
 	}
@@ -122,44 +164,68 @@ public class ReactiveMusic implements ModInitializer {
 
 		if (SongLoader.activeSongpack == null) return;
 
+		MinecraftClient mc = MinecraftClient.getInstance();
+
 		if (!thread.isPlaying()) silenceTicks++;
 		else silenceTicks = 0;
 
 		slowTickUpdateCounter++;
 
 		if (slowTickUpdateCounter > 20) {
+
+			currentDimBlacklisted = false;
+
+			// see if the dimension we're in is blacklisted -- update at same time as event map to keep them in sync
+			if (mc != null && mc.world != null) {
+				String curDim = mc.world.getRegistryKey().getValue().toString();
+
+				for (String dim : config.blacklistedDimensions) {
+					if (dim.equals(curDim)) {
+						currentDimBlacklisted = true;
+						break;
+					}
+				}
+			}
+
 			SongPicker.tickEventMap();
 
 			slowTickUpdateCounter = 0;
 		}
 
+		// --- find new potential entry ---
 
 		validEntries = SongPicker.getAllValidEntries();
 
 		SongpackEntry newEntry = null;
 
-		// Try to find the highest entry with a song we haven't played recently
-		for (var entry : validEntries) {
+		if (!currentDimBlacklisted) {
 
-			// if this is the same entry and we're still playing the song we picked, keep it
-			if (currentEntry == entry && thread.isPlaying()) {
-				newEntry = currentEntry;
-				break;
+			// Try to find the highest entry with a song we haven't played recently
+			for (var entry : validEntries) {
+
+				// if this is the same entry and we're still playing the song we picked, keep it
+				if (currentEntry == entry && thread.isPlaying()) {
+					newEntry = currentEntry;
+					break;
+				}
+
+				// if this entry has songs we haven't played recently -- or it doesn't allow fallback
+				// then pick it as the "new" potential entry
+				if (SongPicker.hasSongNotPlayedRecently(entry.songs) || !entry.allowFallback) {
+					newEntry = entry;
+					break;
+				}
 			}
 
-			// if this entry has songs we haven't played recently -- or it doesn't allow fallback
-			// then pick it as the "new" potential entry
-			if (SongPicker.hasSongNotPlayedRecently(entry.songs) || !entry.allowFallback) {
-				newEntry = entry;
-				break;
+			// if we didn't find any entries, just use the highest priority one
+			if (newEntry == null && !validEntries.isEmpty()) {
+				newEntry = validEntries.get(0);
 			}
+
 		}
 
-		// if we didn't find any entries, just use the highest priority one
-		if (newEntry == null && !validEntries.isEmpty()) {
-			newEntry = validEntries.get(0);
-		}
 
+		// --- main loop, check new entry and see if we should play it ---
 
 		// If a new valid entry exists, check it
 		if (newEntry != null && newEntry.songs.length > 0) {
@@ -212,19 +278,8 @@ public class ReactiveMusic implements ModInitializer {
 					&& !Arrays.asList(newEntry.songs).contains(currentSong)
 			) {
 
-				if (fadeOutTicks < FADE_DURATION) {
-
-					fadeOutTicks++;
-
-					thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
-				}
-				else {
-					thread.resetPlayer();
-					fadeOutTicks = 0;
-				}
-
+				tickFadeOut();
 			}
-
 
 			if (playNewSong) {
 				String picked = SongPicker.pickRandomSong(newEntry.songs);
@@ -253,12 +308,39 @@ public class ReactiveMusic implements ModInitializer {
 
 		}
 
+		// no entries are valid, we shouldn't be playing any music!
+		// this can happen if no entry is valid or the dimension is blacklisted
+		else {
+			if (thread.isPlaying()) {
+				tickFadeOut();
+			}
+			else {
+				currentEntry = null;
+				currentSong = null;
+			}
+		}
+
 
 
 		thread.processRealGain();
 
 	}
 
+
+	public static void tickFadeOut() {
+
+		if (!thread.isPlaying())
+			return;
+
+		if (fadeOutTicks < FADE_DURATION) {
+			fadeOutTicks++;
+			thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
+		}
+		else {
+			thread.resetPlayer();
+			fadeOutTicks = 0;
+		}
+	}
 
 
 	public static void changeCurrentSong(String song, SongpackEntry newEntry) {

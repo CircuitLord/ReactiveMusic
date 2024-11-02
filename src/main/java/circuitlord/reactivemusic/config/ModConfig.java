@@ -19,6 +19,8 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -31,6 +33,10 @@ public class ModConfig {
 
     public static ModConfig getConfig() {
         return GSON.instance();
+    }
+
+    public static void saveConfig() {
+        GSON.save();
     }
 
     public static final ConfigClassHandler<ModConfig> GSON = ConfigClassHandler.createBuilder(ModConfig.class)
@@ -57,6 +63,9 @@ public class ModConfig {
 
     @SerialEntry
     public String loadedUserSongpack = "";
+
+    @SerialEntry
+    public List<String> blacklistedDimensions = new ArrayList<>();
 
 
 
