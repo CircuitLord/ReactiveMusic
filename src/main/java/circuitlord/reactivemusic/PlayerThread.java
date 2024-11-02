@@ -35,7 +35,7 @@ public class PlayerThread extends Thread {
 	public volatile static float gainPercentage = 1.0f;
 
 	public static final float QUIET_VOLUME_PERCENTAGE = 0.7f;
-	public static final float QUIET_VOLUME_LERP_RATE = 0.015f;
+	public static final float QUIET_VOLUME_LERP_RATE = 0.02f;
 	public static float quietPercentage = 1.0f;
 
 	public volatile static float realGain = 0;

@@ -11,13 +11,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
 public class ReactiveMusic implements ModInitializer {
 
 	public static final String MOD_ID = "reactive_music";
-	public static final String MOD_VERSION = "0.4.0";
+	public static final String MOD_VERSION = "0.5.0";
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
@@ -146,7 +147,9 @@ public class ReactiveMusic implements ModInitializer {
 				break;
 			}
 
-			if (SongPicker.hasSongNotPlayedRecently(entry.songs)) {
+			// if this entry has songs we haven't played recently -- or it doesn't allow fallback
+			// then pick it as the "new" potential entry
+			if (SongPicker.hasSongNotPlayedRecently(entry.songs) || !entry.allowFallback) {
 				newEntry = entry;
 				break;
 			}
@@ -154,10 +157,11 @@ public class ReactiveMusic implements ModInitializer {
 
 		// if we didn't find any entries, just use the highest priority one
 		if (newEntry == null && !validEntries.isEmpty()) {
-			newEntry = validEntries.getFirst();
+			newEntry = validEntries.get(0);
 		}
 
-		// If a valid event exists
+
+		// If a new valid entry exists, check it
 		if (newEntry != null && newEntry.songs.length > 0) {
 
 
@@ -195,7 +199,7 @@ public class ReactiveMusic implements ModInitializer {
 				playNewSong = true;
 			}
 
-			// Fading
+			// --- Fading current song to switch to new event ---
 
 			// If we changed what event is active, we need to fade out
 			// Wait for a bit to make sure we stay on a different event
@@ -203,6 +207,9 @@ public class ReactiveMusic implements ModInitializer {
 			else if (thread.isPlaying() && currentEntry != null && newEntry.id != currentEntry.id
 					&& waitForSwitchTicks > WAIT_FOR_SWITCH_DURATION
 					&& (currentEntry.alwaysStop || newEntry.alwaysPlay || config.debugModeEnabled)
+
+					// make sure the new entry doesn't have the song we're playing already -- because then we wouldn't want to switch
+					&& !Arrays.asList(newEntry.songs).contains(currentSong)
 			) {
 
 				if (fadeOutTicks < FADE_DURATION) {

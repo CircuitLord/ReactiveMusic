@@ -17,6 +17,8 @@ public class SongpackEntry {
 
     public boolean alwaysPlay = false;
 
+    public boolean allowFallback = true;
+
     public String[] songs;
 
     // Not part of user-facing config, loaded in SongLoader

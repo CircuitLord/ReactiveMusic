@@ -217,7 +217,8 @@ public final class SongPicker {
         // try to get boss bars
         boolean bossBarActive = false;
 
-        if (mc.inGameHud != null && mc.inGameHud.getBossBarHud() != null) {
+        // TODO: fix null boss_bar_field
+        if (mc.inGameHud != null && mc.inGameHud.getBossBarHud() != null && BOSS_BAR_FIELD != null) {
             try {
 
                 var bossBars = (Map<UUID, ClientBossBar>) BOSS_BAR_FIELD.get(mc.inGameHud.getBossBarHud());
