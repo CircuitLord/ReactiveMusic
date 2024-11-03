@@ -59,6 +59,7 @@ Here's an example songpack entry:
 - `(SongpackEventType) events` The specific events that need to be valid for this entry to play. (see details below)
 - `(Boolean) alwaysStop` (default false) Does this event always stop when it's events are no longer valid?
 - `(Boolean) alwaysPlay` (default false) Does this event always immediately start when it's events become valid?
+- `(Boolean) allowFallback` (default true) If we've played all songs from this event, are we allowed to "fallback" to events under us?
 - `(String[]) songs` The list of song files to pick from when this event plays. These are picked from the `music` sub-folder.
 
 
@@ -115,6 +116,7 @@ This lists all the available songpack events you have available.
 - `HIGH_UP`
 
 ### Entities
+- `NEARBY_MOBS` (nearby >= 1 monster, may not work that well and may be replaced with combat events soon)
 - `MINECART`
 - `BOAT`
 - `HORSE`
@@ -124,12 +126,17 @@ This lists all the available songpack events you have available.
 - `FISHING`
 - `DYING`
 
+### Location
+- `VILLAGE` (nearby villagers)
+
+### Combat
+- `BOSS` (whenever a boss bar is on-screen locally)
 
 ## Biome Tag Events
 
 You can access any biome tag from Fabric's ConventionalBiomeTags in Reactive Music! See a full list of tags [here](https://maven.fabricmc.net/docs/fabric-api-0.100.3+1.21/net/fabricmc/fabric/api/tag/convention/v2/ConventionalBiomeTags.html).
 
-NOTE: if you're using 1.20.x or below you need to instead use [this list of tags](https://maven.fabricmc.net/docs/fabric-api-0.79.2+1.20/net/fabricmc/fabric/api/tag/convention/v1/ConventionalBiomeTags.html).
+NOTE: if you're using 1.20, you have slightly less tags you can use, most of the 1.21 tags WILL work but as a resort reference [this list of tags](https://maven.fabricmc.net/docs/fabric-api-0.79.2+1.20/net/fabricmc/fabric/api/tag/convention/v1/ConventionalBiomeTags.html) for 1.20.
 
 
 For example:
@@ -143,9 +150,6 @@ For example:
     songs:
       - "Eventide"
 ```
-
-Using `IS_` is completely optional and is handled the same internally. (`BIOME=MOUNTAIN` and `BIOME=IS_MOUNTAIN` both point to the `IS_MOUNTAIN` biome tag)
-
 
 ---
 

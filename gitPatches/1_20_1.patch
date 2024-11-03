@@ -1,4 +1,4 @@
-Subject: [PATCH] 1.20.1 build config
+Subject: [PATCH] add comment to fix in future
 ---
 Index: gradle.properties
 IDEA additional info:
@@ -6,9 +6,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>ISO-8859-1
 ===================================================================
 diff --git a/gradle.properties b/gradle.properties
---- a/gradle.properties	(revision 17b933744db3dd216aec4e7b0d58f496891b16fc)
-+++ b/gradle.properties	(date 1730586412799)
-@@ -6,18 +6,18 @@
+--- a/gradle.properties	(revision 24516a190ec2ba03cc0c2d5acaf8f5cff9172fc0)
++++ b/gradle.properties	(date 1730611029267)
+@@ -6,8 +6,8 @@
  
  # Fabric Properties
  # check these on https://fabricmc.net/develop
@@ -18,10 +18,8 @@ diff --git a/gradle.properties b/gradle.properties
 +yarn_mappings=1.20.1+build.10
  loader_version=0.15.11
  
--mod_version=0.4.0
-+mod_version=0.5.0
- maven_group=circuitlord.reactivemusic
- archives_base_name=reactivemusic
+ mod_version=0.5.0
+@@ -16,8 +16,8 @@
  
  
  # Dependencies
@@ -39,8 +37,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/src/main/java/circuitlord/reactivemusic/SongPicker.java b/src/main/java/circuitlord/reactivemusic/SongPicker.java
---- a/src/main/java/circuitlord/reactivemusic/SongPicker.java	(revision 17b933744db3dd216aec4e7b0d58f496891b16fc)
-+++ b/src/main/java/circuitlord/reactivemusic/SongPicker.java	(date 1730590639833)
+--- a/src/main/java/circuitlord/reactivemusic/SongPicker.java	(revision 24516a190ec2ba03cc0c2d5acaf8f5cff9172fc0)
++++ b/src/main/java/circuitlord/reactivemusic/SongPicker.java	(date 1730611029289)
 @@ -1,7 +1,10 @@
  package circuitlord.reactivemusic;
  
@@ -59,8 +57,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/src/main/resources/reactivemusic.mixins.json b/src/main/resources/reactivemusic.mixins.json
---- a/src/main/resources/reactivemusic.mixins.json	(revision 17b933744db3dd216aec4e7b0d58f496891b16fc)
-+++ b/src/main/resources/reactivemusic.mixins.json	(date 1730586098944)
+--- a/src/main/resources/reactivemusic.mixins.json	(revision 24516a190ec2ba03cc0c2d5acaf8f5cff9172fc0)
++++ b/src/main/resources/reactivemusic.mixins.json	(date 1730611029301)
 @@ -1,7 +1,7 @@
  {
    "required": true,
@@ -76,8 +74,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/build.gradle b/build.gradle
---- a/build.gradle	(revision 17b933744db3dd216aec4e7b0d58f496891b16fc)
-+++ b/build.gradle	(date 1730586098926)
+--- a/build.gradle	(revision 24516a190ec2ba03cc0c2d5acaf8f5cff9172fc0)
++++ b/build.gradle	(date 1730611007923)
 @@ -78,7 +78,7 @@
  }
  
@@ -104,8 +102,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/src/main/resources/fabric.mod.json b/src/main/resources/fabric.mod.json
---- a/src/main/resources/fabric.mod.json	(revision 17b933744db3dd216aec4e7b0d58f496891b16fc)
-+++ b/src/main/resources/fabric.mod.json	(date 1730586653017)
+--- a/src/main/resources/fabric.mod.json	(revision 24516a190ec2ba03cc0c2d5acaf8f5cff9172fc0)
++++ b/src/main/resources/fabric.mod.json	(date 1730611029295)
 @@ -27,8 +27,8 @@
  	],
  	"depends": {
