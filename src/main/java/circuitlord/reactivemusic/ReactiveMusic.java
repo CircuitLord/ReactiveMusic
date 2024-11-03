@@ -19,7 +19,7 @@ import java.util.Random;
 public class ReactiveMusic implements ModInitializer {
 
 	public static final String MOD_ID = "reactive_music";
-	public static final String MOD_VERSION = "0.5.0";
+	public static final String MOD_VERSION = "0.5.1";
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
@@ -48,8 +48,6 @@ public class ReactiveMusic implements ModInitializer {
 
 
 	static Random rand = new Random();
-
-	//public static final circuitlord.reactivemusic.ReactiveMusicConfig CONFIG = circuitlord.reactivemusic.ReactiveMusicConfig.createAndLoad();
 
 
 	static ModConfig config;
