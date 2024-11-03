@@ -225,6 +225,9 @@ public class ReactiveMusic implements ModInitializer {
 		}
 
 
+		// TODO: NOTE
+		// when we just skip switching songs if the new event has the music, we should still update currentEntry to match that or it has some issues
+
 		// --- main loop, check new entry and see if we should play it ---
 
 		// If a new valid entry exists, check it
