@@ -256,6 +256,10 @@ public class ReactiveMusic implements ModInitializer {
 				playNewSong = true;
 			}
 
+
+			// TODO: bug with the two below modes:
+			// TODO: when underground, we have alwaysplay so it means this immediately triggers again when it stops
+
 			// the newEntry is defined to always play, just start it immediately
 			else if (thread.notQueuedOrPlaying() && newEntry.alwaysPlay) {
 				playNewSong = true;
