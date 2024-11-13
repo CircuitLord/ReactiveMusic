@@ -1,0 +1,13 @@
+{
+  "reactive_music.title": "韵律回想",
+  "reactive_music.config.category.general": "通用",
+  "reactive_music.config.category.debug": "调试用",
+
+
+  "reactive_music.config.option.music_delay": "音乐延迟",
+
+
+  "reactive_music.config.option.debug_mode_enabled": "已启用调试模式"
+
+
+}
