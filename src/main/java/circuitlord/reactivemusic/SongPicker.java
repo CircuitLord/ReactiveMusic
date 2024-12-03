@@ -113,7 +113,7 @@ public final class SongPicker {
 
         // Actions
 
-        songpackEventMap.put(SongpackEventType.DYING, player.getHealth() < 7);
+        songpackEventMap.put(SongpackEventType.DYING, player.getHealth() / player.getMaxHealth() < 0.35);
         songpackEventMap.put(SongpackEventType.FISHING, player.fishHook != null);
 
         songpackEventMap.put(SongpackEventType.MINECART, riding instanceof MinecartEntity);
