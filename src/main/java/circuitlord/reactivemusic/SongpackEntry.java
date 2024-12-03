@@ -25,4 +25,5 @@ public class SongpackEntry {
     public int id = -1;
     public List<SongpackEventType> songpackEvents = new ArrayList<>();
     public List<TagKey<Biome>> biomeTagEvents = new ArrayList<>();
+    public List<EntityType<?>> entityEvents = new ArrayList<>();
 }
