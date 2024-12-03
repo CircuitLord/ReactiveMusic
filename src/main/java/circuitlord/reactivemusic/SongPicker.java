@@ -212,7 +212,7 @@ public final class SongPicker {
 
             for (MobEntity entity : nearbyEntityCheck) {
                 entityEventMap.put(entity.getType(), nearbyEntityCheck.size() >= 1);
-                ReactiveMusic.LOGGER.info("Entity type: " + String.valueOf(entity.getType()));
+                // ReactiveMusic.LOGGER.info("Entity type: " + String.valueOf(entity.getType()));
             }
         }
         
