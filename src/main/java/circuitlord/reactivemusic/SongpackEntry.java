@@ -19,6 +19,8 @@ public class SongpackEntry {
 
     public boolean allowFallback = true;
 
+    public boolean stackOnFallback = false;
+
     public String[] songs;
 
     // Not part of user-facing config, loaded in SongLoader
