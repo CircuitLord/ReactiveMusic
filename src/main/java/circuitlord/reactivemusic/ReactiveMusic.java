@@ -206,7 +206,7 @@ public class ReactiveMusic implements ModInitializer {
 			for (var entry : validEntries) {
 				// if this entry can stack on entries below it, keep it in a separate list to add to the song picker pool
 				// only consider when the size of valid entries is more than 1
-				if (entry.stackOnFallback && validEntries.size() > 1) {
+				if (entry.stackable && validEntries.size() > 1) {
 					selectedSongs = ArrayUtils.addAll(selectedSongs, entry.songs);
 					continue;
 				}
@@ -230,7 +230,7 @@ public class ReactiveMusic implements ModInitializer {
 				for (var i = 0; i < validEntries.size(); i++) {
 					newEntry = validEntries.get(i);
 					// choose an entry that is not stackable unless it's the only entry in the list
-					if (!newEntry.stackOnFallback || validEntries.size() == 1)
+					if (!newEntry.stackable || validEntries.size() == 1)
 						break;
 				}
 			}

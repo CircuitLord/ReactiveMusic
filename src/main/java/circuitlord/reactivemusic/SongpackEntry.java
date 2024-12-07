@@ -19,7 +19,7 @@ public class SongpackEntry {
 
     public boolean allowFallback = true;
 
-    public boolean stackOnFallback = false;
+    public boolean stackable = false;
 
     public String[] songs;
 
