@@ -1,6 +1,7 @@
 	package circuitlord.reactivemusic;
 
     import net.fabricmc.loader.api.FabricLoader;
+    import net.minecraft.entity.EntityType;
     import net.minecraft.world.biome.Biome;
     import org.yaml.snakeyaml.Yaml;
 
@@ -240,6 +241,22 @@
 
                             // go to next event
                             if (foundTag) continue;
+                        }
+			
+			// try to figure out if it's an entity=
+                        if (val.startsWith("entity=")) {
+                            String entityName = val.substring(7);
+
+                            boolean foundEntityType = false;
+                            var entityType = EntityType.get(entityName);
+                            // Check if an EntityType of entityName exists
+                            if (EntityType.get(entityName).isPresent()) {
+                                songpack.entries[i].entityEvents.add(entityType.get());
+                                foundEntityType = true;
+                            }
+
+                            // go to next event
+                            if (foundEntityType) continue;
                         }
 
                         // last case -- try casting to songpack event enum
