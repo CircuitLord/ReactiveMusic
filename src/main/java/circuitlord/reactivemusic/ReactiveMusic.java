@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +34,7 @@ public class ReactiveMusic implements ModInitializer {
 
 	static String currentSong = null;
 	static SongpackEntry currentEntry = null;
+	static List<SongpackEntry> currentGenericEntries = new ArrayList<>();
 	
 	//static String nextSong;
 	static int waitForSwitchTicks = 0;
@@ -195,11 +197,19 @@ public class ReactiveMusic implements ModInitializer {
 		validEntries = SongPicker.getAllValidEntries();
 
 		SongpackEntry newEntry = null;
+		String[] selectedSongs = {};
 
 		if (!currentDimBlacklisted) {
+			currentGenericEntries.clear();
 
 			// Try to find the highest entry with a song we haven't played recently
 			for (var entry : validEntries) {
+				// if this entry can stack on entries below it, keep it in a separate list to add to the song picker pool
+				// only consider when the size of valid entries is more than 1
+				if (entry.stackable && validEntries.size() > 1) {
+					selectedSongs = ArrayUtils.addAll(selectedSongs, entry.songs);
+					continue;
+				}
 
 				// if this is the same entry and we're still playing the song we picked, keep it
 				if (currentEntry == entry && thread.isPlaying()) {
@@ -217,9 +227,17 @@ public class ReactiveMusic implements ModInitializer {
 
 			// if we didn't find any entries, just use the highest priority one
 			if (newEntry == null && !validEntries.isEmpty()) {
-				newEntry = validEntries.get(0);
+				for (var i = 0; i < validEntries.size(); i++) {
+					newEntry = validEntries.get(i);
+					// choose an entry that is not stackable unless it's the only entry in the list
+					if (!newEntry.stackable || validEntries.size() == 1)
+						break;
+				}
 			}
 
+			if (newEntry != null) {
+				selectedSongs = ArrayUtils.addAll(selectedSongs, newEntry.songs);
+			}
 		}
 
 
@@ -229,7 +247,7 @@ public class ReactiveMusic implements ModInitializer {
 		// --- main loop, check new entry and see if we should play it ---
 
 		// If a new valid entry exists, check it
-		if (newEntry != null && newEntry.songs.length > 0) {
+		if (newEntry != null && selectedSongs.length > 0) {
 
 
 			if (currentEntry == null || newEntry.id != currentEntry.id) waitForSwitchTicks++;
@@ -280,14 +298,14 @@ public class ReactiveMusic implements ModInitializer {
 					&& (currentEntry.alwaysStop || newEntry.alwaysPlay || config.debugModeEnabled)
 
 					// make sure the new entry doesn't have the song we're playing already -- because then we wouldn't want to switch
-					&& !Arrays.asList(newEntry.songs).contains(currentSong)
+					&& !Arrays.asList(selectedSongs).contains(currentSong)
 			) {
 
 				tickFadeOut();
 			}
 
 			if (playNewSong) {
-				String picked = SongPicker.pickRandomSong(newEntry.songs);
+				String picked = SongPicker.pickRandomSong(selectedSongs);
 				changeCurrentSong(picked, newEntry);
 
 				int minTickSilence = 0;
