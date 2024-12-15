@@ -10,8 +10,10 @@ import net.minecraft.client.gui.screen.CreditsScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.mob.Monster;
+import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.mob.Monster; // note: unused atm
 import net.minecraft.entity.passive.HorseEntity;
 import net.minecraft.entity.passive.PigEntity;
 import net.minecraft.entity.passive.VillagerEntity;
@@ -37,6 +39,9 @@ public final class SongPicker {
 
     public static Map<TagKey<Biome>, Boolean> biomeTagEventMap = new HashMap<>();
 
+    // This can probably be done differently (I'm tired, boss...)
+    public static Map<EntityType<?>, Boolean> entityEventMap = new HashMap<>();
+    
     public static Map<Entity, Long> recentEntityDamageSources = new HashMap<>();
 
 
@@ -136,7 +141,7 @@ public final class SongPicker {
 
         // Weather
         songpackEventMap.put(SongpackEventType.RAIN, world.isRaining());
-
+        // TODO: implement SNOW
 
         // TODO: WILL BE REMOVED, use biomeTagEventMap
         songpackEventMap.put(SongpackEventType.MOUNTAIN, biome.isIn(BiomeTags.IS_MOUNTAIN));
@@ -148,7 +153,7 @@ public final class SongPicker {
             biomeTagEventMap.put(tag, biome.isIn(tag));
         }
 
-/*        var biomeTagsList = biome.streamTags().toList();
+        /* var biomeTagsList = biome.streamTags().toList();
 
         for (var tag : biomeTagsList) {
             System.out.println(tag.id().toString());
@@ -191,6 +196,26 @@ public final class SongPicker {
 
         }
 
+        // TODO: change entityEventMap to Map of <entityTypes, numberOfEntities> for threshold requirements
+        // TODO: this would probably also work for checking hostile mobs & villagers from the same map
+        {
+            entityEventMap.clear();
+            //int entityCount = 0;
+
+            double radiusXZ = 30.0;
+            double radiusY = 15.0;
+            // This might as well be GetBoxAroundPlayer
+            Box box = new Box(player.getX() - radiusXZ, player.getY() - radiusY, player.getZ() - radiusXZ,
+                    player.getX() + radiusXZ, player.getY() + radiusY, player.getZ() + radiusXZ);
+
+            List<MobEntity> nearbyEntityCheck = mc.world.getEntitiesByClass(MobEntity.class, box, entity -> entity != null);
+
+            for (MobEntity entity : nearbyEntityCheck) {
+                entityEventMap.put(entity.getType(), nearbyEntityCheck.size() >= 1);
+                // ReactiveMusic.LOGGER.info("Entity type: " + String.valueOf(entity.getType()));
+            }
+        }
+        
         {
             List<HostileEntity> nearbyHostile = world.getEntitiesByClass(HostileEntity.class,
                     GetBoxAroundPlayer(player, 12.f, 6.f),
@@ -239,6 +264,7 @@ public final class SongPicker {
     public static void initialize() {
 
         songpackEventMap.clear();
+        entityEventMap.clear(); // I think this is superfluous
 
         for (SongpackEventType eventType : SongpackEventType.values()) {
             songpackEventMap.put(eventType, false);
@@ -313,6 +339,16 @@ public final class SongPicker {
                 }
             }
 
+            for (EntityType<?> entityEvent : entry.entityEvents) {
+                if (!entityEventMap.containsKey(entityEvent))
+                {
+                    //continue;
+                //if (!entityEventMap.get(entityEvent)) {
+                    eventsMet = false;
+                    break;
+                }
+            }
+            
             for (TagKey<Biome> biomeTagEvent : entry.biomeTagEvents) {
 
                 if (!biomeTagEventMap.containsKey(biomeTagEvent))

@@ -3,6 +3,7 @@ package circuitlord.reactivemusic;
 import net.minecraft.loot.entry.TagEntry;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.entity.EntityType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,4 +28,5 @@ public class SongpackEntry {
     public int id = -1;
     public List<SongpackEventType> songpackEvents = new ArrayList<>();
     public List<TagKey<Biome>> biomeTagEvents = new ArrayList<>();
+    public List<EntityType<?>> entityEvents = new ArrayList<>();
 }
