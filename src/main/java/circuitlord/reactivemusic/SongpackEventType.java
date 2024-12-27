@@ -22,13 +22,6 @@ public enum SongpackEventType {
     SNOW,
 
 
-    // Dimension
-
-    // DEPRECATED -- use BiomeTagMap in SongPicker which pulls from ConventionalBiomeTags
-    NETHER,
-    END,
-    OVERWORLD,
-
     // --- world height ---
     UNDERWATER,
     UNDERGROUND,
@@ -46,13 +39,13 @@ public enum SongpackEventType {
     DYING,
 
 
-    // Biomes
-    // DEPRECATED TO BE REMOVED
-    FOREST,
+    // TODO: remove
+    OVERWORLD,
+    NETHER,
+    END,
     MOUNTAIN,
-    DESERT,
+    FOREST,
     BEACH,
-
 
     // MOBS
 

@@ -1,5 +1,8 @@
 package circuitlord.reactivemusic;
 
+import circuitlord.reactivemusic.config.MusicDelayLength;
+import circuitlord.reactivemusic.config.MusicSwitchSpeed;
+
 import java.nio.file.Path;
 
 public class SongpackConfig {
@@ -11,18 +14,11 @@ public class SongpackConfig {
 
     public String credits = "";
 
+    public MusicDelayLength musicDelayLength = MusicDelayLength.NORMAL;
+
+    public MusicSwitchSpeed musicSwitchSpeed = MusicSwitchSpeed.NORMAL;
+
     public SongpackEntry[] entries;
-
-
-    // Not part of config file
-    public Path configPath;
-
-    public String errorString = "";
-
-    public boolean blockLoading = false;
-
-
-
 
 
 }

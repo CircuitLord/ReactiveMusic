@@ -10,6 +10,7 @@ import rm_javazoom.jl.player.advanced.AdvancedPlayer;
 import net.minecraft.text.TranslatableTextContent;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 public class PlayerThread extends Thread {
 
@@ -43,7 +44,7 @@ public class PlayerThread extends Thread {
 	public volatile static String currentSong = null;
 	public volatile static String currentSongChoices = null;
 
-	public volatile SongResource currentSongResource = null;
+	public volatile MusicPackResource currentSongResource = null;
 	
 	AdvancedPlayer player;
 
@@ -74,7 +75,7 @@ public class PlayerThread extends Thread {
 
 				if(queued && currentSong != null) {
 
-					currentSongResource = SongLoader.getStream(SongLoader.activeSongpackPath, SongLoader.activeSongpackEmbedded, currentSong);
+					currentSongResource = RMSongpackLoader.getInputStream(ReactiveMusic.currentSongpack.path, "music/" + currentSong + ".mp3", ReactiveMusic.currentSongpack.embedded);
 					if(currentSongResource == null || currentSongResource.inputStream == null)
 						continue;
 
@@ -115,9 +116,9 @@ public class PlayerThread extends Thread {
 
 		if (currentSongResource != null && currentSongResource.fileSystem != null) {
             try {
-                currentSongResource.fileSystem.close();
-            } catch (IOException e) {
-                ReactiveMusic.LOGGER.error("Failed to close file system input stream " + e.getMessage());
+				currentSongResource.close();
+            } catch (Exception e) {
+                ReactiveMusic.LOGGER.error("Failed to close file system/input stream " + e.getMessage());
             }
         }
 

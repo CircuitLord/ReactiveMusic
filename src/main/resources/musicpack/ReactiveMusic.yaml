@@ -1,13 +1,15 @@
 name: "Adventure Redefined"
 version: "1.0"
 
+musicSwitchSpeed: NORMAL
+musicDelayLength: NORMAL
+
 entries:
 
 
   # --- Outside game state/special songs ---
   - events: [ "MAIN_MENU" ]
-    alwaysPlay: true
-    alwaysStop: true
+    stopMusicOnEventChanged: true
     songs:
       - "DuNock-Street-TitleEdit"
       - "TheShapersRealm"
@@ -29,8 +31,7 @@ entries:
       - "Eventide"
 
   - events: [ "UNDERGROUND" ]
-    alwaysPlay: true
-    alwaysStop: true
+    stopMusicOnEventChanged: true
     songs:
       - "WintersBreath"
       - "IntoSilenceP1"
@@ -54,8 +55,6 @@ entries:
 
   # Sunset songs
   - events: ["SUNSET"]
-    alwaysPlay: true
-    alwaysStop: true
     songs:
       - "Alvae"
       - "SiochainShuthain"
@@ -75,9 +74,8 @@ entries:
 
 
 
-  - events: [ "NETHER" ]
-    alwaysPlay: true
-    alwaysStop: true
+  - events: [ "DIM=NETHER" ]
+    stopMusicOnEventChanged: true
     songs:
       - "Mufaya-DarkAscension"
       - "TheShapersRealm"
@@ -86,9 +84,8 @@ entries:
       - "WorldUnbound"
 
 
-  - events: [ "END" ]
-    alwaysPlay: true
-    alwaysStop: true
+  - events: [ "DIM=END" ]
+    stopMusicOnEventChanged: true
     songs:
       - "DuNock-Street-TitleEdit"
       - "Mufaya-DarkAscension"

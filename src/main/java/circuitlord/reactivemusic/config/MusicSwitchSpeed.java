@@ -1,10 +1,8 @@
 package circuitlord.reactivemusic.config;
 
-public enum MusicDelayLength {
-
+public enum MusicSwitchSpeed {
     SONGPACK_DEFAULT,
-
-    NONE,
+    INSTANT,
     SHORT,
     NORMAL,
     LONG

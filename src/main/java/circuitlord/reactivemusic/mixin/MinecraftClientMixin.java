@@ -26,7 +26,7 @@ public class MinecraftClientMixin {
     @Inject(method = "tick", at = @At("RETURN"))
     private void reactivemusic$tick(CallbackInfo ci) {
 
-        ReactiveMusic.tick();
+        ReactiveMusic.newTick();
 
     }
 

@@ -1,15 +1,15 @@
 package circuitlord.reactivemusic.config;
 
 
+import circuitlord.reactivemusic.RMScreen;
+import circuitlord.reactivemusic.RMSongpackLoader;
 import circuitlord.reactivemusic.ReactiveMusic;
-import circuitlord.reactivemusic.SongLoader;
+//import circuitlord.reactivemusic.SongLoader;
 import circuitlord.reactivemusic.SongpackZip;
 import com.google.gson.GsonBuilder;
 import com.terraformersmc.modmenu.ModMenu;
 import dev.isxander.yacl3.api.*;
-import dev.isxander.yacl3.api.controller.DropdownStringControllerBuilder;
-import dev.isxander.yacl3.api.controller.EnumControllerBuilder;
-import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder;
+import dev.isxander.yacl3.api.controller.*;
 import dev.isxander.yacl3.config.v2.api.ConfigClassHandler;
 import dev.isxander.yacl3.config.v2.api.SerialEntry;
 import dev.isxander.yacl3.config.v2.api.serializer.GsonConfigSerializerBuilder;
@@ -17,7 +17,9 @@ import dev.isxander.yacl3.gui.controllers.BooleanController;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +32,9 @@ import static dev.isxander.yacl3.platform.YACLPlatform.getConfigDir;
 
 
 public class ModConfig {
+
+    public static final ValueFormatter<Formatting> FORMATTING_FORMATTER = formatting -> Text.literal(StringUtils.capitalize(formatting.getName().replaceAll("_", " ")));
+
 
     public static ModConfig getConfig() {
         return GSON.instance();
@@ -50,16 +55,19 @@ public class ModConfig {
 
 
     @SerialEntry
-    public MusicDelayLength musicDelayLength = MusicDelayLength.NORMAL;
+    public MusicDelayLength musicDelayLength = MusicDelayLength.SONGPACK_DEFAULT;
+
+    @SerialEntry
+    public MusicSwitchSpeed musicSwitchSpeed = MusicSwitchSpeed.SONGPACK_DEFAULT;
 
     @SerialEntry
     public boolean debugModeEnabled = false;
 
-    @SerialEntry
-    public boolean treatAsWhitelist = false;
+    //@SerialEntry
+    //public boolean treatAsWhitelist = false;
 
-    @SerialEntry
-    public double confirmationResetDelay = 1.0;
+    //@SerialEntry
+    //public double confirmationResetDelay = 1.0;
 
     @SerialEntry
     public String loadedUserSongpack = "";
@@ -69,9 +77,12 @@ public class ModConfig {
 
 
 
+
+
     public static Screen createScreen(Screen parent) {
 
-        SongLoader.fetchAvailableSongpacks();
+        //SongLoader.fetchAvailableSongpacks();
+        RMSongpackLoader.fetchAvailableSongpacks();
 
         return YetAnotherConfigLib.create(ModConfig.GSON, ((defaults, config, builder) -> {
 
@@ -81,9 +92,9 @@ public class ModConfig {
             songpacksBuilder.name(Text.literal("Songpacks"));
 
 
-            boolean arIsLoaded = Objects.equals(SongLoader.activeSongpack.name, "Adventure Redefined");
+            boolean arIsLoaded = Objects.equals(ReactiveMusic.currentSongpack.config.name, "Adventure Redefined");
 
-            songpacksBuilder.option(ButtonOption.createBuilder()
+/*            songpacksBuilder.option(ButtonOption.createBuilder()
                     .name(Text.literal("Adventure Redefined (Default)"))
                     .description(
                             OptionDescription.createBuilder()
@@ -94,25 +105,25 @@ public class ModConfig {
                     .available(!arIsLoaded)
                     .text(Text.literal(arIsLoaded ? "Loaded" : "Load"))
                     .action((yaclScreen, buttonOption) -> {
-                        setActiveSongpack(null, true);
+                        setActiveSongpack(RMSongpackLoader.availableSongpacks.getFirst(), true);
                         ReactiveMusic.refreshSongpack();
                         MinecraftClient.getInstance().setScreen(ModConfig.createScreen(parent));
                     })
 
-                    .build());
+                    .build());*/
 
 
-            for (var songpackZip : SongLoader.availableSongpacks) {
+            for (var songpackZip : RMSongpackLoader.availableSongpacks) {
 
-                boolean isLoaded = Objects.equals(SongLoader.activeSongpack.name, songpackZip.config.name);
+                boolean isLoaded = Objects.equals(ReactiveMusic.currentSongpack.config.name, songpackZip.config.name);
 
 
-                if (songpackZip.config.blockLoading) {
+                if (songpackZip.blockLoading) {
                     songpacksBuilder.option(ButtonOption.createBuilder()
                             .name(Text.literal("FAILED LOADING: " + songpackZip.config.name))
                             .description(
                                     OptionDescription.createBuilder()
-                                            .text(Text.literal("Failed to load songpack:\n\n" + songpackZip.config.errorString))
+                                            .text(Text.literal("Failed to load songpack:\n\n" + songpackZip.errorString))
                                             .build()
                             )
 
@@ -129,9 +140,9 @@ public class ModConfig {
                     String name = songpackZip.config.name;
                     String description = songpackZip.config.description + "\n\nCredits:\n" + songpackZip.config.credits;
 
-                    if (!songpackZip.config.errorString.isEmpty()) {
+                    if (!songpackZip.errorString.isEmpty()) {
                         name = "ERRORS: " + name;
-                        description = "Encountered errors while loading:\n\n" + songpackZip.config.errorString + "----------\n\n" + description;
+                        description = "Encountered errors while loading:\n\n" + songpackZip.errorString + "----------\n\n" + description;
                     }
 
                     songpacksBuilder.option(ButtonOption.createBuilder()
@@ -148,8 +159,9 @@ public class ModConfig {
 
 
                             .action((yaclScreen, buttonOption) -> {
-                                setActiveSongpack(songpackZip, false);
+                                setActiveSongpack(songpackZip);
                                 ReactiveMusic.refreshSongpack();
+
                                 MinecraftClient.getInstance().setScreen(ModConfig.createScreen(parent));
                             })
 
@@ -180,6 +192,30 @@ public class ModConfig {
                                     .controller(opt -> EnumControllerBuilder.create(opt).enumClass(MusicDelayLength.class))
 
                                     .build())
+
+                            .option(Option.<MusicSwitchSpeed>createBuilder()
+                                    .name(Text.literal("Music Switch Speed"))
+                                    .binding(defaults.musicSwitchSpeed, () -> config.musicSwitchSpeed, newVal -> config.musicSwitchSpeed = newVal )
+                                    .controller(opt -> EnumControllerBuilder.create(opt).enumClass(MusicSwitchSpeed.class))
+
+                                    .build())
+
+
+/*
+                            .option(Option.<MusicDelayLength>createBuilder()
+                                    .name(Text.literal("Enum Dropdown"))
+                                    .binding(
+                                            defaults.musicDelayLength,
+                                            () -> config.musicDelayLength,
+                                            (value) -> config.musicDelayLength = value
+                                    )
+                                    .controller(option -> EnumDropdownControllerBuilder.create(option).formatValue(formatting -> Text.literal(StringUtils.capitalize(formatting.toString()).replaceAll("_", " "))))
+                                    .build())
+
+
+*/
+
+
 
                             .build())
 
@@ -221,22 +257,25 @@ public class ModConfig {
 
 
 
-    public static void setActiveSongpack(SongpackZip zip, boolean embeddedMode) {
+    public static void setActiveSongpack(SongpackZip songpack) {
 
-        if (embeddedMode) {
+        if (songpack.embedded) {
             getConfig().loadedUserSongpack = "";
         }
         else {
-            getConfig().loadedUserSongpack = zip.config.name;
+            getConfig().loadedUserSongpack = songpack.config.name;
         }
 
         GSON.save();
 
-        SongLoader.setActiveSongpack(zip, embeddedMode);
+        ReactiveMusic.setActiveSongpack(songpack);
 
     }
 
 
+    public static <E extends Enum<E>> Function<Option<E>, ControllerBuilder<E>> getEnumDropdownControllerFactory(ValueFormatter<E> formatter) {
+        return opt -> EnumDropdownControllerBuilder.create(opt).formatValue(formatter);
+    }
 
 }
 
