@@ -306,7 +306,7 @@ public final class SongPicker {
     }*/
 
 
-    static boolean hasSongNotPlayedRecently(String[] songs) {
+    static boolean hasSongNotPlayedRecently(List<String> songs) {
         for (String song : songs) {
             if (!recentlyPickedSongs.contains(song)) {
                 return true;

@@ -10,13 +10,11 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
-import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -216,6 +214,17 @@ public class ReactiveMusic implements ModInitializer {
 
 		// -------------------------
 
+		// clear playing state if not playing
+		if (thread.notQueuedOrPlaying()) {
+			fadeOutTicks = 0;
+			queuedToStopMusic = false;
+			currentEntry = null;
+			currentSong = null;
+		}
+
+
+		// -------------------------
+
 
 		RMRuntimeEntry newEntry = null;
 
@@ -253,7 +262,7 @@ public class ReactiveMusic implements ModInitializer {
 			if (wantsToSwitch) waitForStopTicks++;
 			else waitForStopTicks = 0;
 
-			if (!thread.isPlaying()) waitForNewSongTicks++;
+			if (thread.notQueuedOrPlaying()) waitForNewSongTicks++;
 			else waitForNewSongTicks = 0;
 
 
@@ -292,6 +301,8 @@ public class ReactiveMusic implements ModInitializer {
 
 			if (shouldStartNewSong) {
 
+				// TODO: prioritize current event
+
 				String picked = SongPicker.pickRandomSong(selectedSongs);
 
 				changeCurrentSong(picked, newEntry);
@@ -323,8 +334,11 @@ public class ReactiveMusic implements ModInitializer {
 	}
 
 	private static @NotNull List<String> getSelectedSongs(RMRuntimeEntry newEntry, List<RMRuntimeEntry> validEntries) {
-		// Pick songs
-		List<String> selectedSongs = new ArrayList<>(newEntry.songs);
+
+		// if we have non-recent songs then just return those
+		if (SongPicker.hasSongNotPlayedRecently(newEntry.songs)) {
+			return newEntry.songs;
+		}
 
 		// Fallback behaviour
 		if (newEntry.allowFallback) {
@@ -332,10 +346,16 @@ public class ReactiveMusic implements ModInitializer {
 				if (validEntries.get(i) == null)
 					continue;
 
-				selectedSongs.addAll(validEntries.get(i).songs);
+				// check if we have songs not played recently and early out
+				if (SongPicker.hasSongNotPlayedRecently(validEntries.get(i).songs)) {
+					return validEntries.get(i).songs;
+				}
 			}
 		}
-		return selectedSongs;
+
+
+		// we've played everything recently, just give up and return this event's songs
+		return newEntry.songs;
 	}
 
 
@@ -577,11 +597,6 @@ public class ReactiveMusic implements ModInitializer {
 		}
 		else {
 			thread.resetPlayer();
-			fadeOutTicks = 0;
-
-			queuedToStopMusic = false;
-			currentEntry = null;
-			currentSong = null;
 		}
 	}
 
@@ -639,9 +654,9 @@ public class ReactiveMusic implements ModInitializer {
 
 	public static int getMusicStopSpeed(SongpackZip songpack) {
 
-		MusicSwitchSpeed speed = config.musicSwitchSpeed;
+		MusicSwitchSpeed speed = config.musicSwitchSpeed2;
 
-		if (config.musicSwitchSpeed == MusicSwitchSpeed.SONGPACK_DEFAULT) {
+		if (config.musicSwitchSpeed2 == MusicSwitchSpeed.SONGPACK_DEFAULT) {
 			speed = songpack.config.musicSwitchSpeed;
 		}
 
@@ -671,9 +686,9 @@ public class ReactiveMusic implements ModInitializer {
 
 	public static int getMusicDelay(SongpackZip songpack) {
 
-		MusicDelayLength delay = config.musicDelayLength;
+		MusicDelayLength delay = config.musicDelayLength2;
 
-		if (config.musicDelayLength == MusicDelayLength.SONGPACK_DEFAULT) {
+		if (config.musicDelayLength2 == MusicDelayLength.SONGPACK_DEFAULT) {
 			delay = songpack.config.musicDelayLength;
 		}
 

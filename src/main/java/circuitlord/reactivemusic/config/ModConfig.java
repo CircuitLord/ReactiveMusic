@@ -1,32 +1,25 @@
 package circuitlord.reactivemusic.config;
 
 
-import circuitlord.reactivemusic.RMScreen;
 import circuitlord.reactivemusic.RMSongpackLoader;
 import circuitlord.reactivemusic.ReactiveMusic;
 //import circuitlord.reactivemusic.SongLoader;
 import circuitlord.reactivemusic.SongpackZip;
-import com.google.gson.GsonBuilder;
-import com.terraformersmc.modmenu.ModMenu;
 import dev.isxander.yacl3.api.*;
 import dev.isxander.yacl3.api.controller.*;
 import dev.isxander.yacl3.config.v2.api.ConfigClassHandler;
 import dev.isxander.yacl3.config.v2.api.SerialEntry;
 import dev.isxander.yacl3.config.v2.api.serializer.GsonConfigSerializerBuilder;
-import dev.isxander.yacl3.gui.controllers.BooleanController;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static dev.isxander.yacl3.platform.YACLPlatform.getConfigDir;
 
@@ -55,10 +48,10 @@ public class ModConfig {
 
 
     @SerialEntry
-    public MusicDelayLength musicDelayLength = MusicDelayLength.SONGPACK_DEFAULT;
+    public MusicDelayLength musicDelayLength2 = MusicDelayLength.SONGPACK_DEFAULT;
 
     @SerialEntry
-    public MusicSwitchSpeed musicSwitchSpeed = MusicSwitchSpeed.SONGPACK_DEFAULT;
+    public MusicSwitchSpeed musicSwitchSpeed2 = MusicSwitchSpeed.SONGPACK_DEFAULT;
 
     @SerialEntry
     public boolean debugModeEnabled = false;
@@ -188,14 +181,14 @@ public class ModConfig {
 
                             .option(Option.<MusicDelayLength>createBuilder()
                                     .name(Text.literal("Music Delay Length"))
-                                    .binding(defaults.musicDelayLength, () -> config.musicDelayLength, newVal -> config.musicDelayLength = newVal )
+                                    .binding(defaults.musicDelayLength2, () -> config.musicDelayLength2, newVal -> config.musicDelayLength2 = newVal )
                                     .controller(opt -> EnumControllerBuilder.create(opt).enumClass(MusicDelayLength.class))
 
                                     .build())
 
                             .option(Option.<MusicSwitchSpeed>createBuilder()
                                     .name(Text.literal("Music Switch Speed"))
-                                    .binding(defaults.musicSwitchSpeed, () -> config.musicSwitchSpeed, newVal -> config.musicSwitchSpeed = newVal )
+                                    .binding(defaults.musicSwitchSpeed2, () -> config.musicSwitchSpeed2, newVal -> config.musicSwitchSpeed2 = newVal )
                                     .controller(opt -> EnumControllerBuilder.create(opt).enumClass(MusicSwitchSpeed.class))
 
                                     .build())
