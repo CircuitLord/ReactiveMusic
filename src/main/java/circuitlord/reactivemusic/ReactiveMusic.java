@@ -96,6 +96,11 @@ public class ReactiveMusic implements ModInitializer {
 
 		//SongLoader.fetchAvailableSongpacks();
 
+		SongPicker.initialize();
+
+
+		thread = new PlayerThread();
+
 		RMSongpackLoader.fetchAvailableSongpacks();
 
 		boolean loadedUserSongpack = false;
@@ -119,15 +124,14 @@ public class ReactiveMusic implements ModInitializer {
 
 		// load the default one
 		if (!loadedUserSongpack) {
-			// first is the default songpack
-			setActiveSongpack(RMSongpackLoader.availableSongpacks.getFirst());
+
+			// for the cases where something is broken in the base songpack
+			if (!RMSongpackLoader.availableSongpacks.getFirst().blockLoading) {
+				// first is the default songpack
+				setActiveSongpack(RMSongpackLoader.availableSongpacks.getFirst());
+			}
 		}
 
-
-		SongPicker.initialize();
-
-
-		thread = new PlayerThread();
 
 
 
@@ -216,10 +220,7 @@ public class ReactiveMusic implements ModInitializer {
 
 		// clear playing state if not playing
 		if (thread.notQueuedOrPlaying()) {
-			fadeOutTicks = 0;
-			queuedToStopMusic = false;
-			currentEntry = null;
-			currentSong = null;
+			resetPlayer();
 		}
 
 
@@ -235,7 +236,7 @@ public class ReactiveMusic implements ModInitializer {
 			newEntry = validEntries.getFirst();
 		}
 
-		updateQueuedToStopMusic(validEntries, previousValidEntries);
+		processValidEvents(validEntries, previousValidEntries);
 
 
 		if (currentDimBlacklisted)
@@ -250,6 +251,20 @@ public class ReactiveMusic implements ModInitializer {
 			// wants to switch if our current entry doesn't exist -- or is not the same as the new one
 			boolean wantsToSwitch = currentEntry == null || newEntry != currentEntry;
 
+			// if the new entry contains the same song as our current one, then do a "fake" swap to swap over to the new entry
+			if (wantsToSwitch && currentSong != null && newEntry.songs.contains(currentSong)) {
+
+				LOGGER.info("doing fake swap to new event: " + newEntry.eventString);
+
+				// do a fake swap
+				currentEntry = newEntry;
+				wantsToSwitch = false;
+
+				// if this happens, also clear the queued state since we essentially did a switch
+				queuedToStopMusic = false;
+				queuedToPlayMusic = false;
+			}
+
 			// make sure we're fully faded in if we faded out for any reason but this event is valid
 			if (thread.isPlaying() && !wantsToSwitch && fadeOutTicks > 0) {
 				fadeOutTicks--;
@@ -259,54 +274,68 @@ public class ReactiveMusic implements ModInitializer {
 			}
 
 
-			if (wantsToSwitch) waitForStopTicks++;
+/*			if (wantsToSwitch) waitForStopTicks++;
 			else waitForStopTicks = 0;
 
 			if (thread.notQueuedOrPlaying()) waitForNewSongTicks++;
-			else waitForNewSongTicks = 0;
+			else waitForNewSongTicks = 0;*/
 
 
 			// ---- FADE OUT ----
 
-			boolean shouldFadeOutMusic = false;
+			if (wantsToSwitch && thread.isPlaying()) {
 
-			// handle fade-out if something's playing when a new event becomes valid
-			if (wantsToSwitch && waitForStopTicks > getMusicStopSpeed(currentSongpack)) {
-				shouldFadeOutMusic = true;
+				waitForStopTicks++;
+
+				boolean shouldFadeOutMusic = false;
+
+				// handle fade-out if something's playing when a new event becomes valid
+				if (waitForStopTicks > getMusicStopSpeed(currentSongpack)) {
+					shouldFadeOutMusic = true;
+				}
+
+				// if we're queued to force stop the music, do so here
+				if (queuedToStopMusic) {
+					shouldFadeOutMusic = true;
+				}
+
+				if (shouldFadeOutMusic) {
+					tickFadeOut();
+				}
 			}
-
-			// if we're queued to force stop the music, do so here
-			if (queuedToStopMusic) {
-				shouldFadeOutMusic = true;
+			else {
+				waitForStopTicks = 0;
 			}
-
-
-			if (thread.isPlaying() && shouldFadeOutMusic) {
-				tickFadeOut();
-			}
-
-
 
 			//  ---- SWITCH SONG ----
 
-			boolean shouldStartNewSong = false;
+			if (wantsToSwitch && thread.notQueuedOrPlaying()) {
 
-			if (wantsToSwitch && waitForNewSongTicks > getMusicDelay(currentSongpack)) {
-				shouldStartNewSong = true;
+				waitForNewSongTicks++;
+
+				boolean shouldStartNewSong = false;
+
+				if (waitForNewSongTicks > getMusicDelay(currentSongpack)) {
+					shouldStartNewSong = true;
+				}
+
+				// if we're queued to start a new song and we're not playing anything, do it
+				if (queuedToPlayMusic) {
+					shouldStartNewSong = true;
+				}
+
+				if (shouldStartNewSong) {
+
+					String picked = SongPicker.pickRandomSong(selectedSongs);
+
+					changeCurrentSong(picked, newEntry);
+				}
+
+			}
+			else {
+				waitForNewSongTicks = 0;
 			}
 
-			if (queuedToPlayMusic) {
-				shouldStartNewSong = true;
-			}
-
-			if (shouldStartNewSong) {
-
-				// TODO: prioritize current event
-
-				String picked = SongPicker.pickRandomSong(selectedSongs);
-
-				changeCurrentSong(picked, newEntry);
-			}
 
 
 
@@ -315,13 +344,9 @@ public class ReactiveMusic implements ModInitializer {
 		// no entries are valid, we shouldn't be playing any music!
 		// this can happen if no entry is valid or the dimension is blacklisted
 		else {
-			if (thread.isPlaying()) {
-				tickFadeOut();
-			}
-			else {
-				currentEntry = null;
-				currentSong = null;
-			}
+
+			tickFadeOut();
+
 		}
 
 
@@ -374,216 +399,61 @@ public class ReactiveMusic implements ModInitializer {
 		return validEntries;
 	}
 
-	private static void updateQueuedToStopMusic(List<RMRuntimeEntry> validEntries, List<RMRuntimeEntry> previousValidEntries) {
+	private static void processValidEvents(List<RMRuntimeEntry> validEntries, List<RMRuntimeEntry> previousValidEntries) {
+
+
 		for (var entry : previousValidEntries) {
+
 			// if this event was valid before and is invalid now
-			if (entry.stopMusicOnEventChanged && !validEntries.contains(entry)) {
-				LOGGER.info("stopMusicOnEventChanged, entry invalidated");
-				queuedToStopMusic = true;
+			if (entry.forceStopMusicOnInvalid && !validEntries.contains(entry)) {
+				LOGGER.info("trying forceStopMusicOnInvalid: " + entry.eventString);
+
+				if (entry.cachedRandomChance <= entry.forceChance) {
+
+					LOGGER.info("doing forceStopMusicOnInvalid: " + entry.eventString);
+					queuedToStopMusic = true;
+				}
+
 				break;
 			}
 		}
 
 		for (var entry : validEntries) {
-			// if this event wasn't valid before and is now
-			if (entry.stopMusicOnEventChanged && !previousValidEntries.contains(entry)) {
-				LOGGER.info("stopMusicOnEventChanged, entry valid!");
-				queuedToStopMusic = true;
+
+			if (!previousValidEntries.contains(entry)) {
+
+				// use the same random chance for all so they always happen together
+				entry.cachedRandomChance = rand.nextFloat();
+				boolean randSuccess = entry.cachedRandomChance <= entry.forceChance;
+
+				// if this event wasn't valid before and is now
+				if (entry.forceStopMusicOnValid) {
+					LOGGER.info("trying forceStopMusicOnValid: " + entry.eventString);
+
+					if (randSuccess) {
+						LOGGER.info("doing forceStopMusicOnValid: " + entry.eventString);
+						queuedToStopMusic = true;
+					}
+				}
+
+				if (entry.forceStartMusicOnValid) {
+					LOGGER.info("trying forceStartMusicOnValid: " + entry.eventString);
+
+					if (randSuccess) {
+						LOGGER.info("doing forceStartMusicOnValid: " + entry.eventString);
+						queuedToPlayMusic = true;
+					}
+				}
+
 			}
+
+
 		}
+
+
+
+
 	}
-
-
-	/*public static void tick() {
-
-		if (thread == null) return;
-
-		if (currentSongpack == null) return;
-
-		MinecraftClient mc = MinecraftClient.getInstance();
-
-		if (!thread.isPlaying()) silenceTicks++;
-		else silenceTicks = 0;
-
-		slowTickUpdateCounter++;
-
-		if (slowTickUpdateCounter > 20) {
-
-			currentDimBlacklisted = false;
-
-			// see if the dimension we're in is blacklisted -- update at same time as event map to keep them in sync
-			if (mc != null && mc.world != null) {
-				String curDim = mc.world.getRegistryKey().getValue().toString();
-
-				for (String dim : config.blacklistedDimensions) {
-					if (dim.equals(curDim)) {
-						currentDimBlacklisted = true;
-						break;
-					}
-				}
-			}
-
-			SongPicker.tickEventMap();
-
-			slowTickUpdateCounter = 0;
-		}
-
-		// --- find new potential entry ---
-
-		validEntries = SongPicker.getAllValidEntries();
-
-		SongpackEntry newEntry = null;
-		String[] selectedSongs = {};
-
-		if (!currentDimBlacklisted) {
-			currentGenericEntries.clear();
-
-			// Try to find the highest entry with a song we haven't played recently
-			for (var entry : validEntries) {
-				// if this entry can stack on entries below it, keep it in a separate list to add to the song picker pool
-				// only consider when the size of valid entries is more than 1
-				if (entry.stackable && validEntries.size() > 1) {
-					selectedSongs = ArrayUtils.addAll(selectedSongs, entry.songs);
-					continue;
-				}
-
-				// if this is the same entry and we're still playing the song we picked, keep it
-				if (currentEntry == entry && thread.isPlaying()) {
-					newEntry = currentEntry;
-					break;
-				}
-
-				// if this entry has songs we haven't played recently -- or it doesn't allow fallback
-				// then pick it as the "new" potential entry
-				if (SongPicker.hasSongNotPlayedRecently(entry.songs) || !entry.allowFallback) {
-					newEntry = entry;
-					break;
-				}
-			}
-
-			// if we didn't find any entries, just use the highest priority one
-			if (newEntry == null && !validEntries.isEmpty()) {
-				for (var i = 0; i < validEntries.size(); i++) {
-					newEntry = validEntries.get(i);
-					// choose an entry that is not stackable unless it's the only entry in the list
-					if (!newEntry.stackable || validEntries.size() == 1)
-						break;
-				}
-			}
-
-			if (newEntry != null) {
-				selectedSongs = ArrayUtils.addAll(selectedSongs, newEntry.songs);
-			}
-		}
-
-
-		// TODO: NOTE
-		// when we just skip switching songs if the new event has the music, we should still update currentEntry to match that or it has some issues
-
-		// --- main loop, check new entry and see if we should play it ---
-
-		// If a new valid entry exists, check it
-		if (newEntry != null && selectedSongs.length > 0) {
-
-
-			if (currentEntry == null || newEntry.id != currentEntry.id) waitForStopTicks++;
-			else waitForStopTicks = 0;
-
-
-			// if we started fading out, and the event became valid again, we need to fade back in
-			if (thread.isPlaying() && currentEntry.id == newEntry.id && fadeOutTicks > 0) {
-				// Copy the behavior from below where it fades out
-				thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
-
-				fadeOutTicks--;
-			}
-
-
-			boolean playNewSong = false;
-			boolean doSilenceAfter = true;
-
-
-			// No song is playing and we've waiting through the silence, just start one randomly
-			// Skip wait in debug mode
-			if (thread.notQueuedOrPlaying()
-					&& ((silenceTicks > additionalSilence) || config.debugModeEnabled)) {
-				playNewSong = true;
-			}
-
-
-			// TODO: bug with the two below modes:
-			// TODO: when underground, we have alwaysplay so it means this immediately triggers again when it stops
-
-			// the newEntry is defined to always play, just start it immediately
-			else if (thread.notQueuedOrPlaying() && newEntry.alwaysPlay) {
-				playNewSong = true;
-			}
-
-			// if our previous song was defined to stop for this song, then start playing the new event immediately
-			else if (thread.notQueuedOrPlaying() && (currentEntry != null && currentEntry.alwaysStop)) {
-				playNewSong = true;
-			}
-
-			// --- Fading current song to switch to new event ---
-
-			// If we changed what event is active, we need to fade out
-			// Wait for a bit to make sure we stay on a different event
-			// Also only fade out if it's specifically defined we should stop/start in the songpack
-			else if (thread.isPlaying() && currentEntry != null && newEntry.id != currentEntry.id
-					&& waitForStopTicks > WAIT_FOR_SWITCH_DURATION
-					&& (currentEntry.alwaysStop || newEntry.alwaysPlay || config.debugModeEnabled)
-
-					// make sure the new entry doesn't have the song we're playing already -- because then we wouldn't want to switch
-					&& !Arrays.asList(selectedSongs).contains(currentSong)
-			) {
-
-				tickFadeOut();
-			}
-
-			if (playNewSong) {
-				String picked = SongPicker.pickRandomSong(selectedSongs);
-				changeCurrentSong(picked, newEntry);
-
-				int minTickSilence = 0;
-				int maxTickSilence = 0;
-
-				switch (ModConfig.getConfig().musicDelayLength) {
-					case SHORT -> {
-						minTickSilence = 250;
-						maxTickSilence = 1000;
-					}
-					case NORMAL -> {
-						minTickSilence = 1000;
-						maxTickSilence = 4000;
-					}
-					case LONG -> {
-						minTickSilence = 2000;
-						maxTickSilence = 7000;
-					}
-				}
-
-				additionalSilence = rand.nextInt(minTickSilence, maxTickSilence);
-			}
-
-		}
-
-		// no entries are valid, we shouldn't be playing any music!
-		// this can happen if no entry is valid or the dimension is blacklisted
-		else {
-			if (thread.isPlaying()) {
-				tickFadeOut();
-			}
-			else {
-				currentEntry = null;
-				currentSong = null;
-			}
-		}
-
-
-
-		thread.processRealGain();
-
-	}*/
 
 
 	public static void tickFadeOut() {
@@ -596,12 +466,15 @@ public class ReactiveMusic implements ModInitializer {
 			thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
 		}
 		else {
-			thread.resetPlayer();
+			resetPlayer();
 		}
 	}
 
 
 	public static void changeCurrentSong(String song, RMRuntimeEntry newEntry) {
+
+		resetPlayer();
+
 		currentSong = song;
 		currentEntry = newEntry;
 
@@ -617,13 +490,6 @@ public class ReactiveMusic implements ModInitializer {
 	}
 
 
-	public static void refreshSongpack() {
-
-		thread.resetPlayer();
-		additionalSilence = 0;
-
-	}
-
 
 	public static void setActiveSongpack(SongpackZip songpackZip) {
 
@@ -631,6 +497,8 @@ public class ReactiveMusic implements ModInitializer {
 		if (currentSongpack != null) {
 			deactivateSongpack(currentSongpack);
 		}
+
+		resetPlayer();
 
 		currentSongpack = songpackZip;
 
@@ -665,19 +533,14 @@ public class ReactiveMusic implements ModInitializer {
 		}
 
 		switch (speed) {
-
 			case INSTANT:
 				return 100;
-
 			case SHORT:
 				return 350;
-
 			case NORMAL:
 				return 1000;
-
 			case LONG:
 				return 2500;
-
 		}
 
 		return 100;
@@ -709,6 +572,19 @@ public class ReactiveMusic implements ModInitializer {
 
 		return 100;
 
+	}
+
+	static void resetPlayer() {
+
+		// if queued or playing
+		if (!thread.notQueuedOrPlaying()) {
+			thread.resetPlayer();
+		}
+
+		fadeOutTicks = 0;
+		queuedToStopMusic = false;
+		currentEntry = null;
+		currentSong = null;
 	}
 
 

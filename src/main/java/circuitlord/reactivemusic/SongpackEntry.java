@@ -13,14 +13,19 @@ public class SongpackEntry {
     // expands out into songpack events and biometag events
     public String[] events;
 
-    // deprecated
-    public boolean alwaysStop = false;
-    // deprecated
-    public boolean alwaysPlay = false;
 
-    public boolean allowFallback = true;
+    public boolean allowFallback = false;
 
-    public boolean stopMusicOnEventChanged = false;
+    // OnChanged just sets both Valid and Invalid versions to true
+    public boolean forceStopMusicOnChanged = false;
+    public boolean forceStopMusicOnValid = false;
+    public boolean forceStopMusicOnInvalid = false;
+
+    public boolean forceStartMusicOnValid = false;
+
+    public float forceChance = 1.0f;
+
+    public boolean startMusicOnEventValid = false;
 
     // deprecated for now
     public boolean stackable = false;

@@ -2,6 +2,8 @@ package circuitlord.reactivemusic;
 
 import net.fabricmc.loader.api.FabricLoader;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Construct;
+import org.yaml.snakeyaml.constructor.Constructor;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -153,14 +155,20 @@ public class RMSongpackLoader {
             ReactiveMusic.LOGGER.error("Failed to load properties! Embedded=" + embedded + " Exception:" + e.toString());
         }
 
+        if (!Constructor.errorString.isEmpty()) {
+            songpackZip.errorString += Constructor.errorString;
+        }
+
+        if (Constructor.blockLoading) {
+            songpackZip.blockLoading = true;
+        }
+
 
         verifySongpackZip(songpackZip);
 
         if (!songpackZip.blockLoading) {
             songpackZip.runtimeEntries = getRuntimeEntries(songpackZip);
         }
-
-
 
         return songpackZip;
 
@@ -171,6 +179,9 @@ public class RMSongpackLoader {
         List<RMRuntimeEntry> runtimeEntries = new ArrayList<>();
 
         for (var entry : songpackZip.config.entries) {
+
+            if (entry == null)
+                continue;
 
             RMRuntimeEntry runtimeEntry = RMRuntimeEntry.create(songpackZip.config.name, entry);
 
@@ -204,6 +215,9 @@ public class RMSongpackLoader {
 
         // Check if all the songs are valid
         for (int i = 0; i < songpackZip.config.entries.length; i++) {
+
+            if (songpackZip.config.entries[i] == null)
+                continue;
 
             for (int j = 0; j < songpackZip.config.entries[i].songs.length; j++) {
 

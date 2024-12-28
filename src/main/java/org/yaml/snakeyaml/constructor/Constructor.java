@@ -135,6 +135,7 @@ public class Constructor extends SafeConstructor {
 
 
   public static String errorString = "";
+  public static boolean blockLoading = false;
 
   /**
    * Construct mapping instance (Map, JavaBean) when the runtime class is known.
@@ -281,9 +282,11 @@ public class Constructor extends SafeConstructor {
         } catch (DuplicateKeyException e) {
           throw e;
         } catch (Exception e) {
-          System.out.println("ReactiveMusic: Failed loading songpack, cannot create property=" + key + " " + e.getMessage());
+          System.out.println("ReactiveMusic: Error while loading songpack, cannot create property=" + key + " " + e.getMessage());
 
-          errorString = e.getMessage();
+          errorString += e.getMessage() + "\n\n";
+          blockLoading = true;
+
           return null;
 
                   //    e.getMessage());

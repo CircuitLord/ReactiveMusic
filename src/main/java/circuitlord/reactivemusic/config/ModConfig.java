@@ -14,11 +14,10 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.math.Vec3d;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Function;
 
 import static dev.isxander.yacl3.platform.YACLPlatform.getConfigDir;
@@ -68,6 +67,11 @@ public class ModConfig {
     @SerialEntry
     public List<String> blacklistedDimensions = new ArrayList<>();
 
+    @SerialEntry
+    public HashMap<String, Vec3d> savedHomePositions = new HashMap<>();
+
+
+
 
 
 
@@ -85,7 +89,7 @@ public class ModConfig {
             songpacksBuilder.name(Text.literal("Songpacks"));
 
 
-            boolean arIsLoaded = Objects.equals(ReactiveMusic.currentSongpack.config.name, "Adventure Redefined");
+            //boolean arIsLoaded = Objects.equals(ReactiveMusic.currentSongpack.config.name, "Adventure Redefined");
 
 /*            songpacksBuilder.option(ButtonOption.createBuilder()
                     .name(Text.literal("Adventure Redefined (Default)"))
@@ -108,8 +112,12 @@ public class ModConfig {
 
             for (var songpackZip : RMSongpackLoader.availableSongpacks) {
 
-                boolean isLoaded = Objects.equals(ReactiveMusic.currentSongpack.config.name, songpackZip.config.name);
+                boolean isLoaded = false;
 
+                if (ReactiveMusic.currentSongpack != null) {
+
+                    isLoaded = Objects.equals(ReactiveMusic.currentSongpack.config.name, songpackZip.config.name);
+                }
 
                 if (songpackZip.blockLoading) {
                     songpacksBuilder.option(ButtonOption.createBuilder()
@@ -153,7 +161,6 @@ public class ModConfig {
 
                             .action((yaclScreen, buttonOption) -> {
                                 setActiveSongpack(songpackZip);
-                                ReactiveMusic.refreshSongpack();
 
                                 MinecraftClient.getInstance().setScreen(ModConfig.createScreen(parent));
                             })
@@ -183,6 +190,12 @@ public class ModConfig {
                                     .name(Text.literal("Music Delay Length"))
                                     .binding(defaults.musicDelayLength2, () -> config.musicDelayLength2, newVal -> config.musicDelayLength2 = newVal )
                                     .controller(opt -> EnumControllerBuilder.create(opt).enumClass(MusicDelayLength.class))
+                                    .description(
+                                            OptionDescription.createBuilder()
+                                                    .text(Text.literal("Defines how much silence there should be between songs playing.\n\n" +
+                                                            "SONGPACK_DEFAULT will use values recommended by the songpack creator."))
+                                                    .build()
+                                    )
 
                                     .build())
 
@@ -190,6 +203,12 @@ public class ModConfig {
                                     .name(Text.literal("Music Switch Speed"))
                                     .binding(defaults.musicSwitchSpeed2, () -> config.musicSwitchSpeed2, newVal -> config.musicSwitchSpeed2 = newVal )
                                     .controller(opt -> EnumControllerBuilder.create(opt).enumClass(MusicSwitchSpeed.class))
+                                    .description(
+                                            OptionDescription.createBuilder()
+                                                    .text(Text.literal("Defines how long before a song fades out when it's event becomes invalid.\n\n" +
+                                                            "SONGPACK_DEFAULT will use values recommended by the songpack creator."))
+                                                    .build()
+                                    )
 
                                     .build())
 

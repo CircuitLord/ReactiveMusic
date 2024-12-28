@@ -137,6 +137,10 @@ public abstract class BaseConstructor {
 
   public void setComposer(Composer composer) {
     this.composer = composer;
+
+    // clear constructor info
+    Constructor.blockLoading = false;
+    Constructor.errorString = "";
   }
 
   /**

@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
 import org.yaml.snakeyaml.DumperOptions.FlowStyle;
 import org.yaml.snakeyaml.composer.Composer;
 import org.yaml.snakeyaml.constructor.BaseConstructor;
+import org.yaml.snakeyaml.constructor.Construct;
 import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.emitter.Emitable;
 import org.yaml.snakeyaml.emitter.Emitter;
@@ -489,6 +490,7 @@ public class Yaml {
   private Object loadFromReader(StreamReader sreader, Class<?> type) {
     Composer composer =
         new Composer(new ParserImpl(sreader, loadingConfig), resolver, loadingConfig);
+
     constructor.setComposer(composer);
     return constructor.getSingleData(type);
   }

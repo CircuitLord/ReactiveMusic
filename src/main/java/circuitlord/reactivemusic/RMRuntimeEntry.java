@@ -11,9 +11,14 @@ public class RMRuntimeEntry {
 
     String songpack;
 
-    boolean allowFallback = true;
+    boolean allowFallback = false;
 
-    boolean stopMusicOnEventChanged = false;
+    public boolean forceStopMusicOnValid = false;
+    public boolean forceStopMusicOnInvalid = false;
+
+    public boolean forceStartMusicOnValid = false;
+
+    public float forceChance = 1.0f;
 
     List<String> songs = new ArrayList<>();
 
@@ -21,17 +26,27 @@ public class RMRuntimeEntry {
 
     String errorString = "";
 
+    float cachedRandomChance = 1.0f;
+
 
     public static RMRuntimeEntry create(String songpackName, SongpackEntry songpackEntry) {
 
         RMRuntimeEntry Entry = new RMRuntimeEntry();
         Entry.songpack = songpackName;
+
         Entry.allowFallback = songpackEntry.allowFallback;
-        Entry.stopMusicOnEventChanged = songpackEntry.stopMusicOnEventChanged;
+
+        Entry.forceStopMusicOnValid = songpackEntry.forceStopMusicOnValid || songpackEntry.forceStopMusicOnChanged;
+        Entry.forceStopMusicOnInvalid = songpackEntry.forceStopMusicOnInvalid || songpackEntry.forceStopMusicOnChanged;
+
+        Entry.forceStartMusicOnValid = songpackEntry.forceStartMusicOnValid;
+
+        Entry.forceChance = songpackEntry.forceChance;
+
         Entry.songs = Arrays.stream(songpackEntry.songs).toList();
 
         for (int i = 0; i < songpackEntry.events.length; i++) {
-            Entry.eventString += songpackEntry.events[i];
+            Entry.eventString += songpackEntry.events[i] + "_";
         }
 
         for (String event : songpackEntry.events) {

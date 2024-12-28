@@ -9,7 +9,8 @@ entries:
 
   # --- Outside game state/special songs ---
   - events: [ "MAIN_MENU" ]
-    stopMusicOnEventChanged: true
+    forceStopMusicOnChanged: true
+    forceStartMusicOnValid: true
     songs:
       - "DuNock-Street-TitleEdit"
       - "TheShapersRealm"
@@ -18,20 +19,39 @@ entries:
       - "Reverie"
 
 
-#  - events: ["HOME"]
-#    songs:
-#      - "KeeperOfTheForest"
-#      - "CastleInTheSky"
-#      - "CircleOfLife"
+  # super rare home song
+  - events: [ "HOME", "SNOW", "NIGHT" ]
+    forceStopMusicOnChanged: true
+    forceStartMusicOnValid: true
+    allowFallback: true
+    songs:
+      - "WintersNight"
 
+  - events: ["HOME"]
+    allowFallback: true
+    songs:
+      - "KeeperOfTheForest"
+      - "CastleInTheSky"
+      - "CircleOfLife"
+
+
+
+  # Boss songs
+  - events: [ "BOSS" ]
+    forceStopMusicOnChanged: true
+    forceStartMusicOnValid: true
+    songs:
+      - "LastStand"
+      - "Ruthless"
 
 
   - events: [ "UNDERWATER" ]
+    allowFallback: true
     songs:
       - "Eventide"
 
   - events: [ "UNDERGROUND" ]
-    stopMusicOnEventChanged: true
+    forceStopMusicOnChanged: true
     songs:
       - "WintersBreath"
       - "IntoSilenceP1"
@@ -55,6 +75,9 @@ entries:
 
   # Sunset songs
   - events: ["SUNSET"]
+    forceStopMusicOnChanged: true
+    forceStartMusicOnValid: true
+    forceChance: 0.5
     songs:
       - "Alvae"
       - "SiochainShuthain"
@@ -63,8 +86,9 @@ entries:
 
   # Sunrise songs
   - events: ["SUNRISE"]
-    alwaysPlay: true
-    alwaysStop: true
+    forceStopMusicOnChanged: true
+    forceStartMusicOnValid: true
+    forceChance: 0.5
     songs:
       - "Alvae"
       - "SiochainShuthain"
@@ -75,8 +99,10 @@ entries:
 
 
   - events: [ "DIM=NETHER" ]
-    stopMusicOnEventChanged: true
+    forceStopMusicOnChanged: true
     songs:
+      - "LastStand"
+      - "Ruthless"
       - "Mufaya-DarkAscension"
       - "TheShapersRealm"
       - "Storm"
@@ -85,7 +111,7 @@ entries:
 
 
   - events: [ "DIM=END" ]
-    stopMusicOnEventChanged: true
+    forceStopMusicOnChanged: true
     songs:
       - "DuNock-Street-TitleEdit"
       - "Mufaya-DarkAscension"
@@ -110,6 +136,7 @@ entries:
 
 
   - events: ["BIOME=BEACH"]
+    allowFallback: true
     songs:
       - "CliffsOfMoher"
       - "Eventide"
@@ -167,17 +194,4 @@ entries:
       - "ShimmeringInTheShallows"
 
 
-
-
-
-  # Boss songs
-  #- events: ["Boss"]
-  #  songs:
-  #    - "LastStand"
-  #    - "Ruthless"
-
-  # Home songs
-  #- events: ["Home-Snow-Night"]
-  #  songs:
-  #    - "WintersNight"
 

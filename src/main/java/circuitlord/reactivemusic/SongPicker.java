@@ -1,7 +1,9 @@
 package circuitlord.reactivemusic;
 
 
+import circuitlord.reactivemusic.config.ModConfig;
 import circuitlord.reactivemusic.mixin.BossBarHudAccessor;
+import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.CreditsScreen;
@@ -21,6 +23,7 @@ import net.minecraft.registry.tag.TagKey;
 import net.minecraft.util.math.BlockPos;
 
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 
@@ -49,6 +52,8 @@ public final class SongPicker {
 
     public static Long TIME_FOR_FORGET_DAMAGE_SOURCE = 200L;
 
+    public static boolean wasSleeping = false;
+
     static {
 
         for (Field field : BIOME_TAG_FIELDS) {
@@ -71,6 +76,8 @@ public final class SongPicker {
         }
         return null;
     }
+
+
 
 
     public static void tickEventMap() {
@@ -110,6 +117,31 @@ public final class SongPicker {
         boolean sunset = time > 12000 && time < 13000;
         boolean sunrise = time > 23000;
 
+
+        // TODO: someone help me I have no idea how to get the name of the world/server but if you know how then put it instead of "saved"
+        if (!wasSleeping && player.isSleeping()) {
+            ReactiveMusic.config.savedHomePositions.put("saved", player.getPos());
+
+            ModConfig.saveConfig();
+        }
+
+        wasSleeping = player.isSleeping();
+
+
+        // special
+
+        if (ReactiveMusic.config.savedHomePositions.containsKey("saved")) {
+
+            Vec3d dist = player.getPos().subtract(ReactiveMusic.config.savedHomePositions.get("saved"));
+
+            songpackEventMap.put(SongpackEventType.HOME, dist.length() < 45.0f);
+        }
+        else {
+            songpackEventMap.put(SongpackEventType.HOME, false);
+        }
+
+
+
         // Time
         songpackEventMap.put(SongpackEventType.DAY, !night);
         songpackEventMap.put(SongpackEventType.NIGHT, night);
@@ -141,13 +173,11 @@ public final class SongPicker {
 
 
         // Weather
-        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining());
+        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation(pos) == Biome.Precipitation.RAIN);
+        songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitation(pos) == Biome.Precipitation.SNOW);
 
+        songpackEventMap.put(SongpackEventType.STORM, world.isThundering());
 
-        // TODO: WILL BE REMOVED, use biomeTagEventMap
-        songpackEventMap.put(SongpackEventType.MOUNTAIN, biome.isIn(BiomeTags.IS_MOUNTAIN));
-        songpackEventMap.put(SongpackEventType.FOREST, biome.isIn(BiomeTags.IS_FOREST));
-        songpackEventMap.put(SongpackEventType.BEACH, biome.isIn(BiomeTags.IS_BEACH));
 
         var currentTags = biome.streamTags().toList();
 
@@ -255,6 +285,19 @@ public final class SongPicker {
         for (SongpackEventType eventType : SongpackEventType.values()) {
             songpackEventMap.put(eventType, false);
         }
+
+        EntitySleepEvents.START_SLEEPING.register((entity, sleepingPos) -> {
+            if (entity instanceof ClientPlayerEntity player) {
+
+                ReactiveMusic.LOGGER.info("We started sleeping on client!");
+/*                float delay = entity.getWorld().getRandom().nextFloat(10, 60);
+
+                PacketByteBuf buf = PacketByteBufs.create();
+                buf.writeFloat(delay);
+                buf.writeBlockPos(sleepingPos);
+                ServerPlayNetworking.send(player, NeMuelchS2CPacketHandler.SLEEP_EVENT_S2C_CHANNEL, buf);*/
+            }
+        });
 
     }
 

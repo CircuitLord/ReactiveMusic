@@ -20,6 +20,7 @@ public enum SongpackEventType {
     // --- Weather ---
     RAIN,
     SNOW,
+    STORM,
 
 
     // --- world height ---
@@ -43,9 +44,6 @@ public enum SongpackEventType {
     OVERWORLD,
     NETHER,
     END,
-    MOUNTAIN,
-    FOREST,
-    BEACH,
 
     // MOBS
 
