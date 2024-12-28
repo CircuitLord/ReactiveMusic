@@ -1,3 +1,4 @@
+/*
 	package circuitlord.reactivemusic;
 
     import net.fabricmc.loader.api.FabricLoader;
@@ -222,9 +223,6 @@
                                 // TODO: cache this in song picker?
                                 fieldName = CleanBiomeTagString(fieldName);
 
-                                // remove the IS_ stuff in ConventionalBiomeTags v2
-                                //fieldName = fieldName.replace("is_", "");
-
                                 if (fieldName.equals(biomeTagName)) {
 
                                     var biomeTag = SongPicker.getBiomeTagFromField(SongPicker.BIOME_TAG_FIELDS[k]);
@@ -382,3 +380,4 @@
             return s;
         }
     }
+*/
