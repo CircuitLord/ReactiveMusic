@@ -102,7 +102,10 @@ public final class SongPicker {
         BlockPos pos = new BlockPos(player.getBlockPos());
         var biome = world.getBiome(pos);
 
-        currentBiomeName = biome.getIdAsString();
+        // Copied logic out from getIdAsString
+        currentBiomeName = (String)biome.getKey().map((key) -> {
+            return key.getValue().toString();
+        }).orElse("[unregistered]");
 
         boolean underground = !world.isSkyVisible(pos);
         var indimension = world.getRegistryKey();
