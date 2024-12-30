@@ -1,17 +1,15 @@
 
 # Making Songpacks
 
-NOTE: You can find a video version of this wiki page [here](https://www.youtube.com/watch?v=6vgtpL0cQSA)!
+NOTE: You can find a video version of this wiki page [here](https://www.youtube.com/watch?v=YvEap8IUS-c)!
 
 Songpacks are constructed as folders with a yaml configuration file and a folder with mp3 music files.
 
 They're loaded from the `resourcepacks` folder, although they're not actually resource packs and are instead selected from the configuration UI. This is purely to make including songpacks easier.
 
-I HIGHLY recommend downloading the songpack template and using it as a base to make your pack so you understand the structure.
-Download [here](https://raw.githubusercontent.com/CircuitLord/ReactiveMusic/master/docs/ReactiveMusicSongpackTemplate-v3.zip)!
+**Download the Songpack Template [here](https://raw.githubusercontent.com/CircuitLord/ReactiveMusic/master/docs/ReactiveMusicSongpackTemplate-v5.zip)!**
 
-IMPORTANT: Songpacks can be worked on while unzipped, but when distributing a zipped songpack, it MUST be zipped as uncompressed, (store files). If it is compressed it will not load correctly.
-
+<br>
 
 ## Testing Songpacks
 
@@ -21,6 +19,7 @@ This also works for reloading a songpack if you've made changes you want to try 
 I also highly recommend turning debug mode on in the Debug section,
 this will make songs switch whenever their events become valid and removes silence gaps entirely to make it easier to test.
 
+<br>
 
 ## Songpack Configuration
 
@@ -33,16 +32,18 @@ version: "1.0"
 author: "CircuitLord"
 description: "A really good songpack that I made"
 credits: "Cool people here"
+
+musicSwitchSpeed: NORMAL
+musicDelayLength: NORMAL
 ```
 
 - `(String) name` The unique name/identifier for your songpack.
-- `(String) version` Current version of the songpack.
-- `(String) author` Hey, it's you!
-- `(String) description` Details on the songpack.
-- `(String) credits` Any credits for music creators included in your pack.
+-  `musicSwitchSpeed` (INSTANT, SHORT, NORMAL, LONG) Defines the default for how fast music will stop when it's event becomes invalid
+-  `musicDelayLength` (NONE, SHORT, NORMAL, LONG) Defines the default for how much silence there should be before a new song starts playing again
 
+<br><br>
 
-### Songpack Entries:
+## Songpack Entries:
 
 Songpack entries define what songs play in specific events. You can have as many entries as you want, and they're prioritized internally based on what order you put them in.
 
@@ -50,17 +51,26 @@ Here's an example songpack entry:
 
 ```
 - events: [ "MAIN_MENU" ]
-  alwaysPlay: true
-  alwaysStop: true
   songs:
     - "DuNock-Street-TitleEdit"
 ```
 
 - `(SongpackEventType) events` The specific events that need to be valid for this entry to play. (see details below)
-- `(Boolean) alwaysStop` (default false) Does this event always stop when it's events are no longer valid?
-- `(Boolean) alwaysPlay` (default false) Does this event always immediately start when it's events become valid?
-- `(Boolean) allowFallback` (default true) If we've played all songs from this event, are we allowed to "fallback" to events under us?
+- `(Boolean) allowFallback` (default false) If we've played all songs from this event, should  we "fallback" to other events that are also valid? (good for one-off events you don't want to play over and over)
 - `(String[]) songs` The list of song files to pick from when this event plays. These are picked from the `music` sub-folder.
+
+<br><br>
+
+There are also a couple of other advanced params you can use:
+
+`(Boolean) forceStopMusicOnChanged` (default false) Force stop the current music when this event becomes valid/invalid. Good for when you definitely want the music to switch from whatever's currently playing (boss, nether, etc)
+- this also has variations as `forceStopMusicOnValid` and `forceStopMusicOnInvalid` if you want specific behavior
+
+`(Boolean) forceStartMusicOnValid` (default false) If this event becomes valid, and the music stops naturally or because of forceStop, then play this event immediately.
+
+`(float) forceChance` (default 1.0f) If forceStop/Start is enabled, what is the chance it happens? Good for events where you only want the music to switch sometimes.
+
+<br><br>
 
 
 ### IMPORTANT: Spacing matters! Use tabs to properly indent the entries and their properties.
@@ -73,17 +83,22 @@ A proper entry looks like this!
 (tab)(tab)(tab) - "MyOtherCoolSong"
 ```
 
----
+<br><br>
 
-You can also combine multiple events for more specific songs.
+You can also combine multiple events for more specific songs, or do an "OR" condition
 
 ```
   - events: [ "DAY", "BIOME=MOUNTAIN" ]
     songs:
       - "ForTheKing"
       - "Freedom"
+
+  - events: [ "BIOME=ocean || UNDERWATER" ]
+    songs:
+      - "Freedom"
 ```
 
+<br><br>
 
 ## Events (SongpackEventTypes)
 
@@ -91,8 +106,8 @@ This lists all the available songpack events you have available.
 
 ### Special
 - `MAIN_MENU`
-- `CREDITS` (TODO)
-- `HOME` (TODO)
+- `CREDITS`
+- `HOME` (within 45 blocks of bed)
 
 ### Time
 - `DAY`
@@ -103,11 +118,7 @@ This lists all the available songpack events you have available.
 ### Weather
 - `RAIN`
 - `SNOW`
-
-### Dimension
-- `NETHER`
-- `END`
-- `OVERWORLD`
+- `STORM`
 
 ### World Height
 - `UNDERWATER`
@@ -130,30 +141,49 @@ This lists all the available songpack events you have available.
 - `VILLAGE` (nearby villagers)
 
 ### Combat
-- `BOSS` (whenever a boss bar is on-screen locally)
+- `BOSS` (whenever a boss bar is on-screen)
 
-## Biome Tag Events
+<br><br>
 
-You can access any biome tag from Fabric's ConventionalBiomeTags in Reactive Music! See a full list of tags [here](https://maven.fabricmc.net/docs/fabric-api-0.100.3+1.21/net/fabricmc/fabric/api/tag/convention/v2/ConventionalBiomeTags.html).
+## Biome Events
 
-NOTE: if you're using 1.20, you have slightly less tags you can use, most of the 1.21 tags WILL work but as a resort reference [this list of tags](https://maven.fabricmc.net/docs/fabric-api-0.79.2+1.20/net/fabricmc/fabric/api/tag/convention/v1/ConventionalBiomeTags.html) for 1.20.
+You can search for any biome by using `BIOME=biomename`. This can be the full biome name or just a part of it if you want to soft-search.
 
-
-For example:
 ```
-  - events: [ "DAY", "BIOME=IS_HOT" ]
+  # any biome with cherry in the name
+  - events: [ "BIOME=cherry" ]
+    songs:
+      - "Storm"
+```
+
+<br><br>
+
+Biome tags can be used by specifying `BIOMETAG=BIOME_TAG`. They're good for automatically having compatibility with modded biomes. You can find the full list of tags [here](https://maven.fabricmc.net/docs/fabric-api-0.100.3+1.21/net/fabricmc/fabric/api/tag/convention/v2/ConventionalBiomeTags.html)
+
+NOTE: putting the "IS_" in front of the tag is optional ("BIOMETAG=IS_MOUNTAIN" and "BIOMETAG=MOUNTAIN" are both valid
+
+```
+  - events: [ "DAY", "BIOMETAG=IS_HOT" ]
     songs:
       - "ForTheKing"
-      - "Freedom"
-
-  - events: [ "BIOME=IS_ICY" ]
-    songs:
-      - "Eventide"
 ```
 
----
+<br><br>
 
 
+## Dimension Events
+
+Dimensions can be specified by doing `DIM=dimname`. Similar to biome events, this can be the fully typed name or just a subset of it.
+
+```
+  # we add forceStopMusicOnChanged here so that the song always changes upon going in/out of the nether, since that music is pretty different than anything else
+  - events: [ "DIM=NETHER" ]
+    forceStopMusicOnChanged: true
+    songs:
+      - "Storm"
+```
+
+<br><br>
 
 
 
