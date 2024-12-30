@@ -274,12 +274,6 @@ public class ReactiveMusic implements ModInitializer {
 			}
 
 
-/*			if (wantsToSwitch) waitForStopTicks++;
-			else waitForStopTicks = 0;
-
-			if (thread.notQueuedOrPlaying()) waitForNewSongTicks++;
-			else waitForNewSongTicks = 0;*/
-
 
 			// ---- FADE OUT ----
 

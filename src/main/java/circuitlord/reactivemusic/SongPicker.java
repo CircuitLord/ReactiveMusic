@@ -3,7 +3,6 @@ package circuitlord.reactivemusic;
 
 import circuitlord.reactivemusic.config.ModConfig;
 import circuitlord.reactivemusic.mixin.BossBarHudAccessor;
-import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.CreditsScreen;
@@ -171,10 +170,9 @@ public final class SongPicker {
 
         songpackEventMap.put(SongpackEventType.UNDERWATER, player.isSubmergedInWater());
 
-
         // Weather
-        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation(pos) == Biome.Precipitation.RAIN);
-        songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitation(pos) == Biome.Precipitation.SNOW);
+        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation(pos, world.getSeaLevel()) == Biome.Precipitation.RAIN);
+        songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitation(pos, world.getSeaLevel()) == Biome.Precipitation.SNOW);
 
         songpackEventMap.put(SongpackEventType.STORM, world.isThundering());
 
@@ -285,20 +283,6 @@ public final class SongPicker {
         for (SongpackEventType eventType : SongpackEventType.values()) {
             songpackEventMap.put(eventType, false);
         }
-
-        EntitySleepEvents.START_SLEEPING.register((entity, sleepingPos) -> {
-            if (entity instanceof ClientPlayerEntity player) {
-
-                ReactiveMusic.LOGGER.info("We started sleeping on client!");
-/*                float delay = entity.getWorld().getRandom().nextFloat(10, 60);
-
-                PacketByteBuf buf = PacketByteBufs.create();
-                buf.writeFloat(delay);
-                buf.writeBlockPos(sleepingPos);
-                ServerPlayNetworking.send(player, NeMuelchS2CPacketHandler.SLEEP_EVENT_S2C_CHANNEL, buf);*/
-            }
-        });
-
     }
 
 
