@@ -126,9 +126,9 @@ public class ReactiveMusic implements ModInitializer {
 		if (!loadedUserSongpack) {
 
 			// for the cases where something is broken in the base songpack
-			if (!RMSongpackLoader.availableSongpacks.getFirst().blockLoading) {
+			if (!RMSongpackLoader.availableSongpacks.get(0).blockLoading) {
 				// first is the default songpack
-				setActiveSongpack(RMSongpackLoader.availableSongpacks.getFirst());
+				setActiveSongpack(RMSongpackLoader.availableSongpacks.get(0));
 			}
 		}
 
@@ -233,7 +233,7 @@ public class ReactiveMusic implements ModInitializer {
 
 		// Pick the highest priority one
 		if (!validEntries.isEmpty()) {
-			newEntry = validEntries.getFirst();
+			newEntry = validEntries.get(0);
 		}
 
 		processValidEvents(validEntries, previousValidEntries);
