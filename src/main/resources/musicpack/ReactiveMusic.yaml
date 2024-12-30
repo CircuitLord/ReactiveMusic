@@ -103,8 +103,6 @@ entries:
   - events: [ "DIM=NETHER" ]
     forceStopMusicOnChanged: true
     songs:
-      - "LastStand"
-      - "Ruthless"
       - "Mufaya-DarkAscension"
       - "TheShapersRealm"
       - "Storm"
