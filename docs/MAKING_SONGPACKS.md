@@ -1,7 +1,7 @@
 
 # Making Songpacks
 
-NOTE: You can find a video version of this wiki page [here](https://www.youtube.com/watch?v=6vgtpL0cQSA)!
+NOTE: You can find a video version of this wiki page [here](https://www.youtube.com/watch?v=YvEap8IUS-c)!
 
 Songpacks are constructed as folders with a yaml configuration file and a folder with mp3 music files.
 
