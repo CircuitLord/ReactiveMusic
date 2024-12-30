@@ -1,5 +1,7 @@
 name: "Adventure Redefined"
+description: "The built-in songpack with Reactive Music."
 version: "1.0"
+credits: "Music from Vindsvept, Adrian von Ziegler, and Mufaya."
 
 musicSwitchSpeed: NORMAL
 musicDelayLength: NORMAL
