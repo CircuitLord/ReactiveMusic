@@ -1,12 +1,10 @@
 package circuitlord.reactivemusic;
 
 import net.fabricmc.loader.api.FabricLoader;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.Construct;
-import org.yaml.snakeyaml.constructor.Constructor;
+import org.rm_yaml.snakeyaml.Yaml;
+import org.rm_yaml.snakeyaml.constructor.Constructor;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
