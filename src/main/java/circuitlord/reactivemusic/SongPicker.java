@@ -1,5 +1,6 @@
 package circuitlord.reactivemusic;
 
+// LF - Not a fabric modder, I might make obvious syntax mistakes.
 
 import circuitlord.reactivemusic.config.ModConfig;
 import circuitlord.reactivemusic.mixin.BossBarHudAccessor;
@@ -140,40 +141,62 @@ public final class SongPicker {
         }
         else {
             songpackEventMap.put(SongpackEventType.HOME, false);
+
+            songpackEventMap.put(SongpackEventType.NOTHOME, true);
         }
 
 
-
+        // LF - Ok I admit this might not have much use but I think having the option anyway is good, right? 
         // Time
-        songpackEventMap.put(SongpackEventType.DAY, !night);
+        songpackEventMap.put(SongpackEventType.DAY, day);
+        songpackEventMap.put(SongpackEventType.NOT_DAY, !day);
         songpackEventMap.put(SongpackEventType.NIGHT, night);
+        songpackEventMap.put(SongpackEventType.NOT_NIGHT, !night);
         songpackEventMap.put(SongpackEventType.SUNSET, sunset);
+        songpackEventMap.put(SongpackEventType.NOT_SUNSET, !sunset);
         songpackEventMap.put(SongpackEventType.SUNRISE, sunrise);
+        songpackEventMap.put(SongpackEventType.NOT_SUNRISE, !sunrise);
 
 
         // Actions
-
+        // LF - Ok I admit this might not have much use but I think having the option anyway is good, right?
         songpackEventMap.put(SongpackEventType.DYING, player.getHealth() / player.getMaxHealth() < 0.35);
+        songpackEventMap.put(SongpackEventType.NOT_DYING, player.getHealth() / player.getMaxHealth() >= 0.35);
         songpackEventMap.put(SongpackEventType.FISHING, player.fishHook != null);
+        songpackEventMap.put(SongpackEventType.NOT_FISHING, player.fishHook = null);
+
+        // LF - Ok I admit this might not have much use but I think having the option anyway is good, right?
 
         songpackEventMap.put(SongpackEventType.MINECART, riding instanceof MinecartEntity);
+        songpackEventMap.put(SongpackEventType.NOT_MINECART, !riding instanceof MinecartEntity);
         songpackEventMap.put(SongpackEventType.BOAT, riding instanceof BoatEntity);
+        songpackEventMap.put(SongpackEventType.NOT_BOAT, !riding instanceof BoatEntity);
         songpackEventMap.put(SongpackEventType.HORSE, riding instanceof HorseEntity);
+        songpackEventMap.put(SongpackEventType.NOT_HORSE, !riding instanceof HorseEntity);
         songpackEventMap.put(SongpackEventType.PIG, riding instanceof PigEntity);
+        songpackEventMap.put(SongpackEventType.NOT_PIG, !riding instanceof PigEntity);
 
 
         songpackEventMap.put(SongpackEventType.OVERWORLD, indimension == World.OVERWORLD);
+        songpackEventMap.put(SongpackEventType.NOT_OVERWORLD, indimension == !World.OVERWORLD);
         songpackEventMap.put(SongpackEventType.NETHER, indimension == World.NETHER);
+        songpackEventMap.put(SongpackEventType.NOT_NETHER, indimension == !World.NETHER);
         songpackEventMap.put(SongpackEventType.END, indimension == World.END);
+        songpackEventMap.put(SongpackEventType.NOT_END, indimension == !World.END);
 
+        // LF - Why limit these to overworld? also, perhaps for the not version, I/we should remove the 'underground' check entirely?
+        songpackEventMap.put(SongpackEventType.UNDERGROUND, underground && pos.getY() < 55);
+        songpackEventMap.put(SongpackEventType.NOT_UNDERGROUND, pos.getY() >= 55);
+        songpackEventMap.put(SongpackEventType.DEEP_UNDERGROUND, underground && pos.getY() < 15);
+        songpackEventMap.put(SongpackEventType.NOT_DEEP_UNDERGROUND, underground && pos.getY() >= 15);
+        songpackEventMap.put(SongpackEventType.HIGH_UP, !underground && pos.getY() > 128);
+        songpackEventMap.put(SongpackEventType.NOT_HIGH_UP, !underground && pos.getY() > 128);
 
-        songpackEventMap.put(SongpackEventType.UNDERGROUND, indimension == World.OVERWORLD && underground && pos.getY() < 55);
-        songpackEventMap.put(SongpackEventType.DEEP_UNDERGROUND, indimension == World.OVERWORLD && underground && pos.getY() < 15);
-        songpackEventMap.put(SongpackEventType.HIGH_UP, indimension == World.OVERWORLD && !underground && pos.getY() > 128);
-
-        songpackEventMap.put(SongpackEventType.UNDERWATER, player.isSubmergedInWater());
+        songpackEventMap.put(SongpackEventType.UNDERWATER, player.isSubmergedInWater())
+        songpackEventMap.put(SongpackEventType.NOT_UNDERWATER, !player.isSubmergedInWater());;
 
         // Weather
+        // LF - I actually don't know how to approach this one in a useful way.
         songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation(pos, world.getSeaLevel()) == Biome.Precipitation.RAIN);
         songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitation(pos, world.getSeaLevel()) == Biome.Precipitation.SNOW);
 
@@ -193,7 +216,8 @@ public final class SongPicker {
                     break;
                 }
             }
-
+        // Update all ConventionalBiomeTags
+        
             biomeTagEventMap.put(tag, found);
         }
 
@@ -231,6 +255,7 @@ public final class SongPicker {
             }
 
             songpackEventMap.put(SongpackEventType.VILLAGE, villagerCount > 0);
+            songpackEventMap.put(SongpackEventType.NOT_VILLAGE, villagerCount = 0);
 
         }
 
@@ -265,6 +290,7 @@ public final class SongPicker {
         }
 
         songpackEventMap.put(SongpackEventType.BOSS, bossBarActive);
+        songpackEventMap.put(SongpackEventType.NOT_BOSS, !bossBarActive);
 
 
         songpackEventMap.put(SongpackEventType.GENERIC, true);
