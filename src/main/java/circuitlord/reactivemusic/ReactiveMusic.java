@@ -530,11 +530,11 @@ public class ReactiveMusic implements ModInitializer {
 			case INSTANT:
 				return 100;
 			case SHORT:
-				return 350;
+				return 250;
 			case NORMAL:
-				return 1000;
+				return 900;
 			case LONG:
-				return 2500;
+				return 2400;
 		}
 
 		return 100;
@@ -557,11 +557,11 @@ public class ReactiveMusic implements ModInitializer {
 			case NONE:
 				return 0;
 			case SHORT:
-				return 350;
+				return 250;
 			case NORMAL:
-				return 1000;
+				return 900;
 			case LONG:
-				return 2500;
+				return 2400;
 		}
 
 		return 100;
