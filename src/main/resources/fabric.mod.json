@@ -13,7 +13,7 @@
 	},
 	"license": "GPLv3",
 	"icon": "assets/reactivemusic/icon.png",
-	"environment": "*",
+	"environment": "client",
 	"entrypoints": {
 		"main": [
 			"circuitlord.reactivemusic.ReactiveMusic"
