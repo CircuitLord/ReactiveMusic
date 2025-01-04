@@ -9,7 +9,11 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.option.GameOptions;
+import net.minecraft.client.sound.SoundInstance;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +57,8 @@ public class ReactiveMusic implements ModInitializer {
 	//static int fadeInTicks = 0;
 	static int silenceTicks = 0;
 
+	static int musicDiscDuckTicks = 0;
+
 	static int slowTickUpdateCounter = 0;
 
 	static boolean currentDimBlacklisted = false;
@@ -74,6 +80,8 @@ public class ReactiveMusic implements ModInitializer {
 
 	private static List<RMRuntimeEntry> loadedEntries = new ArrayList<>();
 
+
+	public static final List<SoundInstance> musicDiscInstanceList = new ArrayList<SoundInstance>();
 
 
 	@Override
@@ -225,6 +233,8 @@ public class ReactiveMusic implements ModInitializer {
 
 
 		// -------------------------
+
+		processMusicDiscPlaying();
 
 
 		RMRuntimeEntry newEntry = null;
@@ -580,6 +590,62 @@ public class ReactiveMusic implements ModInitializer {
 		currentEntry = null;
 		currentSong = null;
 	}
+
+
+
+
+	private static void processMusicDiscPlaying() {
+
+		// remove if the song is null or not playing anymore
+		musicDiscInstanceList.removeIf(soundInstance -> soundInstance == null || !MinecraftClient.getInstance().getSoundManager().isPlaying(soundInstance));
+
+
+		boolean foundMusicDisc = false;
+
+		for (SoundInstance disc : musicDiscInstanceList) {
+
+			Vec3d pos = new Vec3d(disc.getX(), disc.getY(), disc.getZ());
+
+			if (MinecraftClient.getInstance().player != null) {
+				Vec3d dist = MinecraftClient.getInstance().player.getPos().subtract(pos);
+
+				if (dist.length() > 65.f) {
+					continue;
+				}
+			}
+
+			foundMusicDisc = true;
+
+		}
+
+
+		GameOptions options = MinecraftClient.getInstance().options;
+		float jukeboxGain = options.getSoundVolume(SoundCategory.RECORDS);
+
+
+		// only duck for jukebox if our volume is loud enough to where it would matter
+		if (foundMusicDisc && jukeboxGain >= 0.04f) {
+
+			var disc = musicDiscInstanceList.get(0);
+
+
+
+			if (musicDiscDuckTicks < FADE_DURATION) {
+				musicDiscDuckTicks++;
+			}
+
+		}
+		else {
+			if (musicDiscDuckTicks > 0) {
+				musicDiscDuckTicks--;
+			}
+		}
+
+		thread.setMusicDiscDuckPercentage(1f - (musicDiscDuckTicks / (float)FADE_DURATION));
+
+
+	}
+
 
 
 

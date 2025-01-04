@@ -34,6 +34,7 @@ public class PlayerThread extends Thread {
 	}
 	
 	public volatile static float gainPercentage = 1.0f;
+	public volatile static float musicDiscDuckPercentage = 1.0f;
 
 	public static final float QUIET_VOLUME_PERCENTAGE = 0.7f;
 	public static final float QUIET_VOLUME_LERP_RATE = 0.02f;
@@ -149,6 +150,10 @@ public class PlayerThread extends Thread {
 	public void setGainPercentage(float newGain) {
 		gainPercentage = Math.min(1.0f, Math.max(0.0f, newGain));
 	}
+
+	public void setMusicDiscDuckPercentage(float newGain) {
+		musicDiscDuckPercentage = newGain;
+	}
 	
 	public void processRealGain() {
 
@@ -181,7 +186,7 @@ public class PlayerThread extends Thread {
 
 		
 		float minecraftGain = options.getSoundVolume(SoundCategory.MUSIC) * options.getSoundVolume(SoundCategory.MASTER);
-		float newRealGain = MIN_GAIN + (MAX_GAIN - MIN_GAIN) * minecraftGain * gainPercentage * quietPercentage;
+		float newRealGain = MIN_GAIN + (MAX_GAIN - MIN_GAIN) * minecraftGain * gainPercentage * quietPercentage * musicDiscDuckPercentage;
 
 		// Force to basically off if the user sets their volume off
 		if (minecraftGain <= 0) {
