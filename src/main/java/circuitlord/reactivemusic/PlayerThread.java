@@ -130,7 +130,7 @@ public class PlayerThread extends Thread {
 		resetPlayer();
 
 		currentSong = song;
-        queued = true;
+		queued = true;
 	}
 	
 /*	public float getGain() {

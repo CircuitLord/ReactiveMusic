@@ -29,10 +29,10 @@ public class RMRuntimeEntry {
     float cachedRandomChance = 1.0f;
 
 
-    public static RMRuntimeEntry create(String songpackName, SongpackEntry songpackEntry) {
+    public static RMRuntimeEntry create(SongpackZip songpack, SongpackEntry songpackEntry) {
 
         RMRuntimeEntry Entry = new RMRuntimeEntry();
-        Entry.songpack = songpackName;
+        Entry.songpack = songpack.config.name;// songpackName;
 
         Entry.allowFallback = songpackEntry.allowFallback;
 
@@ -43,7 +43,9 @@ public class RMRuntimeEntry {
 
         Entry.forceChance = songpackEntry.forceChance;
 
-        Entry.songs = Arrays.stream(songpackEntry.songs).toList();
+        if (songpackEntry.songs != null) {
+            Entry.songs = Arrays.stream(songpackEntry.songs).toList();
+        }
 
         for (int i = 0; i < songpackEntry.events.length; i++) {
             Entry.eventString += songpackEntry.events[i] + "_";
@@ -55,6 +57,11 @@ public class RMRuntimeEntry {
 
             String cleanedEvent = event.replaceAll("\\s", "");
             cleanedEvent = cleanedEvent.toLowerCase();
+
+            // backwards compat with v0.5
+            if (songpack.convertBiomeToBiomeTag) {
+                cleanedEvent = cleanedEvent.replace("biome=", "biometag=");
+            }
 
             // Split by "||"
             String[] eventSections = cleanedEvent.split("\\|\\|");

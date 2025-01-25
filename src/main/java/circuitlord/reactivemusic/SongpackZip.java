@@ -16,6 +16,9 @@ public class SongpackZip {
     public String errorString = "";
     public boolean blockLoading = false;
 
+    // backwards compat
+    public boolean convertBiomeToBiomeTag = false;
+
     public boolean embedded = false;
 
 }

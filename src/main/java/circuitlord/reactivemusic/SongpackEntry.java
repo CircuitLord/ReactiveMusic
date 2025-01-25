@@ -33,4 +33,9 @@ public class SongpackEntry {
     public String[] songs;
 
 
+    // deprecated
+    public boolean alwaysPlay = false;
+    public boolean alwaysStop = false;
+
+
 }

@@ -181,7 +181,7 @@ public class RMSongpackLoader {
             if (entry == null)
                 continue;
 
-            RMRuntimeEntry runtimeEntry = RMRuntimeEntry.create(songpackZip.config.name, entry);
+            RMRuntimeEntry runtimeEntry = RMRuntimeEntry.create(songpackZip, entry);
 
             if (!runtimeEntry.errorString.isEmpty()) {
                 songpackZip.errorString += runtimeEntry.errorString;
@@ -205,17 +205,33 @@ public class RMSongpackLoader {
 
 
         if (songpackZip.config == null || songpackZip.config.entries == null) {
-            songpackZip.errorString += "Entries are null or not formatted correctly! Make sure you indent each entry with a TAB.\n\n";
+            songpackZip.errorString += "Entries are null or not formatted correctly! Make sure you.\n\n";
             songpackZip.blockLoading = true;
 
             return;
         }
 
-        // Check if all the songs are valid
+        // check for outdated props
+
         for (int i = 0; i < songpackZip.config.entries.length; i++) {
 
             if (songpackZip.config.entries[i] == null)
                 continue;
+
+            if (songpackZip.config.entries[i].alwaysPlay || songpackZip.config.entries[i].alwaysStop) {
+                songpackZip.errorString += "WARNING! You are using a songpack made for Reactive Music v0.5 and older, things may not work well!\n\n";
+                songpackZip.convertBiomeToBiomeTag = true;
+
+                break;
+            }
+        }
+
+        // Check if all the songs are valid
+        for (int i = 0; i < songpackZip.config.entries.length; i++) {
+
+            if (songpackZip.config.entries[i] == null || songpackZip.config.entries[i].songs == null)
+                continue;
+
 
             for (int j = 0; j < songpackZip.config.entries[i].songs.length; j++) {
 

@@ -482,12 +482,21 @@ public class ReactiveMusic implements ModInitializer {
 		currentSong = song;
 		currentEntry = newEntry;
 
-		LOGGER.info("Changing entry: " + newEntry.eventString + " Song name: " + song);
-
 		// go full quiet while switching songs, we'll go back to 1.0f after we load the new song
 		thread.setGainPercentage(0.0f);
 
-		thread.play(song);
+		if (song != null) {
+			LOGGER.info("Changing entry: " + newEntry.eventString + " Song name: " + song);
+
+			thread.play(song);
+		}
+		else {
+			// TODO: maybe a better way to do this that doesn't spam?
+			//LOGGER.info("Changing entry: " + newEntry.eventString + " Doing silence... ");
+
+			// this gets called earlier with resetPlayer
+			//thread.resetPlayer();
+		}
 
 		queuedToPlayMusic = false;
 

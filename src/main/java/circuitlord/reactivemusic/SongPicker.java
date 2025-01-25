@@ -355,6 +355,10 @@ public final class SongPicker {
 
     static String pickRandomSong(List<String> songs) {
 
+        if (songs.isEmpty()) {
+            return null;
+        }
+
         List<String> cleanedSongs = new ArrayList<>(songs);
 
         cleanedSongs.removeAll(recentlyPickedSongs);
