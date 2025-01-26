@@ -25,7 +25,6 @@ import java.util.Random;
 public class ReactiveMusic implements ModInitializer {
 
 	public static final String MOD_ID = "reactive_music";
-	public static final String MOD_VERSION = "1.0.2";
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
@@ -87,12 +86,7 @@ public class ReactiveMusic implements ModInitializer {
 	@Override
 	public void onInitialize() {
 
-		LOGGER.info("--------------------------------------------");
-		LOGGER.info("|     Reactive Music initialization...     |");
-		LOGGER.info("|                version " + MOD_VERSION +"              |");
-		LOGGER.info("--------------------------------------------");
-
-
+		LOGGER.info("Initializing Reactive Music...");
 
 		ModConfig.GSON.load();
 		config = ModConfig.getConfig();
