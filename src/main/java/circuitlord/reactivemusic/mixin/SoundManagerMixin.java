@@ -16,7 +16,7 @@ public class SoundManagerMixin {
         //if (soundInstance.getCategory() == SoundCategory.MUSIC) {
             //ReactiveMusic.musicInstanceList.add(soundInstance);
         //} else
-        if (soundInstance.getId().getPath().startsWith("music_disc.")) {
+        if (soundInstance.getId().getPath().contains("music_disc")) {
             ReactiveMusic.musicDiscInstanceList.add(soundInstance);
 
 /*            if (ReactiveMusic.CONFIG.pauseForDiscMusic) {
