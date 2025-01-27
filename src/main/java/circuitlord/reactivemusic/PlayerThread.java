@@ -193,7 +193,7 @@ public class PlayerThread extends Thread {
 		// cap to 1.0
 		minecraftGain = Math.min(minecraftGain + minecraftGainAddScalar, 1.0f);
 
-		ReactiveMusic.LOGGER.info("minecraft fake gain: " + minecraftGain);
+		//ReactiveMusic.LOGGER.info("minecraft fake gain: " + minecraftGain);
 
 
 		float newRealGain = MIN_GAIN + (MAX_GAIN - MIN_GAIN) * minecraftGain * gainPercentage * quietPercentage * musicDiscDuckPercentage;
