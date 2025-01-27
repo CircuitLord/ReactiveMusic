@@ -102,7 +102,7 @@ public class RMSongpackLoader {
 
 
         try {
-            Files.walkFileTree(resourcePacksPath,  EnumSet.noneOf(FileVisitOption.class), 1, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(resourcePacksPath,  EnumSet.of(FileVisitOption.FOLLOW_LINKS), 1, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException {
                     potentialPacks.add(file);
