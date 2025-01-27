@@ -92,11 +92,6 @@ public class ReactiveMusic implements ModInitializer {
 		config = ModConfig.getConfig();
 
 
-		//Path test = Path.of("K:\\Projects\\MC\\BetterMusic\\run\\resourcepacks\\AwesomeMixVol2");
-		//SongpackZip zip = RMSongpackLoader.loadSongpack(test, false);
-
-
-		//SongLoader.fetchAvailableSongpacks();
 
 		SongPicker.initialize();
 
@@ -194,6 +189,24 @@ public class ReactiveMusic implements ModInitializer {
 		if (loadedEntries.isEmpty()) return;
 
 		MinecraftClient mc = MinecraftClient.getInstance();
+		if (mc == null) return;
+
+
+		// force a reasonable volume once on mod install, if you have full 100% everything it's way too loud
+		if (!config.hasForcedInitialVolume) {
+			config.hasForcedInitialVolume = true;
+			ModConfig.saveConfig();
+
+			if (mc.options.getSoundVolume(SoundCategory.MASTER) > 0.5) {
+
+				LOGGER.info("Forcing master volume to a lower default, this will only happen once on mod-install to avoid loud defaults.");
+
+				mc.options.getSoundVolumeOption(SoundCategory.MASTER).setValue(0.5);
+				mc.options.write();
+			}
+		}
+
+
 
 		slowTickUpdateCounter++;
 		if (slowTickUpdateCounter > 20) {
