@@ -70,6 +70,9 @@ public class ModConfig {
     @SerialEntry
     public HashMap<String, Vec3d> savedHomePositions = new HashMap<>();
 
+    @SerialEntry
+    public boolean hasForcedInitialVolume = false;
+
 
 
 

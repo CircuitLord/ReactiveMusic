@@ -16,16 +16,16 @@ public class PlayerThread extends Thread {
 
 	public static final float MIN_POSSIBLE_GAIN = -80F;
 	public static final float MIN_GAIN = -50F;
-	public static final float MAX_GAIN = 5F;
+	public static final float MAX_GAIN = 0F;
 
-	public static float[] fadeGains;
+	//public static float[] fadeGains;
 	
 	static {
-		fadeGains = new float[ReactiveMusic.FADE_DURATION];
+/*		fadeGains = new float[ReactiveMusic.FADE_DURATION];
 		float totaldiff = MIN_GAIN - MAX_GAIN;
 		float diff = totaldiff / fadeGains.length;
 		for(int i = 0; i < fadeGains.length; i++)
-			fadeGains[i] = MAX_GAIN + diff * i;
+			fadeGains[i] = MAX_GAIN + diff * i;*/
 
 		// Invert because we have fade ticks counting up now
 		//for (int i = fadeGains.length - 1; i >= 0; i--) {
@@ -186,6 +186,16 @@ public class PlayerThread extends Thread {
 
 		
 		float minecraftGain = options.getSoundVolume(SoundCategory.MUSIC) * options.getSoundVolume(SoundCategory.MASTER);
+
+		// my jank way of changing the volume curve to be less drastic
+		float minecraftDistFromMax = 1.0f - minecraftGain;
+		float minecraftGainAddScalar = (minecraftDistFromMax * 1.0f) * minecraftGain;
+		// cap to 1.0
+		minecraftGain = Math.min(minecraftGain + minecraftGainAddScalar, 1.0f);
+
+		ReactiveMusic.LOGGER.info("minecraft fake gain: " + minecraftGain);
+
+
 		float newRealGain = MIN_GAIN + (MAX_GAIN - MIN_GAIN) * minecraftGain * gainPercentage * quietPercentage * musicDiscDuckPercentage;
 
 		// Force to basically off if the user sets their volume off
@@ -193,8 +203,8 @@ public class PlayerThread extends Thread {
 			newRealGain = MIN_POSSIBLE_GAIN;
 		}
 
+		//ReactiveMusic.LOGGER.info("Current gain: " + newRealGain);
 
-		
 		realGain = newRealGain;
 		if(player != null) {
 			AudioDevice device = player.getAudioDevice();
