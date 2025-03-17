@@ -115,9 +115,9 @@ public final class SongPicker {
         Entity riding = VersionHelper.GetRidingEntity(player);
 
         long time = world.getTimeOfDay() % 24000;
-        boolean night = time > 13300 && time < 23200;
-        boolean sunset = time > 12000 && time < 13000;
-        boolean sunrise = time > 23000;
+        boolean night = time >= 13000 && time < 23000;
+        boolean sunset = time >= 12000 && time < 13000;
+        boolean sunrise = time >= 23000;
 
 
         // TODO: someone help me I have no idea how to get the name of the world/server but if you know how then put it instead of "saved"
