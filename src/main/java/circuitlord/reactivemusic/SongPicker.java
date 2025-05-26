@@ -53,6 +53,9 @@ public final class SongPicker {
 
     public static boolean wasSleeping = false;
 
+    public static long lastCombatTime = -1;
+    public static final long COMBAT_TIMEOUT = 200; // ticks (5 seconds)
+
     static {
 
         for (Field field : BIOME_TAG_FIELDS) {
@@ -242,6 +245,11 @@ public final class SongPicker {
             songpackEventMap.put(SongpackEventType.NEARBY_MOBS, nearbyHostile.size() >= 1);
 
         }
+
+        // Check if player was recently in combat (attacked or was attacked)
+        boolean inCombat = (world.getTime() - lastCombatTime) < COMBAT_TIMEOUT;
+        ReactiveMusic.LOGGER.info("In combat: " + inCombat + ", last combat time: " + lastCombatTime + ", current time: " + world.getTime());
+        songpackEventMap.put(SongpackEventType.COMBAT, inCombat);
 
 
         //songpackEventMap.put(SongpackEventType.HOSTILE_MOBS, aggroMobsCount >= 4);

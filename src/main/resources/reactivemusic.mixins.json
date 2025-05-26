@@ -11,6 +11,7 @@
     "MinecraftClientMixin",
     "MusicTrackerMixin",
     "BossBarHudAccessor",
-    "SoundManagerMixin"
+    "SoundManagerMixin",
+    "PlayerEntityMixin"
   ]
 }

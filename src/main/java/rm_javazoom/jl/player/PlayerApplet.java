@@ -35,6 +35,7 @@ import rm_javazoom.jl.decoder.JavaLayerException;
  * @author	Mat McGowan
  * @since	0.0.8
  */
+@SuppressWarnings("removal")
 public class PlayerApplet extends Applet implements Runnable
 {
 	static public final String AUDIO_PARAMETER = "audioURL";
