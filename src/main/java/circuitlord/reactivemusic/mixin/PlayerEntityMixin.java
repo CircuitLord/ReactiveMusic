@@ -32,7 +32,6 @@ public abstract class PlayerEntityMixin {
     }
     @Inject(method = "damage", at = @At("HEAD"))
     private void onDamage(ServerWorld world, DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
-        LOGGER.info("Player damaged: {} at time: {}", ((LivingEntity) (Object) this).getName().getString(), world.getTime());
         PlayerEntity player = (PlayerEntity) (Object) this;
         World playerWorld = player.getWorld();
         // cause of source
