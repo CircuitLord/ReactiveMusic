@@ -248,7 +248,6 @@ public final class SongPicker {
 
         // Check if player was recently in combat (attacked or was attacked)
         boolean inCombat = (world.getTime() - lastCombatTime) < COMBAT_TIMEOUT;
-        ReactiveMusic.LOGGER.info("In combat: " + inCombat + ", last combat time: " + lastCombatTime + ", current time: " + world.getTime());
         songpackEventMap.put(SongpackEventType.COMBAT, inCombat);
 
 

@@ -36,7 +36,6 @@ public abstract class PlayerEntityMixin {
         World playerWorld = player.getWorld();
         // cause of source
         if (source.getAttacker() != null) {
-            LOGGER.info("Damage source attacker: {}", source.getAttacker().getName().getString());
             SongPicker.lastCombatTime = playerWorld.getTime();
         }
     }
