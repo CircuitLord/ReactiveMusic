@@ -23,6 +23,11 @@ public class SoundManagerMixin {
                 MinecraftClient.getInstance().getSoundManager().stop(InfiniteMusic.musicInstance);
             }*/
         }
+        else if (soundInstance.getId().getPath().contains("cobblemon") && soundInstance.getId().getPath().contains("battle")) {
+            ReactiveMusic.musicDiscInstanceList.add(soundInstance);
+
+            ReactiveMusic.LOGGER.info("Detected cobblemon battle event, adding to list!");
+        }
     }
 
 }
