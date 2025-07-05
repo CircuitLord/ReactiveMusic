@@ -11,17 +11,14 @@ import java.util.*;
 
 public class RMSongpackLoader {
 
-
     public static List<SongpackZip> availableSongpacks = new ArrayList<>();
 
     public static MusicPackResource getInputStream(Path dirPath, String fileName, boolean embedded) {
-
         MusicPackResource resource = new MusicPackResource();
 
         // quick-path for embedded files
         if (embedded) {
             resource.inputStream = RMSongpackLoader.class.getResourceAsStream("/musicpack/" + fileName);
-
             return resource;
         }
 
@@ -32,44 +29,26 @@ public class RMSongpackLoader {
 
         // Check if path is a zip file
         if (Files.isRegularFile(dirPath) && dirPath.toString().endsWith(".zip")) {
-
             Map<String, String> env = new HashMap<>();
             env.put("create", "false");
 
-            FileSystem fs = null;
-
             try {
-                fs = FileSystems.newFileSystem(dirPath, env);
-
-            } catch (IOException e) {
-                ReactiveMusic.LOGGER.error("Failed while loading file from zip " + e.getMessage());
-
-                return null;
-            }
-
-            Path filePath = fs.getPath(fileName);
-
-            if (Files.exists(filePath)) {
-                try {
+                FileSystem fs = FileSystems.newFileSystem(dirPath, env);
+                Path filePath = fs.getPath(fileName);
+                if (Files.exists(filePath)) {
                     resource.inputStream = Files.newInputStream(filePath);
                     resource.fileSystem = fs;
-
                     return resource;
-                } catch (IOException e) {
-                    ReactiveMusic.LOGGER.error("Failed while creating inputstream from zip " + e.getMessage());
-                    return null;
                 }
+            } catch (IOException e) {
+                ReactiveMusic.LOGGER.error("Failed while loading file from zip " + e.getMessage());
+                return null;
             }
-
-
         } else {
-
-            // Handle normal directory
             Path filePath = dirPath.resolve(fileName);
             if (Files.exists(filePath)) {
                 try {
                     resource.inputStream = Files.newInputStream(filePath);
-
                     return resource;
                 } catch (IOException e) {
                     ReactiveMusic.LOGGER.error(e.toString());
@@ -80,61 +59,77 @@ public class RMSongpackLoader {
         }
 
         return null;
-
     }
 
-
     public static void fetchAvailableSongpacks() {
-
         long startTime = System.currentTimeMillis();
-
         availableSongpacks.clear();
 
-        // First load the embedded songpack
-        availableSongpacks.add(loadSongpack(null, true));
+        // Load embedded songpack
+        availableSongpacks.add(loadSongpack(null, true, "ReactiveMusic.yaml"));
 
-        // then load any user songpacks
-        var gamePath = FabricLoader.getInstance().getGameDir();
-        Path resourcePacksPath = gamePath.resolve("resourcepacks");
-
-
-        List<Path> potentialPacks = new ArrayList<Path>();
-
+        // Load user songpacks
+        Path resourcePacksPath = FabricLoader.getInstance().getGameDir().resolve("resourcepacks");
+        List<Path> potentialPacks = new ArrayList<>();
 
         try {
-            Files.walkFileTree(resourcePacksPath,  EnumSet.of(FileVisitOption.FOLLOW_LINKS), 1, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(resourcePacksPath, EnumSet.of(FileVisitOption.FOLLOW_LINKS), 1, new SimpleFileVisitor<Path>() {
                 @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException {
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attr) {
                     potentialPacks.add(file);
                     return FileVisitResult.CONTINUE;
                 }
             });
-
         } catch (IOException e) {
             ReactiveMusic.LOGGER.error("Failed while visiting potential packs " + e.getMessage());
         }
 
-        for (var packPath : potentialPacks) {
-            SongpackZip songpackZip = loadSongpack(packPath, false);
+        for (Path packPath : potentialPacks) {
+            List<String> yamlFileNames = new ArrayList<>();
 
-            if (songpackZip == null)
-                continue;
+            if (Files.isRegularFile(packPath) && packPath.toString().endsWith(".zip")) {
+                try (FileSystem fs = FileSystems.newFileSystem(packPath, (ClassLoader) null)) {
+                    for (Path root : fs.getRootDirectories()) {
+                        Files.walk(root)
+                                .filter(p -> p.toString().endsWith(".yaml"))
+                                .forEach(p -> yamlFileNames.add(p.toString().substring(1))); // Remove leading slash
+                    }
+                } catch (IOException e) {
+                    ReactiveMusic.LOGGER.error("Failed reading zip: " + e);
+                    continue;
+                }
+            } else if (Files.isDirectory(packPath)) {
+                try {
+                    Files.walk(packPath)
+                            .filter(p -> p.toString().endsWith(".yaml"))
+                            .forEach(p -> {
+                                String relativePath = packPath.relativize(p).toString().replace('\\', '/');
+                                yamlFileNames.add(relativePath);
+                            });
+                } catch (IOException e) {
+                    ReactiveMusic.LOGGER.error("Failed reading directory: " + e);
+                    continue;
+                }
+            }
 
-            availableSongpacks.add(songpackZip);
+            for (String yamlFile : yamlFileNames) {
+                SongpackZip songpackZip = loadSongpack(packPath, false, yamlFile);
+                if (songpackZip != null) {
+                    availableSongpacks.add(songpackZip);
+                }
+            }
         }
 
         ReactiveMusic.LOGGER.info("Took " + (System.currentTimeMillis() - startTime) + "ms to parse available songpacks, found " + availableSongpacks.size() + "!");
-
     }
 
-
-    public static SongpackZip loadSongpack(Path songpackPath, boolean embedded) {
-
+    // New version of loadSongpack with YAML file name
+    public static SongpackZip loadSongpack(Path songpackPath, boolean embedded, String yamlFileName) {
         SongpackZip songpackZip = new SongpackZip();
         songpackZip.path = songpackPath;
         songpackZip.embedded = embedded;
 
-        var configResource = getInputStream(songpackPath, "ReactiveMusic.yaml", embedded);
+        var configResource = getInputStream(songpackPath, yamlFileName, embedded);
         if (configResource == null || configResource.inputStream == null) {
             return null;
         }
@@ -143,10 +138,9 @@ public class RMSongpackLoader {
 
         try {
             songpackZip.config = yaml.loadAs(configResource.inputStream, SongpackConfig.class);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             songpackZip.config = new SongpackConfig();
-            songpackZip.config.name = songpackPath.getFileName().toString();
+            songpackZip.config.name = songpackPath != null ? songpackPath.getFileName().toString() : "Embedded";
             songpackZip.errorString = e.toString() + "\n\n";
             songpackZip.blockLoading = true;
 
@@ -161,7 +155,6 @@ public class RMSongpackLoader {
             songpackZip.blockLoading = true;
         }
 
-
         verifySongpackZip(songpackZip);
 
         if (!songpackZip.blockLoading) {
@@ -169,95 +162,73 @@ public class RMSongpackLoader {
         }
 
         return songpackZip;
+    }
 
+    // Legacy call for default "ReactiveMusic.yaml"
+    public static SongpackZip loadSongpack(Path songpackPath, boolean embedded) {
+        return loadSongpack(songpackPath, embedded, "ReactiveMusic.yaml");
     }
 
     private static List<RMRuntimeEntry> getRuntimeEntries(SongpackZip songpackZip) {
-
         List<RMRuntimeEntry> runtimeEntries = new ArrayList<>();
 
         for (var entry : songpackZip.config.entries) {
-
-            if (entry == null)
-                continue;
+            if (entry == null) continue;
 
             RMRuntimeEntry runtimeEntry = RMRuntimeEntry.create(songpackZip, entry);
 
             if (!runtimeEntry.errorString.isEmpty()) {
                 songpackZip.errorString += runtimeEntry.errorString;
-
                 continue;
             }
 
-            if (runtimeEntry.conditions.isEmpty())
-                continue;
+            if (runtimeEntry.conditions.isEmpty()) continue;
 
             runtimeEntries.add(runtimeEntry);
-
         }
 
         return runtimeEntries;
-
     }
 
-    // any extra verification
     public static void verifySongpackZip(SongpackZip songpackZip) {
-
-
         if (songpackZip.config == null || songpackZip.config.entries == null) {
             songpackZip.errorString += "Entries are null or not formatted correctly! Make sure you.\n\n";
             songpackZip.blockLoading = true;
-
             return;
         }
 
-        // check for outdated props
-
         for (int i = 0; i < songpackZip.config.entries.length; i++) {
-
-            if (songpackZip.config.entries[i] == null)
-                continue;
+            if (songpackZip.config.entries[i] == null) continue;
 
             if (songpackZip.config.entries[i].alwaysPlay || songpackZip.config.entries[i].alwaysStop) {
                 songpackZip.errorString += "WARNING! You are using a songpack made for Reactive Music v0.5 and older, things may not work well!\n\n";
                 songpackZip.convertBiomeToBiomeTag = true;
-
                 break;
             }
         }
 
         // Check if all the songs are valid
         for (int i = 0; i < songpackZip.config.entries.length; i++) {
-
-            if (songpackZip.config.entries[i] == null || songpackZip.config.entries[i].songs == null)
-                continue;
-
+            if (songpackZip.config.entries[i] == null || songpackZip.config.entries[i].songs == null) continue;
 
             for (int j = 0; j < songpackZip.config.entries[i].songs.length; j++) {
-
                 String song = songpackZip.config.entries[i].songs[j];
-
                 var inputStream = getInputStream(songpackZip.path, "music/" + song + ".mp3", songpackZip.embedded);
 
                 if (inputStream == null) {
-                    String eventName = "";
+                    StringBuilder eventName = new StringBuilder();
                     for (int k = 0; k < songpackZip.config.entries[i].events.length; k++) {
-                        eventName += songpackZip.config.entries[i].events[k].toString();
+                        eventName.append(songpackZip.config.entries[i].events[k].toString());
                     }
 
-                    songpackZip.errorString += "Failed finding song: \"" +  songpackZip.config.entries[i].songs[j] + "\" for event: \"" + eventName + "\"\n\n";
-
+                    songpackZip.errorString += "Failed finding song: \"" + song + "\" for event: \"" + eventName + "\"\n\n";
+                } else {
                     try {
                         inputStream.close();
-                    } catch (Exception e) {
-                    }
+                    } catch (Exception ignored) {}
                 }
             }
-
-
         }
-
     }
-
 
 }
