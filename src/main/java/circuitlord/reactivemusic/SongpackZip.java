@@ -19,6 +19,8 @@ public class SongpackZip {
     // backwards compat
     public boolean convertBiomeToBiomeTag = false;
 
+    public boolean isv05OldSongpack = false;
+
     public boolean embedded = false;
 
 }

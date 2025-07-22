@@ -144,9 +144,16 @@ public class ModConfig {
                     String name = songpackZip.config.name;
                     String description = songpackZip.config.description + "\n\nCredits:\n" + songpackZip.config.credits;
 
-                    if (!songpackZip.errorString.isEmpty()) {
-                        name = "ERRORS: " + name;
-                        description = "Encountered errors while loading:\n\n" + songpackZip.errorString + "----------\n\n" + description;
+
+                    boolean allowedToShowErrors =
+                            getConfig().debugModeEnabled ||
+                            songpackZip.isv05OldSongpack ||
+                            (songpackZip.path != null && !songpackZip.path.toString().endsWith(".zip"));
+
+
+                    if (allowedToShowErrors && !songpackZip.errorString.isEmpty()) {
+                        name = "WARNING: " + name;
+                        description = "Encountered warnings while loading:\n\n" + songpackZip.errorString + "----------\n\n" + description;
                     }
 
                     songpacksBuilder.option(ButtonOption.createBuilder()
@@ -243,7 +250,9 @@ public class ModConfig {
                             .option(Option.<Boolean>createBuilder()
                                     .name(Text.literal("Debug Mode Enabled"))
                                     .description(OptionDescription.createBuilder()
-                                            .text(Text.literal("Enables some developer functionality such as always switching between songs when events change."))
+                                            .text(Text.literal("Enables songpack developer functionality.\n" +
+                                                    "- Always immediately switch between songs when events change.\n" +
+                                                    "- Always display all songpack loading errors in the menu.\n"))
                                             .build())
                                     .binding(defaults.debugModeEnabled, () -> config.debugModeEnabled, newVal -> config.debugModeEnabled = newVal )
                                     .controller(TickBoxControllerBuilder::create)

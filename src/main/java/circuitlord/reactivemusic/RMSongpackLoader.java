@@ -202,7 +202,9 @@ public class RMSongpackLoader {
 
             if (!runtimeEntry.errorString.isEmpty()) {
                 songpackZip.errorString += runtimeEntry.errorString;
-                continue;
+
+                // allow it to keep loading if it passes the check below
+                //continue;
             }
 
             if (runtimeEntry.conditions.isEmpty()) continue;
@@ -226,6 +228,7 @@ public class RMSongpackLoader {
             if (songpackZip.config.entries[i].alwaysPlay || songpackZip.config.entries[i].alwaysStop) {
                 songpackZip.errorString += "WARNING! You are using a songpack made for Reactive Music v0.5 and older, things may not work well!\n\n";
                 songpackZip.convertBiomeToBiomeTag = true;
+                songpackZip.isv05OldSongpack = true;
                 break;
             }
         }
