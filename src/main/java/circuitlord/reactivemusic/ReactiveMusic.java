@@ -56,7 +56,7 @@ public class ReactiveMusic implements ModInitializer {
 	//static int fadeInTicks = 0;
 	static int silenceTicks = 0;
 
-	static int musicDiscDuckTicks = 0;
+	static int musicTrackedSoundsDuckTicks = 0;
 
 	static int slowTickUpdateCounter = 0;
 
@@ -70,7 +70,7 @@ public class ReactiveMusic implements ModInitializer {
 	static Random rand = new Random();
 
 
-	static ModConfig config;
+	public static ModConfig config;
 
 
 	// Add this static list to the class
@@ -80,7 +80,7 @@ public class ReactiveMusic implements ModInitializer {
 	private static List<RMRuntimeEntry> loadedEntries = new ArrayList<>();
 
 
-	public static final List<SoundInstance> musicDiscInstanceList = new ArrayList<SoundInstance>();
+	public static final List<SoundInstance> trackedSoundsMuteMusic = new ArrayList<SoundInstance>();
 
 
 	@Override
@@ -241,7 +241,7 @@ public class ReactiveMusic implements ModInitializer {
 
 		// -------------------------
 
-		processMusicDiscPlaying();
+		processTrackedSoundsMuteMusic();
 
 
 		RMRuntimeEntry newEntry = null;
@@ -610,54 +610,59 @@ public class ReactiveMusic implements ModInitializer {
 
 
 
-	private static void processMusicDiscPlaying() {
+	private static void processTrackedSoundsMuteMusic() {
 
 		// remove if the song is null or not playing anymore
-		musicDiscInstanceList.removeIf(soundInstance -> soundInstance == null || !MinecraftClient.getInstance().getSoundManager().isPlaying(soundInstance));
+		trackedSoundsMuteMusic.removeIf(soundInstance -> soundInstance == null || !MinecraftClient.getInstance().getSoundManager().isPlaying(soundInstance));
 
+		GameOptions options = MinecraftClient.getInstance().options;
 
-		boolean foundMusicDisc = false;
+		boolean foundSoundInstance = false;
 
-		for (SoundInstance disc : musicDiscInstanceList) {
+		for (SoundInstance soundInstance : trackedSoundsMuteMusic) {
 
-			Vec3d pos = new Vec3d(disc.getX(), disc.getY(), disc.getZ());
+			// if this is a sound with some sort of falloff
+			if (soundInstance.getAttenuationType() != SoundInstance.AttenuationType.NONE) {
 
-			if (MinecraftClient.getInstance().player != null) {
-				Vec3d dist = MinecraftClient.getInstance().player.getPos().subtract(pos);
+				Vec3d pos = new Vec3d(soundInstance.getX(), soundInstance.getY(), soundInstance.getZ());
 
-				if (dist.length() > 65.f) {
-					continue;
+				if (MinecraftClient.getInstance().player != null) {
+					Vec3d dist = MinecraftClient.getInstance().player.getPos().subtract(pos);
+
+					if (dist.length() > 65.f) {
+						continue;
+					}
 				}
 			}
 
-			foundMusicDisc = true;
+			// if we can't hear it, don't include it
+			if (options.getSoundVolume(soundInstance.getCategory()) < 0.04) {
+				continue;
+			}
 
+			foundSoundInstance = true;
+
+			break;
 		}
 
 
-		GameOptions options = MinecraftClient.getInstance().options;
-		float jukeboxGain = options.getSoundVolume(SoundCategory.RECORDS);
 
 
 		// only duck for jukebox if our volume is loud enough to where it would matter
-		if (foundMusicDisc && jukeboxGain >= 0.04f) {
+		if (foundSoundInstance) {
 
-			var disc = musicDiscInstanceList.get(0);
-
-
-
-			if (musicDiscDuckTicks < FADE_DURATION) {
-				musicDiscDuckTicks++;
+			if (musicTrackedSoundsDuckTicks < FADE_DURATION) {
+				musicTrackedSoundsDuckTicks++;
 			}
 
 		}
 		else {
-			if (musicDiscDuckTicks > 0) {
-				musicDiscDuckTicks--;
+			if (musicTrackedSoundsDuckTicks > 0) {
+				musicTrackedSoundsDuckTicks--;
 			}
 		}
 
-		thread.setMusicDiscDuckPercentage(1f - (musicDiscDuckTicks / (float)FADE_DURATION));
+		thread.setMusicDiscDuckPercentage(1f - (musicTrackedSoundsDuckTicks / (float)FADE_DURATION));
 
 
 	}

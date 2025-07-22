@@ -71,6 +71,9 @@ public class ModConfig {
     public HashMap<String, Vec3d> savedHomePositions = new HashMap<>();
 
     @SerialEntry
+    public List<String> soundsMuteMusic = new ArrayList<>();
+
+    @SerialEntry
     public boolean hasForcedInitialVolume = false;
 
 

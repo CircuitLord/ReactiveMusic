@@ -13,21 +13,32 @@ public class SoundManagerMixin {
 
     @Inject(method = "Lnet/minecraft/client/sound/SoundManager;play(Lnet/minecraft/client/sound/SoundInstance;)V", at = @At("HEAD"), cancellable = true)
     private void play(SoundInstance soundInstance, CallbackInfo ci) {
-        //if (soundInstance.getCategory() == SoundCategory.MUSIC) {
-            //ReactiveMusic.musicInstanceList.add(soundInstance);
-        //} else
-        if (soundInstance.getId().getPath().contains("music_disc")) {
-            ReactiveMusic.musicDiscInstanceList.add(soundInstance);
 
-/*            if (ReactiveMusic.CONFIG.pauseForDiscMusic) {
-                MinecraftClient.getInstance().getSoundManager().stop(InfiniteMusic.musicInstance);
-            }*/
+        String path = soundInstance.getId().getPath();
+
+        if (path.contains("music_disc")) {
+            ReactiveMusic.trackedSoundsMuteMusic.add(soundInstance);
         }
-        else if (soundInstance.getId().getPath().contains("cobblemon") && soundInstance.getId().getPath().contains("battle")) {
-            ReactiveMusic.musicDiscInstanceList.add(soundInstance);
+
+        // cobblemon resource pack uses:
+        //"battle.pvn.default"
+        //"battle.pvp.default"
+        //"battle.pvw.default"
+        else if (path.contains("battle.pv")) {
+            ReactiveMusic.trackedSoundsMuteMusic.add(soundInstance);
 
             ReactiveMusic.LOGGER.info("Detected cobblemon battle event, adding to list!");
         }
+
+
+        for (String muteSound : ReactiveMusic.config.soundsMuteMusic) {
+            if (path.contains(muteSound)) {
+                ReactiveMusic.trackedSoundsMuteMusic.add(soundInstance);
+                break;
+            }
+        }
+
+
     }
 
 }
