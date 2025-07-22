@@ -44,7 +44,10 @@ public class RMSongpackLoader {
                 ReactiveMusic.LOGGER.error("Failed while loading file from zip " + e.getMessage());
                 return null;
             }
-        } else {
+        }
+
+        // handle normal directories
+        else {
             Path filePath = dirPath.resolve(fileName);
             if (Files.exists(filePath)) {
                 try {
@@ -87,25 +90,26 @@ public class RMSongpackLoader {
         for (Path packPath : potentialPacks) {
             List<String> yamlFileNames = new ArrayList<>();
 
+            // zip files
             if (Files.isRegularFile(packPath) && packPath.toString().endsWith(".zip")) {
                 try (FileSystem fs = FileSystems.newFileSystem(packPath, (ClassLoader) null)) {
-                    for (Path root : fs.getRootDirectories()) {
-                        Files.walk(root)
-                                .filter(p -> p.toString().endsWith(".yaml"))
-                                .forEach(p -> yamlFileNames.add(p.toString().substring(1))); // Remove leading slash
-                    }
+
+                    Path root = fs.getPath("/");
+
+                    yamlFileNames = getYamlFiles(Files.list(root).toList());
+
                 } catch (IOException e) {
                     ReactiveMusic.LOGGER.error("Failed reading zip: " + e);
                     continue;
                 }
-            } else if (Files.isDirectory(packPath)) {
+            }
+
+            // normal directories
+            else if (Files.isDirectory(packPath)) {
                 try {
-                    Files.walk(packPath)
-                            .filter(p -> p.toString().endsWith(".yaml"))
-                            .forEach(p -> {
-                                String relativePath = packPath.relativize(p).toString().replace('\\', '/');
-                                yamlFileNames.add(relativePath);
-                            });
+
+                    yamlFileNames = getYamlFiles(Files.list(packPath).toList());
+
                 } catch (IOException e) {
                     ReactiveMusic.LOGGER.error("Failed reading directory: " + e);
                     continue;
@@ -122,6 +126,25 @@ public class RMSongpackLoader {
 
         ReactiveMusic.LOGGER.info("Took " + (System.currentTimeMillis() - startTime) + "ms to parse available songpacks, found " + availableSongpacks.size() + "!");
     }
+
+    public static List<String> getYamlFiles(List<Path> paths) {
+
+        List<String> found = new ArrayList<>();
+
+        for (Path path : paths) {
+
+            if (Files.isRegularFile(path)) {
+                String filename = path.getFileName().toString();
+
+                if (filename.toLowerCase().endsWith(".yaml")) {
+                    found.add(filename);
+                }
+            }
+        }
+
+        return found;
+    }
+
 
     // New version of loadSongpack with YAML file name
     public static SongpackZip loadSongpack(Path songpackPath, boolean embedded, String yamlFileName) {
