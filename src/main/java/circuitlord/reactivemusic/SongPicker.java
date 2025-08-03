@@ -389,7 +389,7 @@ public final class SongPicker {
         long elapsedNano = endNano - startNano;
         double elapsedMs = elapsedNano / 1_000_000.0;
 
-        ReactiveMusic.LOGGER.info("tickBlockCounterMap() took (" + elapsedMs + "ms)");
+        //ReactiveMusic.LOGGER.info("tickBlockCounterMap() took (" + elapsedMs + "ms)");
 
 
 
