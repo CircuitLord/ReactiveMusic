@@ -2,6 +2,7 @@ package circuitlord.reactivemusic;
 
 
 import circuitlord.reactivemusic.config.ModConfig;
+import circuitlord.reactivemusic.entries.RMRuntimeEntry;
 import circuitlord.reactivemusic.mixin.BossBarHudAccessor;
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
 import net.minecraft.block.Block;
@@ -50,6 +51,7 @@ public final class SongPicker {
     public static int currentBlockCounterY = 99999;
 
     public static Map<String, Integer> blockCounterMap = new HashMap<>();
+    public static Map<String, Integer> cachedBlockChecker = new HashMap<>();
 
     public static String currentBiomeName = "";
     public static String currentDimName = "";
@@ -291,7 +293,7 @@ public final class SongPicker {
         long startTime = System.currentTimeMillis();
         long startNano = System.nanoTime();
 
-        int RADIUS = 12;
+        int RADIUS = 20;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         ClientPlayerEntity player = mc.player;
@@ -325,6 +327,7 @@ public final class SongPicker {
         // finished iterating, reset
         if (currentBlockCounterX == -RADIUS/* && currentBlockCounterY == -RADIUS*/) {
 
+
             ReactiveMusic.LOGGER.info("Finished checking for blocks, resetting! Total: " + blockCounterMap.size());
 
             if (queuedToPrintBlockCounter) {
@@ -339,7 +342,11 @@ public final class SongPicker {
 
             }
 
+            // copy
+            cachedBlockChecker.clear();
+            cachedBlockChecker.putAll(blockCounterMap);
 
+            // reset
             blockCounterMap.clear();
             cachedBlockCounterOrigin = player.getBlockPos();
 
@@ -534,6 +541,16 @@ public final class SongPicker {
                 }
             }
 
+            boolean blocksValid = false;
+            for (var blockCond : condition.blocks) {
+                for (var kvp : cachedBlockChecker.entrySet()) {
+                    if (kvp.getKey().contains(blockCond.block) && kvp.getValue() >= blockCond.requiredCount) {
+                        blocksValid = true;
+                        break;
+                    }
+                }
+            }
+
             boolean biomeTypesValid = false;
             for (var biome : condition.biomeTypes) {
                 if (currentBiomeName.contains(biome)) {
@@ -559,7 +576,7 @@ public final class SongPicker {
             }
 
 
-            if (!songpackEventsValid && !biomeTypesValid && !biomeTagsValid && !dimsValid) {
+            if (!songpackEventsValid && !biomeTypesValid && !biomeTagsValid && !dimsValid && !blocksValid) {
                 // none of the OR conditions were valid on this condition, return false
                 return false;
             }

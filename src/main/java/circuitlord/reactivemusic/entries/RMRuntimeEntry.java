@@ -1,4 +1,9 @@
-package circuitlord.reactivemusic;
+package circuitlord.reactivemusic.entries;
+
+import circuitlord.reactivemusic.SongPicker;
+import circuitlord.reactivemusic.SongpackEntry;
+import circuitlord.reactivemusic.SongpackEventType;
+import circuitlord.reactivemusic.SongpackZip;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -7,11 +12,11 @@ import java.util.List;
 public class RMRuntimeEntry {
 
 
-    List<RMRuntimeEntryCondition> conditions = new ArrayList<>();
+    public List<RMEntryCondition> conditions = new ArrayList<>();
 
-    String songpack;
+    public String songpack;
 
-    boolean allowFallback = false;
+    public boolean allowFallback = false;
 
     public boolean forceStopMusicOnValid = false;
     public boolean forceStopMusicOnInvalid = false;
@@ -20,13 +25,13 @@ public class RMRuntimeEntry {
 
     public float forceChance = 1.0f;
 
-    List<String> songs = new ArrayList<>();
+    public List<String> songs = new ArrayList<>();
 
-    String eventString = "";
+    public String eventString = "";
 
-    String errorString = "";
+    public String errorString = "";
 
-    float cachedRandomChance = 1.0f;
+    public float cachedRandomChance = 1.0f;
 
 
     public static RMRuntimeEntry create(SongpackZip songpack, SongpackEntry songpackEntry) {
@@ -53,7 +58,7 @@ public class RMRuntimeEntry {
 
         for (String event : songpackEntry.events) {
 
-            RMRuntimeEntryCondition condition = new RMRuntimeEntryCondition();
+            RMEntryCondition condition = new RMEntryCondition();
 
             String cleanedEvent = event.replaceAll("\\s", "");
             cleanedEvent = cleanedEvent.toLowerCase();
@@ -66,8 +71,31 @@ public class RMRuntimeEntry {
             // Split by "||"
             String[] eventSections = cleanedEvent.split("\\|\\|");
 
+            boolean eventHasData = false;
+
             // Parse each event section (may only be one)
             for (String eventSection : eventSections) {
+
+                if (eventSection.startsWith("block=")) {
+
+                    String blockData = eventSection.substring(6);
+                    String[] parts = blockData.split(",");
+
+                    // make sure it's a number, dunno why this is the syntax for that
+                    if (parts.length >= 2 && parts[1].matches("\\d+")) {
+
+                        RMEntryBlockCondition blockCond = new RMEntryBlockCondition();
+                        blockCond.block = parts[0];
+                        blockCond.requiredCount = Integer.parseInt(parts[1]);
+
+                        condition.blocks.add(blockCond);
+
+                        eventHasData = true;
+                    }
+                    else {
+                        Entry.errorString += "Invalid syntax: " + eventSection + "!\n\n";
+                    }
+                }
 
                 // see if it's a biome event
                 if (eventSection.startsWith("biome=")) {
@@ -77,6 +105,7 @@ public class RMRuntimeEntry {
                         continue;
 
                     condition.biomeTypes.add(biomeName);
+                    eventHasData = true;
                 }
 
                 // Biome-tags
@@ -108,6 +137,7 @@ public class RMRuntimeEntry {
                             if (biomeTag != null) {
                                 // We found a match, now put the biometag key into the condition so we can use it later
                                 condition.biomeTags.add(biomeTag);
+                                eventHasData = true;
 
                                 foundMatch = true;
                                 break;
@@ -129,6 +159,7 @@ public class RMRuntimeEntry {
                         continue;
 
                     condition.dimTypes.add(dimName);
+                    eventHasData = true;
                 }
 
                 // songpack events
@@ -141,6 +172,7 @@ public class RMRuntimeEntry {
                         // it's a songpack event
                         if (eventType != SongpackEventType.NONE) {
                             condition.songpackEvents.add(eventType);
+                            eventHasData = true;
                             continue;
                         }
                     } catch (Exception e) {
@@ -151,7 +183,7 @@ public class RMRuntimeEntry {
             }
 
             // --- If we didn't find any valid conditions, skip this ---
-            if (condition.songpackEvents.isEmpty() && condition.biomeTypes.isEmpty() && condition.dimTypes.isEmpty() && condition.biomeTags.isEmpty()) {
+            if (!eventHasData) {
                 continue;
             }
 

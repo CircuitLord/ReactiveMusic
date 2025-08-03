@@ -37,7 +37,6 @@ entries:
       - "CircleOfLife"
 
 
-
   # Boss songs
   - events: [ "BOSS" ]
     forceStopMusicOnChanged: true
@@ -97,6 +96,13 @@ entries:
       - "Sombre"
 
 
+# fortress
+  - events: [ "BLOCK=nether_bricks,200" ]
+    forceStopMusicOnChanged: true
+    forceStartMusicOnValid: true
+    allowFallback: true
+    songs:
+      - "Mufaya-DarkAscension"
 
 
 
