@@ -75,7 +75,7 @@ entries:
       - "FrozenInTime"
 
   # Sunset songs
-  - events: ["SUNSET"]
+  - events: ["DIM=OVERWORLD", "SUNSET"]
     forceStopMusicOnChanged: true
     forceStartMusicOnValid: true
     forceChance: 0.5
@@ -86,7 +86,7 @@ entries:
       - "FallOfTheLeaf"
 
   # Sunrise songs
-  - events: ["SUNRISE"]
+  - events: ["DIM=OVERWORLD", "SUNRISE"]
     forceStopMusicOnChanged: true
     forceStartMusicOnValid: true
     forceChance: 0.5
@@ -97,9 +97,8 @@ entries:
 
 
 # fortress
-  - events: [ "BLOCK=nether_bricks,200" ]
+  - events: [ "DIM=NETHER", "BLOCK=nether_bricks,1000", "BLOCK=nether_brick_fence,2" ]
     forceStopMusicOnChanged: true
-    forceStartMusicOnValid: true
     allowFallback: true
     songs:
       - "Mufaya-DarkAscension"

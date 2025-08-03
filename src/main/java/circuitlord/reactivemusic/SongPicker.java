@@ -293,7 +293,7 @@ public final class SongPicker {
         long startTime = System.currentTimeMillis();
         long startNano = System.nanoTime();
 
-        int RADIUS = 20;
+        int RADIUS = 25;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         ClientPlayerEntity player = mc.player;
@@ -326,9 +326,7 @@ public final class SongPicker {
 
         // finished iterating, reset
         if (currentBlockCounterX == -RADIUS/* && currentBlockCounterY == -RADIUS*/) {
-
-
-            ReactiveMusic.LOGGER.info("Finished checking for blocks, resetting! Total: " + blockCounterMap.size());
+            // ReactiveMusic.LOGGER.info("Finished checking for blocks, resetting! Total: " + blockCounterMap.size());
 
             if (queuedToPrintBlockCounter) {
 
@@ -391,7 +389,7 @@ public final class SongPicker {
         long elapsedNano = endNano - startNano;
         double elapsedMs = elapsedNano / 1_000_000.0;
 
-        // ReactiveMusic.LOGGER.info("tickBlockCounterMap() took (" + elapsedMs + "ms)");
+        ReactiveMusic.LOGGER.info("tickBlockCounterMap() took (" + elapsedMs + "ms)");
 
 
 
