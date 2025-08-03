@@ -141,6 +141,16 @@ public class ReactiveMusic implements ModInitializer {
 						}
 				)
 
+
+				.then(ClientCommandManager.literal("logBlockCounter")
+						.executes(context -> {
+
+							SongPicker.queuedToPrintBlockCounter = true;
+
+							return 1;
+						})
+				)
+
 				.then(ClientCommandManager.literal("blacklistDimension")
 						.executes(context -> {
 
@@ -207,6 +217,8 @@ public class ReactiveMusic implements ModInitializer {
 		}
 
 
+		// always tick this
+		SongPicker.tickBlockCounterMap();
 
 		slowTickUpdateCounter++;
 		if (slowTickUpdateCounter > 20) {
