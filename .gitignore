@@ -43,3 +43,5 @@ replay_*.log
 # include the music pack on github, not sure why I added this originally but adding it back now
 # src/main/resources/musicpack/music/
 
+issues.github-issues
+

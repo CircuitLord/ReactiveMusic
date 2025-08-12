@@ -1,4 +1,4 @@
-package circuitlord.reactivemusic.entries;
+package circuitlord.reactivemusic.impl.songpack;
 
 public class RMEntryBlockCondition {
 
