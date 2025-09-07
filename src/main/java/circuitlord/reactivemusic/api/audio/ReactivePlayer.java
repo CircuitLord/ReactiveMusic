@@ -38,6 +38,7 @@ public interface ReactivePlayer extends AutoCloseable {
     
     // More controls & accessors
     void fade(float target, int tickDuration);
+    void fade(String gainSupplierId, float target, int tickDuration);
     
     // Fade OUT specific
     boolean stopOnFadeOut();

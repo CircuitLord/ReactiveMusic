@@ -179,6 +179,12 @@ public final class RMPlayer implements ReactivePlayer, Closeable {
         primaryGainSupplier.setFadeDuration(tickDuration);
     }
 
+    @Override public void fade(String gainSupplierId, float target, int tickDuration) {
+        GainSupplier gainSupplier = getGainSuppliers().get(gainSupplierId);
+        gainSupplier.setFadeTarget(target);
+        gainSupplier.setFadeDuration(tickDuration);
+    }
+
     @Override public ConcurrentHashMap<String, GainSupplier> getGainSuppliers() { return gainSuppliers; }
     
     // XXX
