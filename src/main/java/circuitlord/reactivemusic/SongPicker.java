@@ -1,7 +1,6 @@
 package circuitlord.reactivemusic;
 
 import circuitlord.reactivemusic.ReactiveMusicDebug.ChangeLogger;
-import circuitlord.reactivemusic.ReactiveMusicDebug.Wrapper;
 import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 import circuitlord.reactivemusic.api.songpack.RuntimeEntry;

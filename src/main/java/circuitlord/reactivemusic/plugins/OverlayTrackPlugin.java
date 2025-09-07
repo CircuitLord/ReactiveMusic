@@ -1,7 +1,6 @@
 package circuitlord.reactivemusic.plugins;
 
 import circuitlord.reactivemusic.ReactiveMusic;
-import circuitlord.reactivemusic.ReactiveMusicCore;
 import circuitlord.reactivemusic.ReactiveMusicState;
 import circuitlord.reactivemusic.SongPicker;
 import circuitlord.reactivemusic.api.*;

@@ -1,7 +1,6 @@
 package circuitlord.reactivemusic.impl.audio;
 
 import circuitlord.reactivemusic.ReactiveMusicState;
-import circuitlord.reactivemusic.api.ReactiveMusicAPI;
 import circuitlord.reactivemusic.api.audio.GainSupplier;
 import circuitlord.reactivemusic.api.audio.ReactivePlayer;
 import circuitlord.reactivemusic.api.audio.ReactivePlayerManager;
