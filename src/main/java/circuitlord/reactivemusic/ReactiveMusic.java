@@ -1,6 +1,8 @@
 package circuitlord.reactivemusic;
 
+import circuitlord.reactivemusic.ReactiveMusicDebug.TextBuilder;
 import circuitlord.reactivemusic.api.*;
+import circuitlord.reactivemusic.api.audio.GainSupplier;
 import circuitlord.reactivemusic.api.audio.ReactivePlayer;
 import circuitlord.reactivemusic.api.audio.ReactivePlayerManager;
 import circuitlord.reactivemusic.api.audio.ReactivePlayerOptions;
@@ -12,6 +14,8 @@ import circuitlord.reactivemusic.impl.eventsys.RMPluginIdentifier;
 import circuitlord.reactivemusic.impl.songpack.RMSongpackLoader;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
 
 import net.minecraft.client.MinecraftClient;
@@ -22,9 +26,12 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.Vec3d;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ServiceLoader;
+
+import com.mojang.brigadier.arguments.StringArgumentType;
 
 public class ReactiveMusic implements ModInitializer {
 
@@ -91,16 +98,18 @@ public class ReactiveMusic implements ModInitializer {
 			.duck(1.0f)
 			.quietWhenGamePaused(false)
 		);
-			
-			SongPicker.initialize();
-			
-			for (ReactiveMusicPlugin plugin: PLUGINS) {
-				plugin.init();
-			}
-			
-			RMSongpackLoader.fetchAvailableSongpacks();
 
-			boolean loadedUserSongpack = false;
+		musicPlayer.getGainSuppliers().put("reactivemusic-fsi", ReactiveMusicState.foundSoundInstanceGainSupplier);
+
+		SongPicker.initialize();
+		
+		for (ReactiveMusicPlugin plugin: PLUGINS) {
+			plugin.init();
+		}
+		
+		RMSongpackLoader.fetchAvailableSongpacks();
+		
+		boolean loadedUserSongpack = false;
 			
 		// try to load a saved songpack
 		if (!modConfig.loadedUserSongpack.isEmpty()) {
@@ -239,8 +248,6 @@ public class ReactiveMusic implements ModInitializer {
 
 	}
 	
-	
-
 	public static void newTick() {
 		if (musicPlayer == null) return;
 		if (ReactiveMusicState.currentSongpack == null) return;
@@ -309,7 +316,15 @@ public class ReactiveMusic implements ModInitializer {
 
 		GameOptions options = MinecraftClient.getInstance().options;
 
-		boolean foundSoundInstance = false;
+		if (ReactiveMusicState.foundSoundInstance == true) {
+			// only flip
+			ReactiveMusicState.foundSoundInstance = false;
+		}
+		
+		if (ReactiveMusicState.foundSoundInstance == false) {
+			// only call if flip happened
+			ReactiveMusicState.foundSoundInstanceGainSupplier.setFadeTarget(1f);
+		}
 
 		for (SoundInstance soundInstance : trackedSoundsMuteMusic) {
 
@@ -332,21 +347,10 @@ public class ReactiveMusic implements ModInitializer {
 				continue;
 			}
 
-			foundSoundInstance = true;
+			ReactiveMusicState.foundSoundInstance = true;
+			ReactiveMusicState.foundSoundInstanceGainSupplier.setFadeTarget(0f);
 
 			break;
-		}
-
-
-
-		// TODO: Add config parameter to RMPlayer to set the level to duck to.
-		// TODO: Extract into ReactiveMusicCore
-		// only duck for jukebox if our volume is loud enough to where it would matter
-		if (foundSoundInstance) {
-			musicPlayer.fade(0, 70);
-		}
-		else {
-			musicPlayer.fade(1, 140);
 		}
 	}
 }

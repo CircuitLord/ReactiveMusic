@@ -1,6 +1,8 @@
 package circuitlord.reactivemusic.impl.audio;
 
+import circuitlord.reactivemusic.ReactiveMusicDebug;
 import circuitlord.reactivemusic.ReactiveMusicState;
+import circuitlord.reactivemusic.api.audio.GainSupplier;
 import circuitlord.reactivemusic.api.audio.ReactivePlayer;
 import circuitlord.reactivemusic.api.audio.ReactivePlayerOptions;
 import circuitlord.reactivemusic.impl.songpack.MusicPackResource;
@@ -16,6 +18,7 @@ import rm_javazoom.jl.player.JavaSoundAudioDevice;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -34,20 +37,16 @@ public final class RMPlayer implements ReactivePlayer, Closeable {
     private volatile String group;
 
     // ----- options / state -----
+    private final GainSupplier primaryGainSupplier;
     private final boolean linkToMcVolumes;
     private final boolean quietWhenPaused;
     private volatile boolean loop;
     private volatile boolean mute;
 
-    private volatile float gainPercent;              // user layer (your old gainPercentage)
-    private volatile float duckPercent;              // per-player duck
+    private volatile ConcurrentHashMap<String, GainSupplier> gainSuppliers = new ConcurrentHashMap<>();
     private final Supplier<Float> groupDuckSupplier; // from manager: returns 1.0f unless group ducked
-    private volatile float fadePercent;
-    private volatile float fadeTarget;
-    private volatile int fadeDuration;
     private volatile boolean stopOnFadeOut = true;
     private volatile boolean resetOnFadeOut = true;
-    private volatile boolean fadingOut = false;
 
     // ----- source -----
     private volatile String songId;                          // resolved via songpack (e.g., "music/Foo")
@@ -94,10 +93,13 @@ public final class RMPlayer implements ReactivePlayer, Closeable {
         this.linkToMcVolumes = opts.linkToMinecraftVolumes();
         this.quietWhenPaused = opts.quietWhenGamePaused();
         this.loop = opts.loop();
-        this.gainPercent = opts.initialGainPercent();
-        this.duckPercent = opts.initialDuckPercent();
-        this.fadePercent = opts.initialFadePercent();
-        this.fadeTarget = opts.initialFadePercent();
+        
+        primaryGainSupplier = gainSuppliers.computeIfAbsent("reactivemusic", (k) -> {
+            return new RMGainSupplier(opts.initialGainPercent());
+        });
+
+        gainSuppliers.put("reactivemusic-duck", new RMGainSupplier(opts.initialDuckPercent()));
+
         this.groupDuckSupplier = groupDuckSupplier != null ? groupDuckSupplier : () -> 1.0f;
 
         this.worker = new Thread(this::runLoop, "ReactiveMusic Player [" + id + "]");
@@ -171,25 +173,22 @@ public final class RMPlayer implements ReactivePlayer, Closeable {
 		currentResource = null;
     }
 
+    /** Uses the primary gain supplier. */
     @Override public void fade(float target, int tickDuration) {
-        fadeTarget = target;
-        fadeDuration = tickDuration;
+        primaryGainSupplier.setFadeTarget(target);
+        primaryGainSupplier.setFadeDuration(tickDuration);
     }
 
-    @Override public float getFadeTarget() { return fadeTarget; }
-    @Override public int getFadeDuration() { return fadeDuration; }
-    @Override public float getFadePercent() { return fadePercent; }
+    @Override public ConcurrentHashMap<String, GainSupplier> getGainSuppliers() { return gainSuppliers; }
     
     // XXX
     // I know this next pattern isn't idiomatic... but this feels like it's going to get bloated otherwise
     
     // getters
-    @Override public boolean isFadingOut() { return fadingOut; }
     @Override public boolean stopOnFadeOut() { return stopOnFadeOut; }
     @Override public boolean resetOnFadeOut() { return resetOnFadeOut; }
     
     // setters
-    @Override public void isFadingOut(boolean set) { fadingOut = set; }
     @Override public void stopOnFadeOut(boolean set) { stopOnFadeOut = set; }
     @Override public void resetOnFadeOut(boolean set) { resetOnFadeOut = set; }
     
@@ -205,14 +204,12 @@ public final class RMPlayer implements ReactivePlayer, Closeable {
     // @Override public void pause() { paused = true; }
     // @Override public void resume() { paused = false; }
     
+
     @Override public void reset() {
-        fadePercent = 1f;
-        fadeTarget = 1f;
+        primaryGainSupplier.setFadePercent(1f);
+        primaryGainSupplier.setFadeTarget(1f);
+        requestGainRecompute();
     }
-    
-    @Override public void setGainPercent(float p) { gainPercent = clamp01(p); requestGainRecompute(); }
-    @Override public void setDuckPercent(float p) { duckPercent = clamp01(p); requestGainRecompute(); }
-    @Override public void setFadePercent(float p) { fadePercent = clamp01(p); requestGainRecompute(); }
     
     @Override public void setMute(boolean v) { mute = v; requestGainRecompute(); }
 
@@ -267,6 +264,7 @@ public final class RMPlayer implements ReactivePlayer, Closeable {
                             in = currentResource.inputStream; // like your original PlayerThread
                         }
 
+                        ReactiveMusicDebug.LOGGER.info("A new audio device is activating...");
                         audio = new FirstWritePrimerAudioDevice(250, () -> requestGainRecompute());
                         player = new AdvancedPlayer(in, audio);
                         
@@ -365,12 +363,6 @@ public final class RMPlayer implements ReactivePlayer, Closeable {
         );
     }
 
-    /**
-     * Force a recompute of real dB gain using your existing math.
-     * TODO: Implement a hashmap of gain suppliers, that can be registered.
-     * This will allow cleaner gain staging by plugins since they can create their
-     * own value to affect rather than sharing the built-ins.
-     */
     public float requestGainRecompute() {
         if (audio == null) return 0f;
         float minecraftGain = 1.0f;
@@ -388,7 +380,8 @@ public final class RMPlayer implements ReactivePlayer, Closeable {
             quietPct = 0.7f; 
         }
 
-        float effective = (mute ? 0f : gainPercent) * duckPercent * fadePercent * groupDuckSupplier.get() * quietPct * minecraftGain;
+        float suppliedPercent = gainSuppliers.reduce(1L, (supplierId, supplier) -> supplier.supplyComputedPercent(), (a,b) -> a * b);
+        float effective = mute ? 0f : (suppliedPercent * groupDuckSupplier.get() * quietPct * minecraftGain);
         float db = (minecraftGain == 0f || effective == 0f)
                 ? MIN_POSSIBLE_GAIN
                 : (MIN_GAIN + (MAX_GAIN - MIN_GAIN) * clamp01(effective));

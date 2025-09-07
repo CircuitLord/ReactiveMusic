@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import circuitlord.reactivemusic.api.eventsys.PluginIdentifier;
 import circuitlord.reactivemusic.api.songpack.RuntimeEntry;
 import circuitlord.reactivemusic.api.songpack.SongpackZip;
+import circuitlord.reactivemusic.impl.audio.RMGainSupplier;
+import circuitlord.reactivemusic.api.audio.GainSupplier;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 
 public final class ReactiveMusicState {
@@ -21,6 +23,9 @@ public final class ReactiveMusicState {
 
     public static SongpackZip currentSongpack = null;
     public static Boolean currentDimBlacklisted = false;
+
+    public static Boolean foundSoundInstance = false;
+    public static GainSupplier foundSoundInstanceGainSupplier = new RMGainSupplier(1f);
     
     public static Map<PluginIdentifier, Boolean> logicFreeze = new HashMap<>();
     public static Map<EventRecord, Boolean> songpackEventMap = new HashMap<>();

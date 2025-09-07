@@ -26,6 +26,7 @@ import circuitlord.reactivemusic.plugins.OverlayTrackPlugin;
 
 public final class ReactiveMusicCore {
     private static final ChangeLogger CHANGE_LOGGER = ReactiveMusic.debugTools.new ChangeLogger();
+    private static final ChangeLogger ENTRY_LOGGER = ReactiveMusic.debugTools.new ChangeLogger();
     public static final int FADE_DURATION = 150;
 	public static final int SILENCE_DURATION = 100;
 
@@ -48,19 +49,29 @@ public final class ReactiveMusicCore {
 		// Pick the highest priority one
 		if (!ReactiveMusicState.validEntries.isEmpty()) {
             for (RuntimeEntry entry : ReactiveMusicState.validEntries) {
+                if (entry == null) {
+                    ENTRY_LOGGER.writeError("A NULL ENTRY HAS MADE IT INTO THE LIST OF VALID ENTRIES!!!", new UnexpectedException("How did this happen?"));
+                    continue;
+                }
                 if (!entry.shouldOverlay()) { 
                     if (OverlayTrackPlugin.usingOverlay()) {
+                        ENTRY_LOGGER.writeInfo("Keeping the current entry under the overlay...");
                         newEntry = ReactiveMusicState.currentEntry;
                         break;
                     }
+                    ENTRY_LOGGER.writeInfo("Assigning new entry from valid entries...");
                     newEntry = entry;
                     break;
                 }
             }
 		}
+        else {
+            ENTRY_LOGGER.writeInfo("The list of valid entries is empty!");
+        }
 
         for (ReactivePlayer player : players) {
             if (player.isFinished() && !OverlayTrackPlugin.usingOverlay()) {
+                ENTRY_LOGGER.writeInfo("The player has finished. Clearing the current entry and song...");
                 ReactiveMusicState.currentEntry = null;
                 ReactiveMusicState.currentSong = null;
             }
@@ -78,7 +89,7 @@ public final class ReactiveMusicCore {
 			// wants to switch if our current entry doesn't exist -- or is not the same as the new one
 			boolean wantsToSwitch = !OverlayTrackPlugin.usingOverlay() && (ReactiveMusicState.currentEntry == null || !java.util.Objects.equals(ReactiveMusicState.currentEntry.getEventString(), newEntry.getEventString()));
             
-            CHANGE_LOGGER.writeInfo(wantsToSwitch ? "Trying to switch the music." : "The music will not switch.");
+            CHANGE_LOGGER.writeInfo(wantsToSwitch ? "Trying to switch the music." : "The music is no longer attempting to switch.");
 			
             // if the new entry contains the same song as our current one, then do a "fake" swap to swap over to the new entry
 			if (wantsToSwitch && ReactiveMusicState.currentSong != null && newEntry.getSongs().contains(ReactiveMusicState.currentSong) && !queuedToStopMusic) {
@@ -89,13 +100,6 @@ public final class ReactiveMusicCore {
 				// if this happens, also clear the queued state since we essentially did a switch
 				queuedToPlayMusic = false;
 			}
-
-			// make sure we're fully faded in if we faded out for any reason but this event is valid
-            for (ReactivePlayer player : players) {
-                if (player.isPlaying() && !wantsToSwitch) {
-                    player.fade(1, FADE_DURATION);
-                }
-            }
                 
             boolean isPlaying = false;
             for (ReactivePlayer player : players) {
@@ -163,8 +167,11 @@ public final class ReactiveMusicCore {
 		// this can happen if no entry is valid or the dimension is blacklisted
 		else {
             CHANGE_LOGGER.writeInfo("There are no valid songpack entries!");
-            for (ReactivePlayer player : players)
+            for (ReactivePlayer player : players) {
+                player.stopOnFadeOut(true);
+                player.resetOnFadeOut(true);
 			    player.fade(0, FADE_DURATION);
+            }
 		}
 	}
     
@@ -250,10 +257,17 @@ public final class ReactiveMusicCore {
         ReactiveMusicState.currentEntry = newEntry;
     
         if (player != null && song != null) {
+            
             // if you do a fade-in elsewhere, set 0 here; otherwise set 1
-            player.setGainPercent(1.0f);
-            player.setDuckPercent(1.0f);
-            player.setFadePercent(1.0f);
+            player.getGainSuppliers().get("reactivemusic").setGainPercent(1f);
+            player.getGainSuppliers().get("reactivemusic").setFadePercent(1f);
+            player.getGainSuppliers().get("reactivemusic").setFadeTarget(1f);
+            
+            player.getGainSuppliers().get("reactivemusic-duck").setGainPercent(1f);
+            player.getGainSuppliers().get("reactivemusic-duck").setFadePercent(1f);
+            player.getGainSuppliers().get("reactivemusic-duck").setFadeTarget(1f);
+            
+            player.requestGainRecompute();
             player.setSong(song);   // resolves to music/<song>.mp3 inside RMPlayerImpl
             player.play();          // worker thread runs blocking play() internally
         }

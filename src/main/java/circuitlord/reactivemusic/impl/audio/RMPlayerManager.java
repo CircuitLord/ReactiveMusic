@@ -1,6 +1,8 @@
 package circuitlord.reactivemusic.impl.audio;
 
 import circuitlord.reactivemusic.ReactiveMusicState;
+import circuitlord.reactivemusic.api.ReactiveMusicAPI;
+import circuitlord.reactivemusic.api.audio.GainSupplier;
 import circuitlord.reactivemusic.api.audio.ReactivePlayer;
 import circuitlord.reactivemusic.api.audio.ReactivePlayerManager;
 import circuitlord.reactivemusic.api.audio.ReactivePlayerOptions;
@@ -36,41 +38,53 @@ public final class RMPlayerManager implements ReactivePlayerManager {
 
     @Override public ReactivePlayer get(String id) { return players.get(id); }
 
+    /**
+     * Includes an API hook for custom runnable code imported through a wrapper within the RMGainSupplier class.
+     * TODO: Implementation of API hook and wrapper
+     * 
+     */
     @Override public void tick() {
         for (ReactivePlayer player : players.values()) {
 
-            float fp = player.getFadePercent();    // current
-            float ft = player.getFadeTarget();     // target
-            int   dur = player.getFadeDuration() > 0 ? player.getFadeDuration() : 150;
-            if (ft < fp) { player.isFadingOut(true); }
-
-            if (fp == 0f && player.stopOnFadeOut() && player.isFadingOut()) {
-                // reached target – run arrival side effects
+            // check if the primary gain supplier has stopped
+            GainSupplier primaryGainSupplier = player.getGainSuppliers().get("reactivemusic");
+            if (primaryGainSupplier.isFadingOut() && primaryGainSupplier.getFadePercent() == 0f) {
+                
                 LOGGER.info(player.id() + " has stopped on fadeout");
-                if (fp == 0f && player.stopOnFadeOut()) player.stop();
-                if (fp == 0f && player.resetOnFadeOut()) player.reset();
+                
+                // reached target – run arrival side effects
+                if (player.stopOnFadeOut()) player.stop();
+                if (player.resetOnFadeOut()) player.reset();
             }
 
-            if (fp == 0 || ft > fp || fp == ft) player.isFadingOut(false);
-            
-            float step = (ft > fp ? 1f : -1f) * (1f / dur);
-            float next = fp + step;
+            // compute tick fading for suppliers in the player's map
+            player.getGainSuppliers().forEach((id, gainSupplier) -> {
 
-            // clamp overshoot and bounds
-            if ((step > 0 && next >= ft) || (step < 0 && next <= ft)) next = ft;
-            if (next < 0f) next = 0f; else if (next > 1f) next = 1f;
-
-            player.setFadePercent(next);
-            if (fp != ft) {
-                if (fp == 0 && step > 0) {
-                    ReactiveMusicState.LOGGER.info(player.id() + " is fading in");
+                float fp = gainSupplier.getFadePercent();
+                float ft = gainSupplier.getFadeTarget();
+                float dur = gainSupplier.getFadeDuration();
+                
+                // compute next value
+                float step = (ft > fp ? 1f : -1f) * (1f / dur);
+                float next = fp == ft ? fp : fp + step;
+                
+                // clamp overshoot and bounds
+                if ((step > 0 && next >= ft) || (step < 0 && next <= ft)) next = ft;
+                if (next < 0f) next = 0f; else if (next > 1f) next = 1f;
+                
+                gainSupplier.setFadePercent(next);
+                if (fp != ft) {
+                    if (fp == 0 && step > 0) {
+                        ReactiveMusicState.LOGGER.info(player.id() + " is fading in via gain supplier [" + id + "]");
+                    }
+                    
+                    if (fp == 1 && step < 0) {
+                        ReactiveMusicState.LOGGER.info(player.id() + " is fading out via gain supplier [" + id + "]");
+                    }
                 }
+            });
 
-                if (fp == 1 && step < 0) {
-                    ReactiveMusicState.LOGGER.info(player.id() + " is fading out");
-                }
-            }
-
+            player.requestGainRecompute();
         }
     }
 

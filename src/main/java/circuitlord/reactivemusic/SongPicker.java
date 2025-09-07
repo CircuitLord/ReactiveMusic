@@ -125,7 +125,7 @@ public final class SongPicker {
 
             boolean songpackEventsValid = false;
             for (var eventRecord : condition.songpackEvents) {
-                if (eventRecord == null) break;
+                if (eventRecord == null) continue;
                 CHANGE_LOGGER.writeInfo(ReactiveMusicState.songpackEventMap.containsKey(eventRecord) ? "The event record key was found in the event map!" : "Oh no!" );
                 if (ReactiveMusicState.songpackEventMap.containsKey(eventRecord) && ReactiveMusicState.songpackEventMap.get(SongpackEvent.get(eventRecord.getEventId()))) {
                     songpackEventsValid = true;

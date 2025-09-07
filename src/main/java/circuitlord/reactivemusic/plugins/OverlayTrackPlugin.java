@@ -48,7 +48,7 @@ public final class OverlayTrackPlugin extends ReactiveMusicPlugin {
                 if (!ReactiveMusicState.validEntries.isEmpty()) {
                     overlayPlayer.setSong(ReactiveMusicUtils.pickRandomSong(SongPicker.getSelectedSongs(ReactiveMusicState.validEntries.get(0), ReactiveMusicState.validEntries)));
                 }
-                overlayPlayer.setFadePercent(0);
+                overlayPlayer.getGainSuppliers().get("reactivemusic").setFadePercent(0f);
                 overlayPlayer.play();
             }
             overlayPlayer.fade(1f, 140);
