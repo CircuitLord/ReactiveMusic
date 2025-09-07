@@ -117,6 +117,11 @@ public class ReactiveMusicDebug {
             return this;
         }
 
+        public TextBuilder newline() {
+            root.append(Text.literal("\n"));
+            return this;
+        }
+
         public MutableText build() {
             return root;
         }

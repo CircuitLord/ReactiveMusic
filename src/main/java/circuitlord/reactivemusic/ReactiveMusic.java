@@ -197,11 +197,11 @@ public class ReactiveMusic implements ModInitializer {
 				}))
 				.then(literal("enable")
 				.executes(ctx -> {
-					// TODO: Implement pluginId first!
+					// TODO: Implement
 					return 1;
 				}))
 				.then(literal("disable").executes(ctx -> {
-					// TODO: Implement pluginId first!
+					// TODO: Implement
 					return 1;
 				}))
 			.executes(ctx -> {
@@ -232,13 +232,87 @@ public class ReactiveMusic implements ModInitializer {
 					ctx.getSource().sendFeedback(debugTools.new TextBuilder()
 					
 					.header("CURRENT ENTRY")
+
 					.line("events", entry.getEventString(), Formatting.WHITE)
 					.line("allowFallback ", entry.fallbackAllowed() ? "YES" : "NO", entry.fallbackAllowed() ? Formatting.GREEN : Formatting.GRAY)
 					.line("useOverlay", entry.shouldOverlay() ? "YES" : "NO", entry.shouldOverlay() ? Formatting.GREEN : Formatting.GRAY )
+					.line("forceStopMusicOnValid", entry.shouldStopMusicOnValid() ? "YES" : "NO", entry.shouldStopMusicOnValid() ? Formatting.GREEN : Formatting.GRAY)
+					.line("forceStopMusicOnInvalid", entry.shouldStopMusicOnInvalid() ? "YES" : "NO", entry.shouldStopMusicOnInvalid() ? Formatting.GREEN : Formatting.GRAY)
+					.line("forceStartMusicOnValid", entry.shouldStartMusicOnValid() ? "YES" : "NO", entry.shouldStartMusicOnValid() ? Formatting.GREEN : Formatting.GRAY)
+					.line("forceChance", Float.toString(entry.getForceChance()), entry.getForceChance() != 0 ? Formatting.AQUA : Formatting.GRAY)
+					.line("\n"+"Now playing:", ReactiveMusicState.currentSong, Formatting.ITALIC)
+					
 					.build());
 					
 					return 1;
 				}))
+				.then(literal("validEntries")
+				.executes(ctx -> {
+					
+					int n = 0;
+					TextBuilder validEntryList = debugTools.new TextBuilder();
+					
+					validEntryList.header("VALID ENTRIES");
+					for (RuntimeEntry entry : ReactiveMusicState.validEntries) {
+						validEntryList.line(Integer.toString(n), entry.getEventString(), Formatting.AQUA);
+					}
+					validEntryList.raw("\n"+"There are a total of [ " + ReactiveMusicState.validEntries.size() + " ]  valid entries", Formatting.BOLD, Formatting.LIGHT_PURPLE);
+					
+					ctx.getSource().sendFeedback(validEntryList.build());
+					return 1;
+				}))
+				.then(literal("player")
+				.then(argument("namespace", StringArgumentType.string())
+				.then(argument("path", StringArgumentType.string())
+				.executes((ctx) -> {
+					
+					String id = StringArgumentType.getString(ctx, "namespace") + ":" + StringArgumentType.getString(ctx, "path");
+					TextBuilder playerInfo = debugTools.new TextBuilder();
+					ReactivePlayer player = ReactiveMusicAPI.audioManager().get(id);
+
+					playerInfo.header("PLAYER INFO")
+
+					.line("id", player.id(), Formatting.AQUA)
+					.line("isPlaying", player.isPlaying() ? "YES" : "NO", player.isPlaying() ? Formatting.GREEN : Formatting.GRAY)
+					.line("stopOnFadeOut", player.stopOnFadeOut() ? "YES" : "NO", player.stopOnFadeOut() ? Formatting.GREEN : Formatting.GRAY)
+					.line("resetOnFadeOut", player.resetOnFadeOut() ? "YES" : "NO", player.resetOnFadeOut() ? Formatting.GREEN : Formatting.GRAY)
+					.line("gainSuppliers", "", Formatting.WHITE);
+
+					player.getGainSuppliers().forEach((supplierId, gainSupplier) -> {
+						playerInfo.line(" --> " + supplierId, Float.toString(gainSupplier.supplyComputedPercent()), gainSupplier.supplyComputedPercent() > 0 ? Formatting.LIGHT_PURPLE : Formatting.GRAY);
+					});
+
+					ctx.getSource().sendFeedback(playerInfo.build());
+
+					return 1;
+				}))))
+				.then(literal("player")
+				.then(argument("namespace", StringArgumentType.string())
+				.then(argument("path", StringArgumentType.string())
+				.then(argument("gainSupplierId", StringArgumentType.string())
+				.executes((ctx) -> {
+
+					String id = StringArgumentType.getString(ctx, "namespace") + ":" + StringArgumentType.getString(ctx, "path");
+					String gainSupplierId = StringArgumentType.getString(ctx, "gainSupplierId");
+					TextBuilder supplierInfo = debugTools.new TextBuilder();
+					ReactivePlayer player = ReactiveMusicAPI.audioManager().get(id);
+					GainSupplier gainSupplier = player.getGainSuppliers().get(gainSupplierId);
+
+					supplierInfo.header("GAIN SUPPLIER").header(id)
+
+					.line("id", gainSupplierId, Formatting.AQUA)
+					.newline()
+					.line("computedPercent", Float.toString(gainSupplier.supplyComputedPercent()), Formatting.LIGHT_PURPLE)
+					.line("fadeStart", Float.toString(gainSupplier.getFadeStart()), Formatting.AQUA)
+					.line("fadeTarget", Float.toString(gainSupplier.getFadeTarget()), Formatting.AQUA)
+					.line("fadeDuration", Integer.toString(gainSupplier.getFadeDuration()), Formatting.BLUE)
+					.line("isFadingOut", gainSupplier.isFadingOut() ? "YES" : "NO", gainSupplier.isFadingOut() ? Formatting.GREEN : Formatting.GRAY)
+					.line("isFadingIn", gainSupplier.isFadingIn() ? "YES" : "NO", gainSupplier.isFadingIn() ? Formatting.GREEN : Formatting.GRAY);
+
+					ctx.getSource().sendFeedback(supplierInfo.build());
+
+					return 1;
+				})))))
 
 			.executes(ctx -> {
 				// TODO: What do we have here?
