@@ -29,13 +29,6 @@ public interface RuntimeEntry {
     float getForceChance();
     
     List<RMEntryCondition> getConditions();
-    
-    /***************************************************************
-     * TODO: These should be removed and refactored ⚠️
-     * all of the entries use the same random number internally
-     * so there is no reason to hold it within the entry
-     */
-    @Deprecated float getCachedRandomChance();
-    @Deprecated void setCachedRandomChance(float c);
+   
     
 }
