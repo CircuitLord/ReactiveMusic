@@ -38,7 +38,7 @@ public final class ReactiveMusicCore {
 	static int fadeOutTicks = 0;
 	static int silenceTicks = 0;
     static Random rand = new Random();
-    float randomChance  = rand.nextFloat();
+    static float randomChance  = rand.nextFloat();
 
     /**
      * This is the built-in logic for Reactive Music's song switcher.
