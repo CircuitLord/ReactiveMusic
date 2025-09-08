@@ -1,7 +1,18 @@
 plugins {
+	id 'java'
 	id 'fabric-loom' version "${loom_version}"
 	id 'maven-publish'
 }
+
+
+loom {
+  runs {
+    client {
+      vmArgs "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+    }
+  }
+}
+
 
 version = project.mod_version + "+" + project.minecraft_version
 group = project.maven_group
@@ -89,6 +100,9 @@ java {
 
 	sourceCompatibility = JavaVersion.VERSION_21
 	targetCompatibility = JavaVersion.VERSION_21
+	toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 jar {
@@ -97,20 +111,55 @@ jar {
 	}
 }
 
-// configure the maven publication
+// Ensure Loom’s remapped outputs get published
 publishing {
-	publications {
-		create("mavenJava", MavenPublication) {
-			artifactId = project.archives_base_name
-			from components.java
-		}
-	}
+    publications {
+        mavenJava(MavenPublication) {
+            groupId = project.group
+            artifactId = project.archivesBaseName
+            version = project.version
 
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-	repositories {
-		// Add repositories to publish to here.
-		// Notice: This block does NOT have the same function as the block in the top level.
-		// The repositories here will be used for publishing your artifact, not for
-		// retrieving dependencies.
-	}
+            artifact(remapJar) {
+                builtBy remapJar
+            }
+            artifact(remapSourcesJar) {
+                builtBy remapSourcesJar
+            }
+
+            pom {
+                name = project.archivesBaseName
+                description = 'Mocha (re)Mix of Reactive Music!'
+                url = 'https://github.com/rocamocha/ReactiveMusic'
+
+                licenses {
+                    license {
+                        name = 'GPLv3'
+                        url = 'https://opensource.org/license/gpl-3-0'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'rocamocha'
+                        name = 'Jeric Rocamora'
+                    }
+                }
+                scm {
+                    url = 'https://github.com/rocamocha/ReactiveMusic'
+                    connection = 'scm:git:https://github.com/rocamocha/ReactiveMusic.git'
+                    developerConnection = 'scm:git:ssh://git@github.com/rocamocha/ReactiveMusic.git'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"   // can be anything
+            url = uri("https://maven.pkg.github.com/rocamocha/ReactiveMusic")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR") ?: project.findProperty("gpr.user")
+                password = System.getenv("GITHUB_TOKEN") ?: project.findProperty("gpr.key")
+            }
+        }
+    }
 }
+

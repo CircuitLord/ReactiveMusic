@@ -58,18 +58,28 @@ The main addition to this version of Reactive Music is the powerful plugin syste
 
 ---
 
-# Changelog 💃 09.05.25
+# Changelog 💃 09.08.25
 
   Changes:
   
-  * Changed the final plugin class' API from an `interface` to a `class` to use `extends` instead of `implements`
-  * New `class` -> `RMPluginIdentifier` instanced by plugins on construction
-  * New `class` -> `RMEventRecord` which holds the registrar plugin's `RMPluginIdentifier`
-  * New API interfaces `EventRecord` and `PluginIdentifier`
-  * Changed the `Map` in `RMSongpackEvent` to take types `<EventRecord, Boolean>`
-  * Code adjusted to use `EventRecord` instead of `SongpackEvent` where applicable.
+  * New `class` -> `RMGainSupplier` for usage in the map of gain suppliers in the player implementation.
+  * New API interface `GainSupplier`.
+  * Changed `requestGainRecompute()` in `RMPlayer` to use gain suppliers instead of hardcoded values.
+  * Overlay built-in plugin and Minecraft jukebox ducking now uses gain suppliers in the primary audio player.
 
 ---
+<details>
+  <summary>[ 09.08.25 ]</summary>
+
+  Changes:
+  
+  * New `class` -> `RMGainSupplier` for usage in the map of gain suppliers in the player implementation.
+  * New API interface `GainSupplier`.
+  * Changed `requestGainRecompute()` in `RMPlayer` to use gain suppliers instead of hardcoded values.
+  * Overlay built-in plugin and Minecraft jukebox ducking now uses gain suppliers in the primary audio player.
+ 
+</details>
+
 <details>
   <summary>[ 09.05.25 ]</summary>
 
