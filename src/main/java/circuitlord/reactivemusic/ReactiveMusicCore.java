@@ -38,6 +38,7 @@ public final class ReactiveMusicCore {
 	static int fadeOutTicks = 0;
 	static int silenceTicks = 0;
     static Random rand = new Random();
+    float randomChance  = rand.nextFloat();
 
     /**
      * This is the built-in logic for Reactive Music's song switcher.
@@ -202,7 +203,7 @@ public final class ReactiveMusicCore {
     
                 if (entry.shouldStopMusicOnInvalid()) {
                     ReactiveMusicDebug.LOGGER.info("trying forceStopMusicOnInvalid: " + entry.getEventString());
-                    if (entry.getCachedRandomChance() <= entry.getForceChance()) {
+                    if (randomChance  <= entry.getForceChance()) {
                         ReactiveMusicDebug.LOGGER.info("doing forceStopMusicOnInvalid: " + entry.getEventString());
                         queuedToStopMusic = true;
                     }
@@ -215,8 +216,7 @@ public final class ReactiveMusicCore {
     
             if (previousValidEntries.stream().noneMatch(e -> java.util.Objects.equals(e.getEventString(), entry.getEventString()))) {
                 // use the same random chance for all so they always happen together
-                entry.setCachedRandomChance(rand.nextFloat());
-                boolean randSuccess = entry.getCachedRandomChance() <= entry.getForceChance();
+                boolean randSuccess = randomChance <= entry.getForceChance();
     
                 // if this event wasn't valid before and is now
                 ReactiveMusicDebug.LOGGER.info("Triggering onValid() for songpack event plugins");

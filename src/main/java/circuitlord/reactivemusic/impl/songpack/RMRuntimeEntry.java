@@ -30,9 +30,7 @@ public class RMRuntimeEntry implements RuntimeEntry {
     
     public String eventString = "";
     public String errorString = "";
-    
-    public float cachedRandomChance = 1.0f;
-    
+        
     public HashMap<String, Object> entryMap = new HashMap<>();
     
     public Object getExternalOption(String key) {
@@ -75,8 +73,6 @@ public class RMRuntimeEntry implements RuntimeEntry {
     public boolean shouldStopMusicOnValid() { return forceStopMusicOnValid; }
     public boolean shouldStopMusicOnInvalid() { return forceStopMusicOnInvalid; }
     public boolean shouldStartMusicOnValid() { return forceStartMusicOnValid; }
-    public float getCachedRandomChance() { return cachedRandomChance; }
-    public void setCachedRandomChance(float c) { cachedRandomChance = c; }
     public String getSongpack() { return songpack; }
     public List<RMEntryCondition> getConditions() { return conditions; }
 
