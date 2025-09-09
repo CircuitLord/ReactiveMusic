@@ -1,13 +1,14 @@
 package circuitlord.reactivemusic;
 
-import circuitlord.reactivemusic.ReactiveMusicDebug.TextBuilder;
 import circuitlord.reactivemusic.api.*;
-import circuitlord.reactivemusic.api.audio.GainSupplier;
 import circuitlord.reactivemusic.api.audio.ReactivePlayer;
 import circuitlord.reactivemusic.api.audio.ReactivePlayerManager;
 import circuitlord.reactivemusic.api.audio.ReactivePlayerOptions;
 import circuitlord.reactivemusic.api.eventsys.PluginIdentifier;
-import circuitlord.reactivemusic.api.songpack.RuntimeEntry;
+import circuitlord.reactivemusic.commands.HelpCommandHandlers;
+import circuitlord.reactivemusic.commands.PlayerCommandHandlers;
+import circuitlord.reactivemusic.commands.PluginCommandHandlers;
+import circuitlord.reactivemusic.commands.SongpackCommandHandlers;
 import circuitlord.reactivemusic.config.ModConfig;
 import circuitlord.reactivemusic.impl.audio.RMPlayerManager;
 import circuitlord.reactivemusic.impl.eventsys.RMPluginIdentifier;
@@ -22,15 +23,16 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.sound.SoundInstance;
+import net.minecraft.command.argument.serialize.IntegerArgumentSerializer;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.math.Vec3d;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ServiceLoader;
 
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 
 public class ReactiveMusic implements ModInitializer {
@@ -138,189 +140,121 @@ public class ReactiveMusic implements ModInitializer {
 				ReactiveMusicCore.setActiveSongpack(RMSongpackLoader.availableSongpacks.get(0));
 			}
 		}
-
 		
 		
 		
-        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess)-> dispatcher.register(literal("reactivemusic")
-		.executes(ctx -> {
-			MinecraftClient mc = ctx.getSource().getClient();
-			Screen screen = ModConfig.createScreen(mc.currentScreen);
-			mc.send(() -> mc.setScreen(screen));
-			return 1;
-		})
 		
 
-			.then(literal("logBlockCounter")
-			.executes(ctx -> {
-				SongPicker.queuedToPrintBlockCounter = true;
-				return 1;	
-			}))
-			
-			
-			.then(literal("blacklistDimension")
-			.executes(ctx -> {	
-				String key = ctx.getSource().getClient().world.getRegistryKey().getValue().toString();
-				if (modConfig.blacklistedDimensions.contains(key)) {
-					ctx.getSource().sendFeedback(Text.literal("ReactiveMusic: " + key + " was already in blacklist."));
-					return 1;
-				}
-				ctx.getSource().sendFeedback(Text.literal("ReactiveMusic: Added " + key + " to blacklist."));
-				modConfig.blacklistedDimensions.add(key);
-				ModConfig.saveConfig();
-				return 1;
-			}))
-			
-			
-			.then(literal("unblacklistDimension")
-			.executes(ctx -> {
-				String key = ctx.getSource().getClient().world.getRegistryKey().getValue().toString();
-				
-				if (!modConfig.blacklistedDimensions.contains(key)) {
-					ctx.getSource().sendFeedback(Text.literal("ReactiveMusic: " + key + " was not in blacklist."));
-					return 1;
-				}
-				ctx.getSource().sendFeedback(Text.literal("ReactiveMusic: Removed " + key + " from blacklist."));
-				modConfig.blacklistedDimensions.remove(key);
-				ModConfig.saveConfig();
-				return 1;
-			}))
-			
-			
-			.then(literal("plugin")
-				.then(literal("list")
-				.executes(ctx -> {
-					for (ReactiveMusicPlugin plugin : PLUGINS) {
-						ctx.getSource().sendFeedback(Text.literal(plugin.pluginId.getId()));
-					}
-					return 1;
-				}))
-				.then(literal("enable")
-				.executes(ctx -> {
-					// TODO: Implement
-					return 1;
-				}))
-				.then(literal("disable").executes(ctx -> {
-					// TODO: Implement
-					return 1;
-				}))
-			.executes(ctx -> {
-				ctx.getSource().sendFeedback(Text.literal("""
-					Usage:
-					/plugin list
-					/plugin enable pluginId
-					/plugin disable pluginId
-					"""));
-				return 1;	
-			}))
-			
-			
-			.then(literal("skip")
-			.executes(ctx -> {
-				ReactiveMusicState.currentEntry = null;
-				ReactiveMusicState.currentSong = null;
-				
-				return 1;
-			}))
-			
-			
-			.then(literal("info")
-				.then(literal("currentEntry")
-				.executes(ctx -> {
-					RuntimeEntry entry = ReactiveMusicState.currentEntry;
+	ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+		dispatcher.register(
+			literal("reactivemusic")
 
-					ctx.getSource().sendFeedback(debugTools.new TextBuilder()
-					
-					.header("CURRENT ENTRY")
-
-					.line("events", entry.getEventString(), Formatting.WHITE)
-					.line("allowFallback ", entry.fallbackAllowed() ? "YES" : "NO", entry.fallbackAllowed() ? Formatting.GREEN : Formatting.GRAY)
-					.line("useOverlay", entry.shouldOverlay() ? "YES" : "NO", entry.shouldOverlay() ? Formatting.GREEN : Formatting.GRAY )
-					.line("forceStopMusicOnValid", entry.shouldStopMusicOnValid() ? "YES" : "NO", entry.shouldStopMusicOnValid() ? Formatting.GREEN : Formatting.GRAY)
-					.line("forceStopMusicOnInvalid", entry.shouldStopMusicOnInvalid() ? "YES" : "NO", entry.shouldStopMusicOnInvalid() ? Formatting.GREEN : Formatting.GRAY)
-					.line("forceStartMusicOnValid", entry.shouldStartMusicOnValid() ? "YES" : "NO", entry.shouldStartMusicOnValid() ? Formatting.GREEN : Formatting.GRAY)
-					.line("forceChance", Float.toString(entry.getForceChance()), entry.getForceChance() != 0 ? Formatting.AQUA : Formatting.GRAY)
-					.line("\n"+"Now playing:", ReactiveMusicState.currentSong, Formatting.ITALIC)
-					
-					.build());
-					
-					return 1;
-				}))
-				.then(literal("validEntries")
 				.executes(ctx -> {
-					
-					int n = 0;
-					TextBuilder validEntryList = debugTools.new TextBuilder();
-					
-					validEntryList.header("VALID ENTRIES");
-					for (RuntimeEntry entry : ReactiveMusicState.validEntries) {
-						validEntryList.line(Integer.toString(n), entry.getEventString(), Formatting.AQUA);
-					}
-					validEntryList.raw("\n"+"There are a total of [ " + ReactiveMusicState.validEntries.size() + " ]  valid entries", Formatting.BOLD, Formatting.LIGHT_PURPLE);
-					
-					ctx.getSource().sendFeedback(validEntryList.build());
+					MinecraftClient mc = ctx.getSource().getClient();
+					Screen screen = ModConfig.createScreen(mc.currentScreen);
+					mc.send(() -> mc.setScreen(screen));
 					return 1;
-				}))
+				})
+
+				.then(literal("help")
+					.then(literal("songpack").executes(HelpCommandHandlers::songpackCommands))
+					.then(literal("plugin").executes(HelpCommandHandlers::pluginCommands))
+					.then(literal("player").executes(HelpCommandHandlers::playerCommands))
+				)
+
+				.then(literal("logBlockCounter")
+					.executes(ctx -> {
+						SongPicker.queuedToPrintBlockCounter = true;
+						return 1;
+					})
+				)
+
+				.then(literal("blacklistDimension")
+					.executes(ctx -> {
+						String key = ctx.getSource().getClient().world.getRegistryKey().getValue().toString();
+						if (modConfig.blacklistedDimensions.contains(key)) {
+							ctx.getSource().sendFeedback(Text.literal("ReactiveMusic: " + key + " was already in blacklist."));
+							return 1;
+						}
+						ctx.getSource().sendFeedback(Text.literal("ReactiveMusic: Added " + key + " to blacklist."));
+						modConfig.blacklistedDimensions.add(key);
+						ModConfig.saveConfig();
+						return 1;
+					})
+				)
+
+				.then(literal("unblacklistDimension")
+					.executes(ctx -> {
+						String key = ctx.getSource().getClient().world.getRegistryKey().getValue().toString();
+						if (!modConfig.blacklistedDimensions.contains(key)) {
+							ctx.getSource().sendFeedback(Text.literal("ReactiveMusic: " + key + " was not in blacklist."));
+							return 1;
+						}
+						ctx.getSource().sendFeedback(Text.literal("ReactiveMusic: Removed " + key + " from blacklist."));
+						modConfig.blacklistedDimensions.remove(key);
+						ModConfig.saveConfig();
+						return 1;
+					})
+				)
+
+				.then(literal("songpack")
+					.executes(HelpCommandHandlers::songpackCommands)
+					.then(literal("info")
+						.executes(SongpackCommandHandlers::songpackInfo))
+					.then(literal("entry")
+						.then(literal("current")
+							.executes(SongpackCommandHandlers::currentEntryInfo))
+						.then(literal("list")
+							.executes(SongpackCommandHandlers::listAllEntries))
+						.then(argument("index", IntegerArgumentType.integer())
+							.executes(SongpackCommandHandlers::indexedEntryInfo)
+							.then(literal("songs")
+								.executes(SongpackCommandHandlers::indexedEntrySongs))
+						)
+					)
+				)
+
+				.then(literal("plugin")
+					.executes(HelpCommandHandlers::pluginCommands)
+					.then(literal("list").executes(PluginCommandHandlers::listPlugins))
+					.then(literal("enable")
+						.then(argument("pluginId", StringArgumentType.string())
+							.executes(PluginCommandHandlers::enablePlugin)
+						)
+					)
+					.then(literal("disable")
+						.then(argument("pluginId", StringArgumentType.string())
+							.executes(PluginCommandHandlers::disablePlugin)
+						)
+					)
+				)
+
 				.then(literal("player")
-				.then(argument("namespace", StringArgumentType.string())
-				.then(argument("path", StringArgumentType.string())
-				.executes((ctx) -> {
-					
-					String id = StringArgumentType.getString(ctx, "namespace") + ":" + StringArgumentType.getString(ctx, "path");
-					TextBuilder playerInfo = debugTools.new TextBuilder();
-					ReactivePlayer player = ReactiveMusicAPI.audioManager().get(id);
+					.then(literal("list").executes(PlayerCommandHandlers::playerList))
+					.then(literal("info")
+						.then(argument("namespace", StringArgumentType.string())
+							.then(argument("path", StringArgumentType.string())
+								.executes(PlayerCommandHandlers::playerInfo)
+								.then(argument("gainSupplierId", StringArgumentType.string())
+									.executes(PlayerCommandHandlers::gainSupplierInfo)
+								)
+							)
+						)
+					)
+				)
 
-					playerInfo.header("PLAYER INFO")
+				.then(literal("skip")
+					.executes(ctx -> {
+						ReactiveMusicState.currentEntry = null;
+						ReactiveMusicState.currentSong = null;
+						return 1;
+					})
+				)
+			);
+		});
+	}	
 
-					.line("id", player.id(), Formatting.AQUA)
-					.line("isPlaying", player.isPlaying() ? "YES" : "NO", player.isPlaying() ? Formatting.GREEN : Formatting.GRAY)
-					.line("stopOnFadeOut", player.stopOnFadeOut() ? "YES" : "NO", player.stopOnFadeOut() ? Formatting.GREEN : Formatting.GRAY)
-					.line("resetOnFadeOut", player.resetOnFadeOut() ? "YES" : "NO", player.resetOnFadeOut() ? Formatting.GREEN : Formatting.GRAY)
-					.line("gainSuppliers", "", Formatting.WHITE);
 
-					player.getGainSuppliers().forEach((supplierId, gainSupplier) -> {
-						playerInfo.line(" --> " + supplierId, Float.toString(gainSupplier.supplyComputedPercent()), gainSupplier.supplyComputedPercent() > 0 ? Formatting.LIGHT_PURPLE : Formatting.GRAY);
-					});
-
-					ctx.getSource().sendFeedback(playerInfo.build());
-
-					return 1;
-				}))))
-				.then(literal("player")
-				.then(argument("namespace", StringArgumentType.string())
-				.then(argument("path", StringArgumentType.string())
-				.then(argument("gainSupplierId", StringArgumentType.string())
-				.executes((ctx) -> {
-
-					String id = StringArgumentType.getString(ctx, "namespace") + ":" + StringArgumentType.getString(ctx, "path");
-					String gainSupplierId = StringArgumentType.getString(ctx, "gainSupplierId");
-					TextBuilder supplierInfo = debugTools.new TextBuilder();
-					ReactivePlayer player = ReactiveMusicAPI.audioManager().get(id);
-					GainSupplier gainSupplier = player.getGainSuppliers().get(gainSupplierId);
-
-					supplierInfo.header("GAIN SUPPLIER").header(id)
-
-					.line("id", gainSupplierId, Formatting.AQUA)
-					.newline()
-					.line("computedPercent", Float.toString(gainSupplier.supplyComputedPercent()), Formatting.LIGHT_PURPLE)
-					.line("fadeStart", Float.toString(gainSupplier.getFadeStart()), Formatting.AQUA)
-					.line("fadeTarget", Float.toString(gainSupplier.getFadeTarget()), Formatting.AQUA)
-					.line("fadeDuration", Integer.toString(gainSupplier.getFadeDuration()), Formatting.BLUE)
-					.line("isFadingOut", gainSupplier.isFadingOut() ? "YES" : "NO", gainSupplier.isFadingOut() ? Formatting.GREEN : Formatting.GRAY)
-					.line("isFadingIn", gainSupplier.isFadingIn() ? "YES" : "NO", gainSupplier.isFadingIn() ? Formatting.GREEN : Formatting.GRAY);
-
-					ctx.getSource().sendFeedback(supplierInfo.build());
-
-					return 1;
-				})))))
-
-			.executes(ctx -> {
-				// TODO: What do we have here?
-				return 1;
-			}))
-		));
-
-	}
 	
 	public static void newTick() {
 		if (musicPlayer == null) return;

@@ -58,16 +58,24 @@ The main addition to this version of Reactive Music is the powerful plugin syste
 
 ---
 
-# Changelog 💃 09.08.25
+# Changelog 💃 09.09.25
 
   Changes:
   
-  * New `class` -> `RMGainSupplier` for usage in the map of gain suppliers in the player implementation.
-  * New API interface `GainSupplier`.
-  * Changed `requestGainRecompute()` in `RMPlayer` to use gain suppliers instead of hardcoded values.
-  * Overlay built-in plugin and Minecraft jukebox ducking now uses gain suppliers in the primary audio player.
+* New `class` based command handler structure for client commands.
+* Added various new commands, useful for debugging or to aid in songpack creation.
 
 ---
+<details>
+  <summary>[ 09.09.25 ]</summary>
+
+  Changes:
+  
+* New `class` based command handler structure for client commands.
+* Added various new commands, useful for debugging or to aid in songpack creation.
+ 
+</details>
+
 <details>
   <summary>[ 09.08.25 ]</summary>
 

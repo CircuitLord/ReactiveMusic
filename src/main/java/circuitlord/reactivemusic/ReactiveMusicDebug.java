@@ -12,6 +12,16 @@ public class ReactiveMusicDebug {
     public ReactiveMusicDebug() {}
     public static final ReactiveMusicDebug INSTANCE = new ReactiveMusicDebug(); 
     
+    public static final String NON_IMPL_WARN = """
+        This feature is not implemented yet!
+        Track related issues and follow development @
+        https://github.com/users/rocamocha/projects
+        """;
+
+    public static final Text NON_IMPL_WARN_BUILT = new TextBuilder()
+        .line(ReactiveMusicDebug.NON_IMPL_WARN, Formatting.RED, Formatting.BOLD)
+        .build();
+
     public static final Logger LOGGER = LoggerFactory.getLogger("reactive_music");
     public static final ChangeLogger CHANGE_LOGGER = INSTANCE.new ChangeLogger();
 
@@ -89,8 +99,8 @@ public class ReactiveMusicDebug {
      * 
      * XXX ~ rocamocha ~ This idea should honestly be its own library - this is a self-reminder extract it and expand!
      */
-    public class TextBuilder {
-        private final MutableText root;
+    public static class TextBuilder {
+        protected final MutableText root;
 
         public TextBuilder() {
             this.root = Text.empty();
@@ -105,13 +115,19 @@ public class ReactiveMusicDebug {
             return this;
         }
 
+        public TextBuilder line(String value, Formatting... formats) {
+            root.append(Text.literal(value).formatted(formats));
+            root.append(Text.literal("\n"));
+            return this;
+        }
+        
         public TextBuilder line(String label, String value, Formatting valueColor) {
             root.append(Text.literal(label + ": ").formatted(Formatting.YELLOW));
             root.append(Text.literal(value).formatted(valueColor, Formatting.BOLD));
             root.append(Text.literal("\n"));
             return this;
         }
-
+        
         public TextBuilder raw(String text, Formatting... formats) {
             root.append(Text.literal(text).formatted(formats));
             return this;

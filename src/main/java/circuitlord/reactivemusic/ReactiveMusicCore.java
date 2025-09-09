@@ -26,6 +26,7 @@ import circuitlord.reactivemusic.impl.songpack.RMSongpackZip;
 import circuitlord.reactivemusic.plugins.OverlayTrackPlugin;
 
 public final class ReactiveMusicCore {
+    
     private static final ChangeLogger CHANGE_LOGGER = ReactiveMusic.debugTools.new ChangeLogger();
     private static final ChangeLogger ENTRY_LOGGER = ReactiveMusic.debugTools.new ChangeLogger();
     public static final int FADE_DURATION = 150;
