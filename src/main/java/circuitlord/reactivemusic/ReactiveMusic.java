@@ -5,6 +5,7 @@ import circuitlord.reactivemusic.api.audio.ReactivePlayer;
 import circuitlord.reactivemusic.api.audio.ReactivePlayerManager;
 import circuitlord.reactivemusic.api.audio.ReactivePlayerOptions;
 import circuitlord.reactivemusic.api.eventsys.PluginIdentifier;
+import circuitlord.reactivemusic.commands.AwaitValueCommandUtility;
 import circuitlord.reactivemusic.commands.HelpCommandHandlers;
 import circuitlord.reactivemusic.commands.PlayerCommandHandlers;
 import circuitlord.reactivemusic.commands.PluginCommandHandlers;
@@ -13,6 +14,7 @@ import circuitlord.reactivemusic.config.ModConfig;
 import circuitlord.reactivemusic.impl.audio.RMPlayerManager;
 import circuitlord.reactivemusic.impl.eventsys.RMPluginIdentifier;
 import circuitlord.reactivemusic.impl.songpack.RMSongpackLoader;
+import circuitlord.reactivemusic.plugins.BlockCounterPlugin;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 
@@ -23,7 +25,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.sound.SoundInstance;
-import net.minecraft.command.argument.serialize.IntegerArgumentSerializer;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
@@ -75,6 +76,7 @@ public class ReactiveMusic implements ModInitializer {
 	@Override public void onInitialize() {
 		ModConfig.GSON.load();
 		modConfig = ModConfig.getConfig();
+		AwaitValueCommandUtility.initClientEvents();
 		
 		ReactiveMusicState.logicFreeze.put(corePluginId, false);
 		ReactiveMusicDebug.LOGGER.info("Initializing Reactive Music");
@@ -164,7 +166,8 @@ public class ReactiveMusic implements ModInitializer {
 
 				.then(literal("logBlockCounter")
 					.executes(ctx -> {
-						SongPicker.queuedToPrintBlockCounter = true;
+						AwaitValueCommandUtility.await("BlockCounterPlugin", ctx.getSource(), 60);
+						BlockCounterPlugin.queueToPrint();
 						return 1;
 					})
 				)

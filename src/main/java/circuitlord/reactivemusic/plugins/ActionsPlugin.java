@@ -3,13 +3,15 @@ package circuitlord.reactivemusic.plugins;
 import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 import circuitlord.reactivemusic.api.songpack.SongpackEvent;
-import net.minecraft.entity.Entity;
+
+// TODO: find a way to remove these leaks
 import net.minecraft.entity.passive.HorseEntity;
 import net.minecraft.entity.passive.PigEntity;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.entity.vehicle.MinecartEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.world.World;
+import rocamocha.mochamix.api.minecraft.MinecraftEntity;
+import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
+import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 
 import java.util.Map;
 
@@ -28,18 +30,18 @@ public final class ActionsPlugin extends ReactiveMusicPlugin {
         FISHING = SongpackEvent.get("FISHING");
         MINECART = SongpackEvent.get("MINECART");
         BOAT = SongpackEvent.get("BOAT");
-        HORSE = SongpackEvent.get("HORSEING");
+        HORSE = SongpackEvent.get("HORSE");
         PIG = SongpackEvent.get("PIG");
     }
     
 
     @Override
-    public void gameTick(PlayerEntity player, World world, Map<EventRecord, Boolean> eventMap) {
+    public void gameTick(MinecraftPlayer player, MinecraftWorld world, Map<EventRecord, Boolean> eventMap) {
         if (player == null) return;
 
-        eventMap.put(FISHING, player.fishHook != null);
+        eventMap.put(FISHING, player.fishing());
 
-        Entity v = player.getVehicle();
+        MinecraftEntity v = player.vehicle();
         eventMap.put(MINECART, v instanceof MinecartEntity);
         eventMap.put(BOAT,     v instanceof BoatEntity);
         eventMap.put(HORSE,    v instanceof HorseEntity);

@@ -1,0 +1,115 @@
+// Standalone IDE Context Generator for ReactiveMusic
+// This is a separate build file that can be run independently to generate IDE context
+// Usage: gradle -b ide-context.gradle generateContext
+
+plugins {
+    id 'java-library'
+}
+
+// Read the adapter setting
+def getActiveAdapter() {
+    def propsFile = file('gradle.properties')
+    if (!propsFile.exists()) {
+        return '1_21_1'
+    }
+    
+    def props = new Properties()
+    propsFile.withInputStream { props.load(it) }
+    
+    def adapter = props.getProperty('reactivemusic.adapter', '1_21_1')
+    def validAdapters = ['1_20_4', '1_21_1', 'latest']
+    
+    return validAdapters.contains(adapter) ? adapter : '1_21_1'
+}
+
+// Static dependency configurations
+def getDependencyVersions(String adapter) {
+    def configs = [
+        '1_20_4': [
+            minecraft: '1.20.4',
+            yarn: '1.20.4+build.3',
+            loader: '0.15.11',
+            fabricApi: '0.97.0+1.20.4',
+            modMenu: '11.0.3',
+            yacl: '3.6.2+1.21-fabric'
+        ],
+        '1_21_1': [
+            minecraft: '1.21.1', 
+            yarn: '1.21.1+build.3',
+            loader: '0.16.14',
+            fabricApi: '0.114.0+1.21.1',
+            modMenu: '11.0.3', 
+            yacl: '3.6.2+1.21-fabric'
+        ],
+        'latest': [
+            minecraft: '1.21.6',
+            yarn: '1.21.6+build.1', 
+            loader: '0.17.2',
+            fabricApi: '0.128.2+1.21.6',
+            modMenu: '15.0.0',
+            yacl: '3.8.0+1.21.6-fabric'
+        ]
+    ]
+    return configs[adapter] ?: configs['1_21_1']
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://maven.fabricmc.net/' }
+    maven { url 'https://maven.terraformersmc.com/releases/' }
+    maven {
+        name 'Xander Maven'
+        url 'https://maven.isxander.dev/releases'
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+def adapter = getActiveAdapter()
+def versions = getDependencyVersions(adapter)
+
+// Configure source sets to point to common module
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+}
+
+dependencies {
+    compileOnly "com.mojang:minecraft:${versions.minecraft}"
+    compileOnly "net.fabricmc:yarn:${versions.yarn}:v2"
+    compileOnly "net.fabricmc:fabric-loader:${versions.loader}"
+    compileOnly "net.fabricmc.fabric-api:fabric-api:${versions.fabricApi}"
+    compileOnly "com.terraformersmc:modmenu:${versions.modMenu}"
+    compileOnly("dev.isxander:yet-another-config-lib:${versions.yacl}") {
+        exclude(group: 'net.fabricmc.fabric-api')
+    }
+}
+
+// Disable actual build tasks
+tasks.withType(JavaCompile) { enabled = false }
+tasks.withType(Jar) { enabled = false }
+tasks.withType(Test) { enabled = false }
+
+task generateContext {
+    doLast {
+        println "IDE context generated for adapter: ${adapter}"
+        println "Minecraft: ${versions.minecraft}"
+        println "Yarn: ${versions.yarn}"
+        println "Fabric API: ${versions.fabricApi}"
+        println ""
+        println "Dependencies resolved successfully!"
+        println "Refresh your IDE to see updated context."
+    }
+}

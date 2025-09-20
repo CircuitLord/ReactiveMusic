@@ -5,13 +5,16 @@ import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 import circuitlord.reactivemusic.api.songpack.SongpackEvent;
 import circuitlord.reactivemusic.config.ModConfig;
+
+// TODO: find a way to remove these leaks
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ServerInfo;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
+import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 
+// import net.minecraft.client.MinecraftClient;
+// import net.minecraft.client.network.ServerInfo;
 import java.util.Map;
 
 public final class AtHomePlugin extends ReactiveMusicPlugin {
@@ -38,39 +41,39 @@ public final class AtHomePlugin extends ReactiveMusicPlugin {
     }
 
     @Override
-    public void gameTick(PlayerEntity player, World world, Map<EventRecord, Boolean> eventMap) {
+    public void gameTick(MinecraftPlayer player, MinecraftWorld world, Map<EventRecord, Boolean> eventMap) {
         if (player == null || world == null) return;
 
         // Keys: base (per save/server), and per-dimension
         String baseKey = computeBaseWorldKey();
-        String dimPath = world.getRegistryKey().getValue().getPath(); // overworld | the_nether | the_end | ...
+        String dimPath = world.dimension().path(); // overworld | the_nether | the_end | ...
         String dimKey = baseKey + "_" + dimPath;
 
         // On sleep edge, save both base and dimension-specific homes
-        if (!wasSleeping && player.isSleeping()) {
-            var pos = player.getPos();
+        if (!wasSleeping && player.sleeping()) {
+            var pos = player.location().pos();
             ReactiveMusic.modConfig.savedHomePositions.put(baseKey, pos);
             ReactiveMusic.modConfig.savedHomePositions.put(dimKey, pos);
-            // TODO: There is a better way to sereialize the positions that is built into the fabric mappings
-            // ???: Is it Persistent State?
+            // TODO: There is definitely a better way to serialize the positions that is built into the fabric mappings
+            // ???: Is it Persistent State? Is it possible to make it part of the stable API?
             ModConfig.saveConfig();
         }
-        wasSleeping = player.isSleeping();
+        wasSleeping = player.sleeping();
 
         // Emit base HOME (per save/server, regardless of dimension)
         eventMap.put(HOME, isWithinHome(world, player, baseKey));
 
         // Emit one of the three dimension-specific events (only for vanilla dims)
-        Identifier dimId = world.getRegistryKey().getValue();
-        if (dimId.equals(World.OVERWORLD.getValue())) {
+        String dimId = world.dimension().path();
+        if (dimId == "overworld") {
             eventMap.put(HOME_OVERWORLD, isWithinHome(world, player, dimKey));
             eventMap.put(HOME_NETHER, false);
             eventMap.put(HOME_END, false);
-        } else if (dimId.equals(World.NETHER.getValue())) {
+        } else if (dimId == "the_nether") {
             eventMap.put(HOME_OVERWORLD, false);
             eventMap.put(HOME_NETHER, isWithinHome(world, player, dimKey));
             eventMap.put(HOME_END, false);
-        } else if (dimId.equals(World.END.getValue())) {
+        } else if (dimId == "the_end") {
             eventMap.put(HOME_OVERWORLD, false);
             eventMap.put(HOME_NETHER, false);
             eventMap.put(HOME_END, isWithinHome(world, player, dimKey));
@@ -84,10 +87,10 @@ public final class AtHomePlugin extends ReactiveMusicPlugin {
 
     // --- helpers ---
 
-    private static boolean isWithinHome(World world, PlayerEntity player, String key) {
+    private static boolean isWithinHome(MinecraftWorld world, MinecraftPlayer player, String key) {
         var map = ReactiveMusic.modConfig.savedHomePositions;
         if (!map.containsKey(key)) return false;
-        Vec3d dist = player.getPos().subtract(map.get(key));
+        MinecraftVector3 dist = player.location().pos().subtract(map.get(key));
         return dist.length() < RADIUS;
     }
 

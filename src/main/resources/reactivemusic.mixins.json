@@ -10,7 +10,7 @@
   "client": [
     "MinecraftClientMixin",
     "MusicTrackerMixin",
-    "BossBarHudAccessor",
-    "SoundManagerMixin"
+    "SoundManagerMixin",
+    "BossBarHudAccessor"
   ]
 }

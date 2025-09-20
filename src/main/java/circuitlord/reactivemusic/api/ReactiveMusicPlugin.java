@@ -7,8 +7,8 @@ import circuitlord.reactivemusic.api.songpack.RuntimeEntry;
 import circuitlord.reactivemusic.api.songpack.SongpackEvent;
 import circuitlord.reactivemusic.impl.eventsys.RMEventRecord;
 import circuitlord.reactivemusic.impl.eventsys.RMPluginIdentifier;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.world.World;
+import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
+import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,6 +18,10 @@ import java.util.Map;
  * For your plugin to be recognized and loaded by Reactive Music, create a plaintext file with the class' full
  * package path (ex. <code>circuitlord.reactivemusic.plugins.WeatherAltitudePlugin</code>) on it's own line in
  * <code>resources/META-INF/services</code> 
+ * 
+ * It is heavily discouraged to import any net.minecraft mappings, unless you are okay with your plugin breaking should mojang
+ * make breaking changes to what you implement. If you stick to our stable API, you can build once and forget with version compatibility
+ * across any minecraft version that Reactive Music has a stable release for.
  */
 public abstract class ReactiveMusicPlugin {
 
@@ -71,12 +75,13 @@ public abstract class ReactiveMusicPlugin {
     /**
      * Called when scheduled. Default schedule is 20 ticks, and can be configured.
      * Provides player, world, and Reactive Music's eventMap for convenience.
-     * @param player
-     * @param world
+     * The player and world are safely mapped through an interface implementation pattern using mixins.
+     * @param apiPlayer
+     * @param apiWorld
      * @param eventMap
      * @see #tickSchedule()
      */
-    public void gameTick(PlayerEntity player, World world, Map<EventRecord, Boolean> eventMap) {};
+    public void gameTick(MinecraftPlayer apiPlayer, MinecraftWorld apiWorld, Map<EventRecord, Boolean> eventMap) {};
 
     /** 
      * Called every tick.

@@ -14,7 +14,8 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.math.Vec3d;
+import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -68,7 +69,7 @@ public class ModConfig {
     public List<String> blacklistedDimensions = new ArrayList<>();
 
     @SerialEntry
-    public HashMap<String, Vec3d> savedHomePositions = new HashMap<>();
+    public HashMap<String, MinecraftVector3> savedHomePositions = new HashMap<>();
 
     @SerialEntry
     public List<String> soundsMuteMusic = new ArrayList<>();

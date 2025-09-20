@@ -1,6 +1,5 @@
 package circuitlord.reactivemusic.impl.eventsys;
 
-import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.songpack.SongpackEvent;
 import net.minecraft.entity.player.PlayerEntity;
 

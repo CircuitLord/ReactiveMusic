@@ -3,8 +3,8 @@ package circuitlord.reactivemusic.plugins;
 import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 import circuitlord.reactivemusic.api.songpack.SongpackEvent;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.world.World;
+import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
+import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 
 import java.util.Map;
 
@@ -24,9 +24,9 @@ public final class CombatPlugin extends ReactiveMusicPlugin {
     }
 
     @Override
-    public void gameTick(PlayerEntity player, World world, Map<EventRecord, Boolean> eventMap) {
+    public void gameTick(MinecraftPlayer player, MinecraftWorld world, Map<EventRecord, Boolean> eventMap) {
         if (player == null || world == null) return;
-        boolean dying = (player.getHealth() / player.getMaxHealth()) < THRESHOLD;
+        boolean dying = (player.health() / player.maxHealth()) < THRESHOLD;
         eventMap.put(DYING, dying);
     }
 }

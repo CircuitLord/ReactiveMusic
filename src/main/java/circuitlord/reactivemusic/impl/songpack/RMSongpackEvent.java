@@ -8,7 +8,7 @@ import circuitlord.reactivemusic.impl.eventsys.RMEventRecord;
 import circuitlord.reactivemusic.impl.eventsys.RMPluginIdentifier;
 
 /**
- * This is coupled to the API's matching interface.
+ * The registry stores an EventRecord in a map under the specified String key.
  * @see SongpackEvent
  */
 public final class RMSongpackEvent implements SongpackEvent {

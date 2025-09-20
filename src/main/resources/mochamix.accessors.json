@@ -1,0 +1,10 @@
+{
+  "required": true,
+  "package": "rocamocha.mochamix.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "accessor.PlayerEntityAccess",
+    "accessor.LivingEntityAccess"
+  ],
+  "injectors": { "defaultRequire": 1 }
+}

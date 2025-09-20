@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +30,8 @@ public final class ReactiveMusicState {
     
     public static Map<PluginIdentifier, Boolean> logicFreeze = new HashMap<>();
     public static Map<EventRecord, Boolean> songpackEventMap = new HashMap<>();
+    
+    @Nullable public static Map<String, Integer> blockCountsMap;
     
     public static RuntimeEntry currentEntry = null;
     public static String currentSong = null;

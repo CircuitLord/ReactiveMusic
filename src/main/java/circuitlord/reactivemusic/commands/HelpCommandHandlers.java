@@ -27,13 +27,25 @@ public class HelpCommandHandlers {
         }
         
         public HelpBuilder helpline(String command, String description, Formatting valueColor) {
-            root.append(Text.literal(commandTree + " "));
+            root.append(Text.literal(commandTree + " ").formatted(Formatting.GRAY));
             root.append(Text.literal(command + " -> ").formatted(Formatting.GREEN, Formatting.BOLD));
             root.append(Text.literal(description).formatted(Formatting.BOLD, Formatting.ITALIC, valueColor));
             root.append(Text.literal("\n"));
             return this;
         }
 
+    }
+
+    public static int apiCommands(CommandContext<FabricClientCommandSource> ctx) {
+        HelpBuilder help = new HelpBuilder("api");
+
+        help.header("API DEBUGGING")
+
+        .helpline("player", "Info through API calls." , Formatting.WHITE)
+        .helpline("world", "Info through the API calls.", Formatting.WHITE);
+
+        ctx.getSource().sendFeedback(help.build());
+        return 1;
     }
 
     public static int songpackCommands(CommandContext<FabricClientCommandSource> ctx) {

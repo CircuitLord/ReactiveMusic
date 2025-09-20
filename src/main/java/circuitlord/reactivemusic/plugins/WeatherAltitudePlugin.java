@@ -3,9 +3,9 @@ package circuitlord.reactivemusic.plugins;
 import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 import circuitlord.reactivemusic.api.songpack.SongpackEvent;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
+import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 
 import java.util.Map;
 
@@ -29,14 +29,14 @@ public final class WeatherAltitudePlugin extends ReactiveMusicPlugin {
     }
 
     @Override
-    public void gameTick(PlayerEntity player, World world, Map<EventRecord, Boolean> eventMap) {
+    public void gameTick(MinecraftPlayer player, MinecraftWorld world, Map<EventRecord, Boolean> eventMap) {
         if (player == null || world == null) return;
-        BlockPos pos = player.getBlockPos();
+        MinecraftVector3 pos = player.location().pos();
 
-        eventMap.put(STORM, ReactiveMusicUtils.isStorm(world));
-        eventMap.put(RAIN, ReactiveMusicUtils.isRainingAt(world, pos));
-        eventMap.put(SNOW, ReactiveMusicUtils.isSnowingAt(world, pos));
-        eventMap.put(UNDERWATER, player.isSubmergedInWater());
+        eventMap.put(STORM, world.weather().isThunderingAt(pos));
+        eventMap.put(RAIN, world.weather().isRainingAt(pos));
+        eventMap.put(SNOW, world.weather().isSnowingAt(pos));
+        eventMap.put(UNDERWATER, player.underwater());
         eventMap.put(UNDERGROUND, ReactiveMusicUtils.isUnderground(world, pos, 55));
         eventMap.put(DEEP_UNDERGROUND, ReactiveMusicUtils.isDeepUnderground(world, pos, 15));
         eventMap.put(HIGH_UP, ReactiveMusicUtils.isHighUp(pos, 128));

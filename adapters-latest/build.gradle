@@ -1,0 +1,3 @@
+// Latest Minecraft Version Adapter
+// Configuration is handled by the root build.gradle based on the reactivemusic.adapter property  
+// This file can be used for adapter-specific configuration overrides if needed

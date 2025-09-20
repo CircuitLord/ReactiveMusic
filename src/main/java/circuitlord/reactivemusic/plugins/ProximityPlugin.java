@@ -3,10 +3,14 @@ package circuitlord.reactivemusic.plugins;
 import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 import circuitlord.reactivemusic.api.songpack.SongpackEvent;
+import net.minecraft.client.MinecraftClient;
+
+// TODO: find a way to remove these leaks?
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.world.World;
+import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
+import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 
 import java.util.Map;
 
@@ -23,16 +27,18 @@ public final class ProximityPlugin extends ReactiveMusicPlugin {
     }
 
     @Override
-    public void gameTick(PlayerEntity player, World world, Map<EventRecord, Boolean> eventMap) {
+    public void gameTick(MinecraftPlayer player, MinecraftWorld world, Map<EventRecord, Boolean> eventMap) {
         if (player == null || world == null) return;
 
+        PlayerEntity mcplayer = MinecraftClient.getInstance().player;
+
         // Nearby mobs
-        var hostiles = ReactiveMusicUtils.getEntitiesInSphere(HostileEntity.class, player, 12.0, null);
+        var hostiles = ReactiveMusicUtils.getEntitiesInSphere(HostileEntity.class, mcplayer, 12.0, null);
         boolean mobsNearby = !hostiles.isEmpty();
         eventMap.put(NEARBY_MOBS, mobsNearby);
 
         // Village proximity (simple heuristic using VillageManager distance)
-        var villagers = ReactiveMusicUtils.getEntitiesInSphere(VillagerEntity.class, player, 30.0, null);
+        var villagers = ReactiveMusicUtils.getEntitiesInSphere(VillagerEntity.class, mcplayer, 30.0, null);
         boolean inVillage = !villagers.isEmpty();
         eventMap.put(VILLAGE, inVillage);
     }

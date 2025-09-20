@@ -1,11 +1,10 @@
 package circuitlord.reactivemusic.plugins;
 
-import circuitlord.reactivemusic.SongPicker;
 import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 import circuitlord.reactivemusic.api.songpack.SongpackEvent;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.world.World;
+import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
+import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 
 import java.util.Map;
 
@@ -25,15 +24,12 @@ public final class DimensionPlugin extends ReactiveMusicPlugin {
     }
 
     @Override
-    public void gameTick(PlayerEntity player, World world, Map<EventRecord, Boolean> eventMap) {
+    public void gameTick(MinecraftPlayer player, MinecraftWorld world, Map<EventRecord, Boolean> eventMap) {
         if (world == null) return;
 
-        var indimension = world.getRegistryKey();
-        SongPicker.currentDimName = indimension.getValue().toString();
-
-        boolean isOverworld = indimension == World.OVERWORLD;
-        boolean isNether    = indimension == World.NETHER;
-        boolean isEnd       = indimension == World.END;
+        boolean isOverworld = world.dimension().id() == "minecraft:overworld";
+        boolean isNether    = world.dimension().id() == "minecraft:the_nether" ;
+        boolean isEnd       = world.dimension().id() == "minecraft:the_end";
 
         eventMap.put(OVERWORLD, isOverworld);
         eventMap.put(NETHER,    isNether);

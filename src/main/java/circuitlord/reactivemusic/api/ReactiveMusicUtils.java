@@ -8,7 +8,8 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 
 import java.util.Locale;
 import java.util.Map;
@@ -153,13 +154,25 @@ public final class ReactiveMusicUtils {
         );
     }
 
-    public static boolean isHighUp(BlockPos pos, int minY) { return pos.getY() >= minY; }
-    public static boolean isUnderground(World w, BlockPos pos, int maxY) { return pos.getY() <= maxY && !w.isSkyVisible(pos); }
-    public static boolean isDeepUnderground(World w, BlockPos pos, int maxY){ return pos.getY() <= maxY && !w.isSkyVisible(pos); }
+    public static boolean isHighUp(MinecraftVector3 apiBlockPos, int minY) {
+        return apiBlockPos.asBlockPos().yi() >= minY;
+    }
 
-    public static boolean isRainingAt(World w, BlockPos pos) { return w.isRaining() && w.getBiome(pos).value().getPrecipitation(pos) == Biome.Precipitation.RAIN; }
-    public static boolean isSnowingAt(World w, BlockPos pos) { return w.isRaining() && w.getBiome(pos).value().getPrecipitation(pos) == Biome.Precipitation.SNOW; }
-    public static boolean isStorm(World w) { return w.isThundering(); }
+    public static boolean isUnderground(MinecraftWorld apiWorld, MinecraftVector3 apiBlockPos, int maxY) {
+
+        World world = (World)(Object) apiWorld.asNative();
+        BlockPos pos = (BlockPos)(Object) apiBlockPos.asNativeBlockPos();
+
+        return pos.getY() <= maxY && !world.isSkyVisible(pos);
+    }
+
+    public static boolean isDeepUnderground(MinecraftWorld apiWorld, MinecraftVector3 apiBlockPos, int maxY){
+
+        World world = (World)(Object) apiWorld.asNative();
+        BlockPos pos = (BlockPos)(Object) apiBlockPos.asNativeBlockPos();
+
+        return pos.getY() <= maxY && !world.isSkyVisible(pos);
+    }
 
     /* =========================================================
        XXX==============  DAMAGE TRACKING  =====================
