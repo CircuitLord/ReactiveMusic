@@ -32,7 +32,6 @@ import javax.sound.sampled.Line;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
-import circuitlord.reactivemusic.PlayerThread;
 import rm_javazoom.jl.decoder.Decoder;
 import rm_javazoom.jl.decoder.JavaLayerException;
 
@@ -113,7 +112,6 @@ public class JavaSoundAudioDevice extends AudioDeviceBase
                     c.setValue(c.getMaximum());
                 }*/
                 source.start();
-         		setGain(PlayerThread.realGain); // XXX ~Vazkii
             }
         } catch (RuntimeException ex)
           {

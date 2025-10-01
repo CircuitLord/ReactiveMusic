@@ -1,59 +1,99 @@
-package circuitlord.reactivemusic.entries;
+package circuitlord.reactivemusic.impl.songpack;
 
 import circuitlord.reactivemusic.SongPicker;
-import circuitlord.reactivemusic.SongpackEntry;
-import circuitlord.reactivemusic.SongpackEventType;
-import circuitlord.reactivemusic.SongpackZip;
+import circuitlord.reactivemusic.api.eventsys.EventRecord;
+import circuitlord.reactivemusic.api.songpack.RuntimeEntry;
+import circuitlord.reactivemusic.api.songpack.SongpackEvent;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
-public class RMRuntimeEntry {
+public class RMRuntimeEntry implements RuntimeEntry {
 
 
     public List<RMEntryCondition> conditions = new ArrayList<>();
-
+    
     public String songpack;
-
+    
     public boolean allowFallback = false;
-
+    public boolean useOverlay = false;
+    
     public boolean forceStopMusicOnValid = false;
     public boolean forceStopMusicOnInvalid = false;
-
     public boolean forceStartMusicOnValid = false;
-
     public float forceChance = 1.0f;
-
+    
     public List<String> songs = new ArrayList<>();
-
+    
     public String eventString = "";
-
     public String errorString = "";
+        
+    public HashMap<String, Object> entryMap = new HashMap<>();
+    
+    public Object getExternalOption(String key) {
+        return entryMap.get(key);
+    }
+    
+    // should import values in the yaml that are *NOT* predefined
+    // this means plugin devs can create custom options for events
+    // that live in the YAML
+    //
+    // TODO: Not implemented - need to figure out how to change
+    // the RMSongpackLoader to import the unknown keys with SnakeYAML
+    //
+    // TODO: Maybe the built-ins should just use this pattern as well?
+    public void setExternalOption(String key, Object value) {
+    Set<String> knownOptions = Set.of(
+        "allowFallback",
+        "useOverlay",
+        "forceStopMusicOnValid",
+        "forceStopMusicOnInvalid",
+        "forceStartMusicOnValid",
+        "forceChance",
+        // don't load the songs or events into this map either
+        "songs",
+        "events"
+        );
+        
+        entryMap.put(key, value);
+        entryMap.keySet().removeAll(knownOptions);
+    }
+    
+    // getters
+    //--------------------------------------------------------------
+    public String getEventString() { return eventString; }
+    public String getErrorString() { return errorString; }
+    public List<String> getSongs() { return songs; }
+    public boolean fallbackAllowed() { return allowFallback; }
+    public boolean shouldOverlay() { return useOverlay; }
+    public float getForceChance() { return forceChance; }
+    public boolean shouldStopMusicOnValid() { return forceStopMusicOnValid; }
+    public boolean shouldStopMusicOnInvalid() { return forceStopMusicOnInvalid; }
+    public boolean shouldStartMusicOnValid() { return forceStartMusicOnValid; }
+    public String getSongpack() { return songpack; }
+    public List<RMEntryCondition> getConditions() { return conditions; }
 
-    public float cachedRandomChance = 1.0f;
+    public RMRuntimeEntry(RMSongpackZip songpack, RMSongpackEntry songpackEntry) {
 
+        this.songpack = songpack.config.name;// songpackName;
 
-    public static RMRuntimeEntry create(SongpackZip songpack, SongpackEntry songpackEntry) {
+        this.allowFallback = songpackEntry.allowFallback;
+        this.useOverlay = songpackEntry.useOverlay;
 
-        RMRuntimeEntry Entry = new RMRuntimeEntry();
-        Entry.songpack = songpack.config.name;// songpackName;
-
-        Entry.allowFallback = songpackEntry.allowFallback;
-
-        Entry.forceStopMusicOnValid = songpackEntry.forceStopMusicOnValid || songpackEntry.forceStopMusicOnChanged;
-        Entry.forceStopMusicOnInvalid = songpackEntry.forceStopMusicOnInvalid || songpackEntry.forceStopMusicOnChanged;
-
-        Entry.forceStartMusicOnValid = songpackEntry.forceStartMusicOnValid;
-
-        Entry.forceChance = songpackEntry.forceChance;
+        this.forceStopMusicOnValid = songpackEntry.forceStopMusicOnValid || songpackEntry.forceStopMusicOnChanged;
+        this.forceStopMusicOnInvalid = songpackEntry.forceStopMusicOnInvalid || songpackEntry.forceStopMusicOnChanged;
+        this.forceStartMusicOnValid = songpackEntry.forceStartMusicOnValid;
+        this.forceChance = songpackEntry.forceChance;
 
         if (songpackEntry.songs != null) {
-            Entry.songs = Arrays.stream(songpackEntry.songs).toList();
+            this.songs = Arrays.stream(songpackEntry.songs).toList();
         }
 
         for (int i = 0; i < songpackEntry.events.length; i++) {
-            Entry.eventString += songpackEntry.events[i] + "_";
+            this.eventString += songpackEntry.events[i] + "_";
         }
 
         for (String event : songpackEntry.events) {
@@ -93,7 +133,7 @@ public class RMRuntimeEntry {
                         eventHasData = true;
                     }
                     else {
-                        Entry.errorString += "Invalid syntax: " + eventSection + "!\n\n";
+                        this.errorString += "Invalid syntax: " + eventSection + "!\n\n";
                     }
                 }
 
@@ -147,7 +187,7 @@ public class RMRuntimeEntry {
 
                     // we didn't find a match
                     if (!foundMatch) {
-                        Entry.errorString += "Didn't find biometag with name: " + rawTagString + "!\n\n";
+                        this.errorString += "Didn't find biometag with name: " + rawTagString + "!\n\n";
                     }
 
                 }
@@ -166,17 +206,16 @@ public class RMRuntimeEntry {
                 else {
                     try {
                         // try to cast to SongpackEvent
-                        // needs uppercase for enum names
-                        SongpackEventType eventType = Enum.valueOf(SongpackEventType.class, eventSection.toUpperCase());
+                        EventRecord eventRecord = SongpackEvent.get(eventSection.toUpperCase());
 
                         // it's a songpack event
-                        if (eventType != SongpackEventType.NONE) {
-                            condition.songpackEvents.add(eventType);
+                        if (eventRecord != SongpackEvent.NONE) {
+                            condition.songpackEvents.add(eventRecord);
                             eventHasData = true;
                             continue;
                         }
                     } catch (Exception e) {
-                        Entry.errorString += "Could not find event with name " + eventSection + "!\n\n";
+                        this.errorString += "Could not find event with name " + eventSection + "!\n\n";
                         //e.printStackTrace();
                     }
                 }
@@ -187,12 +226,9 @@ public class RMRuntimeEntry {
                 continue;
             }
 
-            Entry.conditions.add(condition);
+            this.conditions.add(condition);
 
         }
-
-        return Entry;
-
     }
 
 

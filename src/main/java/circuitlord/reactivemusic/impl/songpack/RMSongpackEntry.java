@@ -1,41 +1,34 @@
-package circuitlord.reactivemusic;
+package circuitlord.reactivemusic.impl.songpack;
 
-import net.minecraft.loot.entry.TagEntry;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.world.biome.Biome;
+import java.util.HashMap;
 
-import java.util.ArrayList;
-import java.util.List;
+public class RMSongpackEntry {
 
-public class SongpackEntry {
-
-
+    public HashMap<String, Object> entryMap = new HashMap<>();
+    
+    // BUILT-INS:
+    // These are kept class-based to improve developer experience
+    // when working on the Reactive Music base mod
+    //---------------------------------------------------------------------------------
     // expands out into songpack events and biometag events
     public String[] events;
-
-
+    
     public boolean allowFallback = false;
-
-    // OnChanged just sets both Valid and Invalid versions to true
+    public boolean useOverlay = false;
+    
     public boolean forceStopMusicOnChanged = false;
     public boolean forceStopMusicOnValid = false;
     public boolean forceStopMusicOnInvalid = false;
-
+    
     public boolean forceStartMusicOnValid = false;
-
     public float forceChance = 1.0f;
-
     public boolean startMusicOnEventValid = false;
-
+    
     // deprecated for now
     public boolean stackable = false;
-
     public String[] songs;
-
-
+    
     // deprecated
     public boolean alwaysPlay = false;
     public boolean alwaysStop = false;
-
-
 }
