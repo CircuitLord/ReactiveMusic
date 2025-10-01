@@ -79,15 +79,6 @@ public class ReactiveMusic implements ModInitializer {
 		ReactiveMusicState.logicFreeze.put(corePluginId, false);
 		ReactiveMusicDebug.LOGGER.info("Initializing Reactive Music");
 		
-		if (circuitlord.reactivemusic.api.ReactiveMusicUtils.isClientEnv()) {
-			try {
-				Class.forName("circuitlord.reactivemusic.ClientBootstrap")
-				.getMethod("install").invoke(null);
-			} catch (Throwable ignored) {
-				// leave delegate null on failure; API calls will return false
-			}
-		}
-		
 		// Create the primary audio player
 		musicPlayer = audio().create(
 			"reactive:music",

@@ -27,7 +27,12 @@ public class ReactiveMusicDebug {
 
     /**
      * Useful for monitoring changes on an assignment that happens every tick,
-     * without causing the console to flail about.
+     * without causing the console to flail about and churn out hundreds of identical lines.
+     * ^ This is the main use case, and only works when the assignment is done from a single thread,
+     * and the value being monitored is viewed through the same logger instance.
+     * 
+     * Trying to monitor multiple values at once with a single logger instance will not work
+     * in regards to reducing spam, as the last-seen value is shared across all monitored values.
      * 
      * TODO: Implement a history function with queries to tick or repeat values, etc.
      * TODO: Implement realtime tracking.

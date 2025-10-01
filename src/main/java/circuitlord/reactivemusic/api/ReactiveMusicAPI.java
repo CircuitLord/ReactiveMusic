@@ -21,6 +21,22 @@ public interface ReactiveMusicAPI {
     public interface EventSys { 
     }
     
+    /**
+     * API view for anything related to SONGPACKS should go here.
+     * 
+     * TODO: Add a method to inject a code-defined songpack object at runtime
+     * (for plugins that want to define their own songs/events without a zip file)
+     * 
+     * This is kept separate from the "Song Selection" utilities in ReactiveMusicUtils
+     * because song selection is a more general-purpose utility that can be used
+     * by plugins and other systems that don't need to know about songpacks.
+     * 
+     * In the future, if we add more songpack-related functionality, and abstract it
+     * away from the core ReactiveMusicState, we might want to add more to this interface
+     * to allow plugins to define and interact with those same structured systems.
+     * @see ReactiveMusicUtils
+     * @see SongpackZip
+     */
     public interface Songpack {
         static SongpackZip getCurrent() { return ReactiveMusicState.currentSongpack; }
         static List<SongpackZip> getAvailable() { return List.copyOf(RMSongpackLoader.availableSongpacks); }
