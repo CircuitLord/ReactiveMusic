@@ -6,7 +6,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.world.biome.Biome;
 import rocamocha.mochamix.api.minecraft.MinecraftPlayer.Location;
 import rocamocha.mochamix.api.io.MinecraftView;
-import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
 import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 import rocamocha.mochamix.impl.vector3.Vector3Socket;
 

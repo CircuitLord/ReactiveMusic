@@ -1,6 +1,6 @@
 package rocamocha.mochamix.impl.vector3;
 
-import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
 
 /**
  * Provides math operations for MinecraftVector3 instances.

@@ -4,6 +4,8 @@ import java.util.UUID;
 
 import org.jetbrains.annotations.Nullable;
 
+import rocamocha.mochamix.api.minecraft.util.MinecraftIdentity;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
 import rocamocha.mochamix.impl.NativeAccess;
 
 public interface MinecraftEntity extends NativeAccess {
@@ -28,6 +30,9 @@ public interface MinecraftEntity extends NativeAccess {
     String typeId();       // e.g. "minecraft:zombie"
     
     boolean isLivingEntity();
+    boolean isItemEntity();
+    boolean isPlayerEntity();
+
     boolean onGround();
     
     MinecraftWorld world();      // e.g. "minecraft:overworld"
@@ -52,4 +57,10 @@ public interface MinecraftEntity extends NativeAccess {
         int age();
         MinecraftItemStack itemStack();
     }
+
+    MinecraftPlayer asPlayer();
+
+    MinecraftItemEntity asItem();
+
+    MinecraftIdentity identity();
 }

@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import rocamocha.mochamix.impl.NativeAccess;
 import rocamocha.mochamix.api.minecraft.MinecraftEntity.MinecraftLivingEntity;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
 
 /**
  * A view of a player in Minecraft, providing access to various properties and states.

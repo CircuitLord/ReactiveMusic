@@ -8,7 +8,7 @@ import circuitlord.reactivemusic.commands.AwaitValueCommandUtility;
 import circuitlord.reactivemusic.util.ReactiveBlockTools;
 import net.minecraft.util.Formatting;
 import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
-import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
 import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 
 import java.util.*;

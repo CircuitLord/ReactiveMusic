@@ -3,7 +3,7 @@ package rocamocha.mochamix.impl.world.adapter;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
-import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
 import rocamocha.mochamix.api.minecraft.MinecraftWorld.Weather;;
 
 public class WorldWeatherAdapter implements Weather {

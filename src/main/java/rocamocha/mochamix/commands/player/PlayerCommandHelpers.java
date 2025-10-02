@@ -2,7 +2,7 @@ package rocamocha.mochamix.commands.player;
 
 import circuitlord.reactivemusic.ReactiveMusicDebug.TextBuilder;
 import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
-import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
 import net.minecraft.util.Formatting;
 
 public class PlayerCommandHelpers {

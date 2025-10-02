@@ -36,11 +36,26 @@ public final class OverlayTrackPlugin extends ReactiveMusicPlugin {
         overlayPlayer = ReactiveMusic.audio().get("reactive:overlay");
     }
     
+    private boolean wasUsingOverlay = false;
+    
     @Override public void newTick() {
         boolean usingOverlay = usingOverlay();
         
         // guard the call
         if (musicPlayer == null || overlayPlayer == null) { return; }
+        
+        // State transition: starting overlay
+        if (usingOverlay && !wasUsingOverlay) {
+            musicPlayer.stopOnFadeOut(false);
+            musicPlayer.resetOnFadeOut(false);
+        }
+        
+        // State transition: stopping overlay  
+        if (!usingOverlay && wasUsingOverlay) {
+            // Only set these flags once when transitioning out of overlay
+            musicPlayer.stopOnFadeOut(true);
+            musicPlayer.resetOnFadeOut(true);
+        }
         
         if (usingOverlay) {
             if (!overlayPlayer.isPlaying()) {
@@ -52,44 +67,16 @@ public final class OverlayTrackPlugin extends ReactiveMusicPlugin {
             }
             overlayPlayer.fade(1f, 140);
             musicPlayer.fade(0f, 70);
-            musicPlayer.stopOnFadeOut(false);
             
         }
         if (!usingOverlay) {
             overlayPlayer.fade(0f, 70);
             overlayPlayer.stopOnFadeOut(true);
-
-            // FIXME: This is coupling! Figure out how to get this out of here.
-            musicPlayer.stopOnFadeOut(true);
-            musicPlayer.resetOnFadeOut(true);
         }
+        
+        wasUsingOverlay = usingOverlay;
     };
-
-    /**
-     * FIXME
-     * This is broken. It should be getting called from processValidEvents... but it isn't.
-     * @see ReactiveMusicPlugin#onValid(RMRuntimeEntry)
-     */
-    @Override public void onValid(RuntimeEntry entry) {
-        // ReactiveMusicAPI.LOGGER.info("Overlay enabled");
-        // if (entry.useOverlay) {
-        //     ReactiveMusicAPI.freezeCore();
-        // }
-    }
     
-    /**
-     * FIXME
-     * This is broken. It should be getting called from processValidEvents... but it isn't.
-     * Or is it? It's not logging, but sometimes the main player breaks.
-     * @see ReactiveMusicPlugin#onInvalid(RMRuntimeEntry)
-     */
-    @Override public void onInvalid(RuntimeEntry entry) {
-        // ReactiveMusicAPI.LOGGER.info("Overlay disabled");
-        // if (entry.useOverlay) {
-        //     ReactiveMusicAPI.unfreezeCore();
-        // }
-    }
-
     /**
      * Calling this from <code>newTick()</code> for now since the event processing calls are broken...
      * Or is it? It's not logging, but sometimes the main player breaks.

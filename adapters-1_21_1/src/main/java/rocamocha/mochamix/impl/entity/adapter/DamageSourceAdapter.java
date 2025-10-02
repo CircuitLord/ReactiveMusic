@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.entity.damage.DamageSource;
 import rocamocha.mochamix.api.minecraft.MinecraftEntity;
-import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
 import rocamocha.mochamix.impl.entity.EntitySocket;
 import rocamocha.mochamix.impl.vector3.Vector3Socket;
 

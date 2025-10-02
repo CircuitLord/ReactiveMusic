@@ -3,11 +3,12 @@ package rocamocha.mochamix.api.minecraft;
 import java.util.Map;
 
 import rocamocha.mochamix.api.minecraft.MinecraftComponent.*;
+import rocamocha.mochamix.api.minecraft.util.MinecraftIdentity;
 import rocamocha.mochamix.impl.NativeAccess;
 
 public interface MinecraftItemStack extends NativeAccess {
 
-    Identity identity();
+    MinecraftIdentity identity();
     Map<String, EnchantmentAccess> enchantments();
     FoodAccess food();
 

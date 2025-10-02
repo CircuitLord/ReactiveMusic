@@ -10,7 +10,7 @@ import circuitlord.reactivemusic.config.ModConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ServerInfo;
 import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
-import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
 import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 
 // import net.minecraft.client.MinecraftClient;

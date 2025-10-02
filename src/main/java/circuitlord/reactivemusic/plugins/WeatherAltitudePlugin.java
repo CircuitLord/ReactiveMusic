@@ -4,7 +4,7 @@ import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 import circuitlord.reactivemusic.api.songpack.SongpackEvent;
 import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
-import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
 import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 
 import java.util.Map;

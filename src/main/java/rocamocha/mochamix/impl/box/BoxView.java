@@ -1,9 +1,9 @@
 package rocamocha.mochamix.impl.box;
 
 import net.minecraft.util.math.Box;
-import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
 import rocamocha.mochamix.impl.vector3.Vector3Socket;
-import rocamocha.mochamix.api.minecraft.MinecraftBox;
+import rocamocha.mochamix.api.minecraft.util.MinecraftBox;
 import rocamocha.mochamix.api.io.MinecraftView;
 
 public class BoxView implements MinecraftBox {

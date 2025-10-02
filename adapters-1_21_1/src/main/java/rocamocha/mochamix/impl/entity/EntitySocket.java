@@ -2,9 +2,16 @@
 package rocamocha.mochamix.impl.entity;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.registry.Registries;
 
 import rocamocha.mochamix.api.minecraft.*;
+import rocamocha.mochamix.api.minecraft.util.MinecraftIdentity;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
+import rocamocha.mochamix.impl.common.IdentityAdapter;
+import rocamocha.mochamix.impl.player.PlayerSocket;
 import rocamocha.mochamix.api.io.MinecraftView;
 
 /**
@@ -23,12 +30,24 @@ import rocamocha.mochamix.api.io.MinecraftView;
  */
 public class EntitySocket implements MinecraftEntity {
     protected final Entity e;
-    public EntitySocket(Entity e) { this.e = e; }
+    protected final IdentityAdapter identity;
+    
+    public EntitySocket(Entity e) {
+        this.identity = new IdentityAdapter(e);
+        this.e = e;
+    }
+    
     @Override public Entity asNative() { return e; }
-    @Override public MinecraftLivingEntity asLiving() { return new LivingEntitySocket(e); }
-
+    @Override public MinecraftIdentity identity() { return identity; }
+    
     @Override public boolean isLivingEntity() { return e.isLiving(); }
-
+    @Override public boolean isItemEntity() { return e instanceof ItemEntity; }
+    @Override public boolean isPlayerEntity() { return e instanceof PlayerEntity; }
+    
+    @Override public MinecraftLivingEntity asLiving() { return new LivingEntitySocket((LivingEntity) e); }
+    @Override public MinecraftItemEntity asItem() { return new ItemEntitySocket((ItemEntity) e); }
+    @Override public MinecraftPlayer asPlayer() { return new PlayerSocket((PlayerEntity) e); }
+    
     @Override public java.util.UUID uuid() { return e.getUuid(); }
     @Override public String typeId() { return Registries.ENTITY_TYPE.getId(e.getType()).toString(); }
     @Override public boolean onGround() { return e.isOnGround(); }

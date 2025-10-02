@@ -5,7 +5,8 @@ import java.util.Map;
 import net.minecraft.item.ItemStack;
 import rocamocha.mochamix.api.minecraft.MinecraftComponent.*;
 import rocamocha.mochamix.api.minecraft.MinecraftItemStack;
-import rocamocha.mochamix.impl.item.adapter.ItemStackIdentityAdapter;
+import rocamocha.mochamix.api.minecraft.util.MinecraftIdentity;
+import rocamocha.mochamix.impl.common.IdentityAdapter;
 import rocamocha.mochamix.impl.item.adapter.ItemStackComponentAdapter;
 
 /**
@@ -16,19 +17,19 @@ public class ItemStackSocket implements MinecraftItemStack {
     
     protected final ItemStack itemStack;
 
-    private final ItemStackIdentityAdapter identity;
+    private final IdentityAdapter identity;
     private final ItemStackComponentAdapter components;
 
     public ItemStackSocket(ItemStack itemStack) {
         this.itemStack = itemStack;
-        this.identity = new ItemStackIdentityAdapter(itemStack);
+        this.identity = new IdentityAdapter(itemStack);
         this.components = new ItemStackComponentAdapter(itemStack);
     }
     
     @Override public ItemStack asNative() { return itemStack; }
 
     @Override public String name() { return itemStack.getName().getString(); }
-    @Override public Identity identity() { return identity; }
+    @Override public MinecraftIdentity identity() { return identity; }
     @Override public Map<String, EnchantmentAccess> enchantments() { return components.getEnchantments(); }
     @Override public FoodAccess food() { return components.getFood(); }
 

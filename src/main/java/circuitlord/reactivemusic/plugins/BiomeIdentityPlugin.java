@@ -4,7 +4,7 @@ import circuitlord.reactivemusic.SongPicker;
 import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
-import rocamocha.mochamix.api.minecraft.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
 import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 
 public final class BiomeIdentityPlugin extends ReactiveMusicPlugin {

@@ -16,6 +16,7 @@ def adapterProperty = providers.gradleProperty('reactivemusic.adapter')
 def adapterVersion = adapterProperty.isPresent() ? adapterProperty.get() : '1_21_1'
 def adapter = "adapters-${adapterVersion}"
 
+
 // Only include the active adapter - common code is included via sourceSets
 include adapter
 

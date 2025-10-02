@@ -1,4 +1,4 @@
-package rocamocha.mochamix.api.minecraft;
+package rocamocha.mochamix.api.minecraft.util;
 
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;

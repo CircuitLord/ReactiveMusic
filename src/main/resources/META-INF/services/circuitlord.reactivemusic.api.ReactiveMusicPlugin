@@ -11,3 +11,5 @@ circuitlord.reactivemusic.plugins.ProximityPlugin
 circuitlord.reactivemusic.plugins.TimeOfDayPlugin
 circuitlord.reactivemusic.plugins.WeatherAltitudePlugin
 circuitlord.reactivemusic.plugins.BossBarPlugin
+
+rocamocha.mochamix.plugins.ImmersiveAircraftPlugin

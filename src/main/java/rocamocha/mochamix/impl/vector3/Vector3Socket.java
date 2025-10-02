@@ -3,8 +3,8 @@ package rocamocha.mochamix.impl.vector3;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
-import rocamocha.mochamix.api.minecraft.MinecraftVector3;
-import rocamocha.mochamix.api.minecraft.MinecraftVector3.*;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
+import rocamocha.mochamix.api.minecraft.util.MinecraftVector3.*;
 
 /**
  * A view of a Minecraft position, which can be a Vec3d, Vec3i, or BlockPos.
