@@ -1,6 +1,7 @@
 package circuitlord.reactivemusic;
 
 import circuitlord.reactivemusic.ReactiveMusicDebug.ChangeLogger;
+import circuitlord.reactivemusic.ReactiveMusicDebug.LogCategory;
 import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 import circuitlord.reactivemusic.api.songpack.RuntimeEntry;
@@ -40,6 +41,9 @@ public final class SongPicker {
 
     public static String currentBiomeName = "";
     public static String currentDimName = "";
+    
+    // Zone tracking for specific zone validation
+    public static Set<String> currentZoneNames = new HashSet<>();
 
     private static final String[] CONVENTIONAL_BIOME_TAGS_CANDIDATES = {
         "net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags",
@@ -154,7 +158,7 @@ public final class SongPicker {
             
             for (var eventRecord : condition.songpackEvents) {
                 if (eventRecord == null) {
-                    CHANGE_LOGGER.writeInfo("A null event record has made it into entry conditions for [" + entry.getEventString() + "]");
+                    CHANGE_LOGGER.writeInfoSmart("A null event record has made it into entry conditions for [" + entry.getEventString() + "]");
                     continue;
                 }
                 // CHANGE_LOGGER.writeInfo(
@@ -162,7 +166,7 @@ public final class SongPicker {
                 //         "The event record [" + eventRecord.getEventId() + "] was found in the event map!" : "The event record [" + eventRecord.getEventId() + "] was not found in the event map."
                 // );
                 if (ReactiveMusicState.songpackEventMap.containsKey(eventRecord) && ReactiveMusicState.songpackEventMap.get(SongpackEvent.get(eventRecord.getEventId()))) {
-                    CHANGE_LOGGER.writeInfo("Validating entry with event [" + entry.getEventString() + "]...");
+                    CHANGE_LOGGER.writeInfoSmart("Validating entry with event [" + entry.getEventString() + "]...");
                     songpackEventsValid = true;
                     break;
                 }
@@ -202,7 +206,6 @@ public final class SongPicker {
                 }
             }
 
-
             if (!songpackEventsValid && !biomeTypesValid && !biomeTagsValid && !dimsValid && !blocksValid) {
                 // none of the OR conditions were valid on this condition, return false
                 // CHANGE_LOGGER.writeInfo("The songpack entry [" + entry.getEventString() + "] did not pass validation.");
@@ -211,8 +214,38 @@ public final class SongPicker {
 
         }
 
+        // Additional zone name validation - if zones are specified, must match current zone names
+        Object zonesOption = entry.getExternalOption("zones");
+        if (zonesOption != null) {
+            boolean zoneNameMatches = false;
+            
+            if (zonesOption instanceof List<?> zonesList) {
+                // Handle zones as a list of strings
+                for (Object zoneObj : zonesList) {
+                    if (zoneObj instanceof String zoneName) {
+                        if (currentZoneNames.contains(zoneName)) {
+                            zoneNameMatches = true;
+                            CHANGE_LOGGER.writeInfoSmart("Entry [" + entry.getEventString() + "] zone name validated: " + zoneName);
+                            break;
+                        }
+                    }
+                }
+            } else if (zonesOption instanceof String singleZone) {
+                // Handle single zone as string
+                if (currentZoneNames.contains(singleZone)) {
+                    zoneNameMatches = true;
+                    CHANGE_LOGGER.writeInfo("Entry [" + entry.getEventString() + "] zone name validated: " + singleZone);
+                }
+            }
+            
+            if (!zoneNameMatches) {
+                CHANGE_LOGGER.writeInfo("Entry [" + entry.getEventString() + "] failed zone name validation. Required zones: " + zonesOption + ", Current zones: " + currentZoneNames);
+                return false;
+            }
+        }
+
         // we passed without failing so it must be true
-        CHANGE_LOGGER.writeInfo("The songpack entry [" + entry.getEventString() + "] has passed validation." );
+        CHANGE_LOGGER.writeInfoSmart("The songpack entry [" + entry.getEventString() + "] has passed validation." );
         return true;
         
     }

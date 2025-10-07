@@ -3,7 +3,23 @@
  * the main logic for songpack loading & selection features.
  * 
  * It is now included in the API package so that plugin developers have convenient access to
- * some functions that relate to parsing the data in songpack entries during runtime.
+ * so    public static void changeCurrentSong(String song, RuntimeEntry newEntry, ReactivePlayer player) {
+        // No change? Do nothing.
+        if (java.util.Objects.equals(ReactiveMusicState.currentSong, song)) {
+            // Still need to update currentEntry even if song hasn't changed
+            ReactiveMusicState.currentEntry = newEntry;
+            queuedToPlayMusic = false;
+            return;
+        }
+    
+        // Stop only if we're switching tracks (not just metadata)
+        final boolean switchingTrack = !java.util.Objects.equals(ReactiveMusicState.currentSong, song);
+        if (switchingTrack && player != null && player.isPlaying()) {
+            player.stop(); // RMPlayerImpl stops underlying AdvancedPlayer.play()
+        }
+    
+        ReactiveMusicState.currentSong = song;
+        ReactiveMusicState.currentEntry = newEntry;at relate to parsing the data in songpack entries during runtime.
  */
 package circuitlord.reactivemusic;
 
@@ -57,11 +73,6 @@ public final class ReactiveMusicCore {
                     continue;
                 }
                 if (!entry.shouldOverlay()) { 
-                    if (OverlayTrackPlugin.usingOverlay()) {
-                        ENTRY_LOGGER.writeInfo("Keeping the current entry under the overlay...");
-                        newEntry = ReactiveMusicState.currentEntry;
-                        break;
-                    }
                     ENTRY_LOGGER.writeInfo("Assigning new entry from valid entries...");
                     newEntry = entry;
                     break;
@@ -93,16 +104,23 @@ public final class ReactiveMusicCore {
 			boolean wantsToSwitch = !OverlayTrackPlugin.usingOverlay() && (ReactiveMusicState.currentEntry == null || !java.util.Objects.equals(ReactiveMusicState.currentEntry.getEventString(), newEntry.getEventString()));
             
             CHANGE_LOGGER.writeInfo(wantsToSwitch ? "Trying to switch the music." : "The music is no longer attempting to switch.");
-			
+            
             // if the new entry contains the same song as our current one, then do a "fake" swap to swap over to the new entry
 			if (wantsToSwitch && ReactiveMusicState.currentSong != null && newEntry.getSongs().contains(ReactiveMusicState.currentSong) && !queuedToStopMusic) {
 				ReactiveMusicDebug.LOGGER.info("doing fake swap to new event: " + newEntry.getEventString());
-				// do a fake swap
-				ReactiveMusicState.currentEntry = newEntry;
 				wantsToSwitch = false;
 				// if this happens, also clear the queued state since we essentially did a switch
 				queuedToPlayMusic = false;
 			}
+            
+            // Always update currentEntry when it changes (after fake swap check to preserve original logic)
+            if (ReactiveMusicState.currentEntry == null || !java.util.Objects.equals(ReactiveMusicState.currentEntry.getEventString(), newEntry.getEventString())) {
+                ENTRY_LOGGER.writeInfo("Entry changed from " + 
+                    (ReactiveMusicState.currentEntry != null ? ReactiveMusicState.currentEntry.getEventString() : "null") + 
+                    " to " + newEntry.getEventString() + 
+                    (OverlayTrackPlugin.usingOverlay() ? " (during overlay)" : ""));
+                ReactiveMusicState.currentEntry = newEntry;
+            }
                 
             boolean isPlaying = false;
             for (ReactivePlayer player : players) {
@@ -245,6 +263,8 @@ public final class ReactiveMusicCore {
     public static void changeCurrentSong(String song, RuntimeEntry newEntry, ReactivePlayer player) {
         // No change? Do nothing.
         if (java.util.Objects.equals(ReactiveMusicState.currentSong, song)) {
+            // Still need to update currentEntry even if song hasn't changed
+            ReactiveMusicState.currentEntry = newEntry;
             queuedToPlayMusic = false;
             return;
         }

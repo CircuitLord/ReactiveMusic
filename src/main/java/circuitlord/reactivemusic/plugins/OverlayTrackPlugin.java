@@ -1,5 +1,7 @@
 package circuitlord.reactivemusic.plugins;
 
+import java.util.List;
+
 import circuitlord.reactivemusic.ReactiveMusic;
 import circuitlord.reactivemusic.ReactiveMusicState;
 import circuitlord.reactivemusic.SongPicker;
@@ -15,6 +17,8 @@ public final class OverlayTrackPlugin extends ReactiveMusicPlugin {
 
     ReactivePlayer musicPlayer;
     ReactivePlayer overlayPlayer;
+    public static RuntimeEntry currentEntry;
+    private RuntimeEntry previousOverlayEntry = null;
 
     @Override public void init() {
         ReactiveMusicState.LOGGER.info("Initializing " + pluginId.getId() + " plugin");
@@ -52,26 +56,62 @@ public final class OverlayTrackPlugin extends ReactiveMusicPlugin {
         
         // State transition: stopping overlay  
         if (!usingOverlay && wasUsingOverlay) {
-            // Only set these flags once when transitioning out of overlay
+            // Restore normal main player fade-out behavior for song switching
             musicPlayer.stopOnFadeOut(true);
             musicPlayer.resetOnFadeOut(true);
         }
         
         if (usingOverlay) {
-            if (!overlayPlayer.isPlaying()) {
-                if (!ReactiveMusicState.validEntries.isEmpty()) {
-                    overlayPlayer.setSong(ReactiveMusicUtils.pickRandomSong(SongPicker.getSelectedSongs(ReactiveMusicState.validEntries.get(0), ReactiveMusicState.validEntries)));
+            // Find the current overlay entry
+            RuntimeEntry newOverlayEntry = null;
+            for (RuntimeEntry entry : ReactiveMusicState.validEntries) {
+                if (entry.shouldOverlay()) {
+                    newOverlayEntry = entry;
+                    break;
                 }
-                overlayPlayer.getGainSuppliers().get("reactivemusic").setFadePercent(0f);
-                overlayPlayer.play();
+            }
+            
+            // Check if overlay entry has changed
+            boolean overlayEntryChanged = !java.util.Objects.equals(previousOverlayEntry, newOverlayEntry);
+            
+            // Update current entry
+            currentEntry = newOverlayEntry;
+            
+            // If entry changed, stop current overlay and start new one
+            if (overlayEntryChanged) {
+                if (overlayPlayer.isPlaying()) {
+                    overlayPlayer.stop();
+                }
+                if (currentEntry != null) {
+                    List<String> songs = SongPicker.getSelectedSongs(currentEntry, ReactiveMusicState.validEntries);
+                    overlayPlayer.setSong(ReactiveMusicUtils.pickRandomSong(songs));
+                    overlayPlayer.getGainSuppliers().get("reactivemusic").setFadePercent(0f);
+                    overlayPlayer.play();
+                }
+            } else {
+                // Same entry - just ensure it's playing if needed
+                if (!overlayPlayer.isPlaying() && currentEntry != null) {
+                    // Don't reset fade percent - let it resume from current fade state
+                    overlayPlayer.play();
+                }
             }
             overlayPlayer.fade(1f, 140);
             musicPlayer.fade(0f, 70);
             
+            // Update tracking
+            previousOverlayEntry = newOverlayEntry;
         }
         if (!usingOverlay) {
             overlayPlayer.fade(0f, 70);
-            overlayPlayer.stopOnFadeOut(true);
+            // Don't stop or reset the overlay player - keep it playing at 0 volume for seamless re-entry
+            overlayPlayer.stopOnFadeOut(false);
+            overlayPlayer.resetOnFadeOut(false);
+            // Don't clear entries yet - keep them for potential seamless re-entry
+            
+            // Ensure main player fades back in when overlay stops
+            if (wasUsingOverlay) {
+                musicPlayer.fade(1f, 140);
+            }
         }
         
         wasUsingOverlay = usingOverlay;

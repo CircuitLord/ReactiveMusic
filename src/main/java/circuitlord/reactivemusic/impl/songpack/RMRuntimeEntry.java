@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+
 
 public class RMRuntimeEntry implements RuntimeEntry {
 
@@ -46,20 +46,17 @@ public class RMRuntimeEntry implements RuntimeEntry {
     //
     // TODO: Maybe the built-ins should just use this pattern as well?
     public void setExternalOption(String key, Object value) {
-    Set<String> knownOptions = Set.of(
-        "allowFallback",
-        "useOverlay",
-        "forceStopMusicOnValid",
-        "forceStopMusicOnInvalid",
-        "forceStartMusicOnValid",
-        "forceChance",
-        // don't load the songs or events into this map either
-        "songs",
-        "events"
+        java.util.Set<String> knownOptions = java.util.Set.of(
+            // Actual RMSongpackEntry properties
+            "events", "songs", "allowFallback", "useOverlay", "forceStopMusicOnChanged",
+            "forceStopMusicOnValid", "forceStopMusicOnInvalid", "forceStartMusicOnValid",
+            "forceChance", "startMusicOnEventValid", "stackable", "alwaysPlay", "alwaysStop"
         );
         
-        entryMap.put(key, value);
-        entryMap.keySet().removeAll(knownOptions);
+        // Only store truly external options
+        if (!knownOptions.contains(key)) {
+            entryMap.put(key, value);
+        }
     }
     
     // getters
@@ -90,6 +87,13 @@ public class RMRuntimeEntry implements RuntimeEntry {
 
         if (songpackEntry.songs != null) {
             this.songs = Arrays.stream(songpackEntry.songs).toList();
+        }
+        
+        // Transfer external options from songpack entry
+        if (songpackEntry.entryMap != null) {
+            for (java.util.Map.Entry<String, Object> externalOption : songpackEntry.entryMap.entrySet()) {
+                this.setExternalOption(externalOption.getKey(), externalOption.getValue());
+            }
         }
 
         for (int i = 0; i < songpackEntry.events.length; i++) {

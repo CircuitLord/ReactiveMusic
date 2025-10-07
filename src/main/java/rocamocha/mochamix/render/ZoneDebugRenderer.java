@@ -2,6 +2,8 @@ package rocamocha.mochamix.render;
 
 import rocamocha.mochamix.api.minecraft.util.MinecraftBox;
 import rocamocha.mochamix.api.minecraft.util.MinecraftVector3;
+import rocamocha.mochamix.impl.box.BoxSocket;
+import rocamocha.mochamix.impl.vector3.Vector3Socket;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
@@ -15,6 +17,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Random;
+import java.util.stream.Collectors;
+
+import rocamocha.mochamix.zones.ZoneDataManager;
+import rocamocha.mochamix.zones.ZoneUtils;
+import rocamocha.mochamix.api.io.MinecraftView;
 
 /**
  * Debug renderer for zone visualization that integrates with Minecraft's debug rendering system.
@@ -25,7 +33,28 @@ public class ZoneDebugRenderer {
     
     // Store active zones to render
     private static final Map<String, ZoneData> activeZones = new ConcurrentHashMap<>();
+    private static final Map<String, float[]> zoneColors = new ConcurrentHashMap<>();
     private static boolean enabled = false;
+    private static boolean autoSync = true;
+    private static long lastSyncTime = 0;
+    private static final long SYNC_INTERVAL_MS = 2000; // Sync every 2 seconds
+    private static final Random colorRandom = new Random();
+    
+    // Z-fighting prevention constants
+    private static final double WIREFRAME_DEPTH_OFFSET = 0.001; // Slight forward offset for wireframes
+    private static final double FACE_INSET = 0.002; // Shrink faces slightly to prevent adjacency conflicts
+    private static final double ZONE_LAYER_OFFSET = 0.0005; // Offset between overlapping zones
+    
+    /**
+     * Calculate a consistent depth offset for a zone based on its ID
+     * This ensures overlapping zones render at slightly different depths
+     */
+    private static double getZoneDepthOffset(String zoneId) {
+        // Use zone ID hash to get consistent offset between zones
+        int hash = Math.abs(zoneId.hashCode());
+        // Create small offset (0 to ~0.005) based on hash
+        return (hash % 10) * ZONE_LAYER_OFFSET;
+    }
     
     /**
      * Data class to hold zone rendering information
@@ -102,33 +131,148 @@ public class ZoneDebugRenderer {
     }
     
     /**
+     * Enable/disable automatic syncing with persisted zones
+     */
+    public static void setAutoSync(boolean autoSync) {
+        ZoneDebugRenderer.autoSync = autoSync;
+        if (autoSync) {
+            syncWithPersistedZones();
+        }
+    }
+    
+    /**
+     * Check if auto-sync is enabled
+     */
+    public static boolean isAutoSyncEnabled() {
+        return autoSync;
+    }
+    
+    /**
+     * Generate a unique color for a zone based on its ID
+     */
+    private static float[] generateZoneColor(String zoneId) {
+        // Use zone ID as seed for consistent colors across sessions
+        Random random = new Random(zoneId.hashCode());
+        
+        // Generate vibrant, distinct colors
+        float[] hsv = new float[3];
+        hsv[0] = random.nextFloat(); // Hue: 0-1 (full spectrum)
+        hsv[1] = 0.7f + random.nextFloat() * 0.3f; // Saturation: 0.7-1.0 (vibrant)
+        hsv[2] = 0.8f + random.nextFloat() * 0.2f; // Value: 0.8-1.0 (bright)
+        
+        // Convert HSV to RGB
+        int rgb = java.awt.Color.HSBtoRGB(hsv[0], hsv[1], hsv[2]);
+        float red = ((rgb >> 16) & 0xFF) / 255.0f;
+        float green = ((rgb >> 8) & 0xFF) / 255.0f;
+        float blue = (rgb & 0xFF) / 255.0f;
+        
+        return new float[]{red, green, blue, 0.8f}; // Alpha = 0.8
+    }
+    
+    /**
+     * Get or generate a color for a zone
+     */
+    private static float[] getZoneColor(String zoneId) {
+        return zoneColors.computeIfAbsent(zoneId, ZoneDebugRenderer::generateZoneColor);
+    }
+    
+    /**
+     * Manually sync with persisted zones from ZoneDataManager
+     */
+    public static void syncWithPersistedZones() {
+        try {
+            List<rocamocha.mochamix.zones.ZoneData> persistedZones = ZoneUtils.getAllZones();
+            
+            // Clear existing zones that are no longer persisted
+            List<String> persistedIds = persistedZones.stream()
+                .map(rocamocha.mochamix.zones.ZoneData::getUniqueId)
+                .collect(Collectors.toList());
+            
+            // Remove zones that no longer exist
+            activeZones.entrySet().removeIf(entry -> !persistedIds.contains(entry.getKey()));
+            
+            // Add or update zones from persistence
+            for (rocamocha.mochamix.zones.ZoneData persistedZone : persistedZones) {
+                String zoneId = persistedZone.getUniqueId();
+                String zoneName = persistedZone.getZoneName();
+                
+                // Convert ZoneData to MinecraftBox
+                MinecraftVector3 min = new Vector3Socket(persistedZone.minX(), persistedZone.minY(), persistedZone.minZ());
+                MinecraftVector3 max = new Vector3Socket(persistedZone.maxX(), persistedZone.maxY(), persistedZone.maxZ());
+                MinecraftBox box = new rocamocha.mochamix.impl.box.BoxSocket(min, max);
+                
+                // Get consistent color for this zone
+                float[] color = getZoneColor(zoneId);
+                
+                // Add to active zones with generated color
+                activeZones.put(zoneId, new ZoneData(box, color[0], color[1], color[2], color[3], 
+                    zoneName + " (" + zoneId.substring(0, 8) + "...)"));
+            }
+            
+            lastSyncTime = System.currentTimeMillis();
+            
+        } catch (Exception e) {
+            System.err.println("Failed to sync with persisted zones: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
      * Main render method called during world rendering
      * This should be called from a mixin or event handler during the world render pass
      */
     public static void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
-        if (!enabled || activeZones.isEmpty()) {
+        if (!enabled) {
+            return;
+        }
+        
+        // Auto-sync with persisted zones periodically
+        if (autoSync && System.currentTimeMillis() - lastSyncTime > SYNC_INTERVAL_MS) {
+            syncWithPersistedZones();
+        }
+        
+        if (activeZones.isEmpty()) {
             return;
         }
         
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.world == null) return;
         
-        Matrix4f positionMatrix = matrices.peek().getPositionMatrix();
         Matrix3f normalMatrix = matrices.peek().getNormalMatrix();
         
         // Render transparent faces first (behind wireframes)  
         // Use a simpler render layer for the faces
         VertexConsumer facesConsumer = vertexConsumers.getBuffer(RenderLayer.getDebugQuads());
         for (Map.Entry<String, ZoneData> entry : activeZones.entrySet()) {
+            String zoneId = entry.getKey();
             ZoneData zone = entry.getValue();
-            renderZoneFaces(facesConsumer, positionMatrix, normalMatrix, zone, cameraX, cameraY, cameraZ);
+            
+            // Apply zone-specific depth offset to separate overlapping zones
+            matrices.push();
+            double zoneOffset = getZoneDepthOffset(zoneId);
+            matrices.translate(0, 0, zoneOffset);
+            
+            Matrix4f offsetPositionMatrix = matrices.peek().getPositionMatrix();
+            renderZoneFaces(facesConsumer, offsetPositionMatrix, normalMatrix, zone, cameraX, cameraY, cameraZ);
+            
+            matrices.pop();
         }
         
         // Render wireframe edges on top for clear definition
         VertexConsumer wireframeConsumer = vertexConsumers.getBuffer(RenderLayer.getLines());
         for (Map.Entry<String, ZoneData> entry : activeZones.entrySet()) {
+            String zoneId = entry.getKey();
             ZoneData zone = entry.getValue();
-            renderZoneWireframe(wireframeConsumer, positionMatrix, normalMatrix, zone, cameraX, cameraY, cameraZ);
+            
+            // Apply zone-specific depth offset + additional wireframe offset
+            matrices.push();
+            double zoneOffset = getZoneDepthOffset(zoneId);
+            matrices.translate(0, 0, zoneOffset + WIREFRAME_DEPTH_OFFSET);
+            
+            Matrix4f offsetPositionMatrix = matrices.peek().getPositionMatrix();
+            renderZoneWireframe(wireframeConsumer, offsetPositionMatrix, normalMatrix, zone, cameraX, cameraY, cameraZ);
+            
+            matrices.pop();
         }
     }
     
@@ -217,12 +361,13 @@ public class ZoneDebugRenderer {
         Vec3d maxVec = max.asNativeVec3d();
         
         // Offset by camera position for proper world space rendering
-        double minX = minVec.x - cameraX;
-        double minY = minVec.y - cameraY;
-        double minZ = minVec.z - cameraZ;
-        double maxX = maxVec.x - cameraX;
-        double maxY = maxVec.y - cameraY;
-        double maxZ = maxVec.z - cameraZ;
+        // Apply face inset to prevent Z-fighting with adjacent zones
+        double minX = minVec.x - cameraX + FACE_INSET;
+        double minY = minVec.y - cameraY + FACE_INSET;
+        double minZ = minVec.z - cameraZ + FACE_INSET;
+        double maxX = maxVec.x - cameraX - FACE_INSET;
+        double maxY = maxVec.y - cameraY - FACE_INSET;
+        double maxZ = maxVec.z - cameraZ - FACE_INSET;
         
         // Use lower alpha for faces so they're translucent
         float faceAlpha = Math.min(0.3f, zone.alpha * 0.4f);
@@ -284,53 +429,7 @@ public class ZoneDebugRenderer {
         MinecraftVector3 max = rocamocha.mochamix.api.io.MinecraftView.of(
             new Vec3d(center.x + xRadius, center.y + yRadius, center.z + zRadius));
         
-        MinecraftBox box = new SimpleMinecraftBox(min, max);
+        MinecraftBox box = new BoxSocket(min, max);
         addZone(id, box, label);
-    }
-    
-    /**
-     * Simple MinecraftBox implementation for our debug renderer
-     */
-    private static class SimpleMinecraftBox implements MinecraftBox {
-        private final MinecraftVector3 min, max;
-        
-        public SimpleMinecraftBox(MinecraftVector3 min, MinecraftVector3 max) {
-            this.min = min;
-            this.max = max;
-        }
-        
-        @Override public MinecraftVector3 min() { return min; }
-        @Override public MinecraftVector3 max() { return max; }
-        @Override public MinecraftVector3 center() {
-            Vec3d minVec = min.asNativeVec3d();
-            Vec3d maxVec = max.asNativeVec3d();
-            return rocamocha.mochamix.api.io.MinecraftView.of(
-                new Vec3d((minVec.x + maxVec.x) / 2.0, (minVec.y + maxVec.y) / 2.0, (minVec.z + maxVec.z) / 2.0)
-            );
-        }
-        @Override public MinecraftVector3 size() {
-            Vec3d minVec = min.asNativeVec3d();
-            Vec3d maxVec = max.asNativeVec3d();
-            return rocamocha.mochamix.api.io.MinecraftView.of(
-                new Vec3d(maxVec.x - minVec.x, maxVec.y - minVec.y, maxVec.z - minVec.z)
-            );
-        }
-        @Override public int width() { 
-            Vec3d minVec = min.asNativeVec3d();
-            Vec3d maxVec = max.asNativeVec3d();
-            return (int)(maxVec.x - minVec.x); 
-        }
-        @Override public int height() { 
-            Vec3d minVec = min.asNativeVec3d();
-            Vec3d maxVec = max.asNativeVec3d();
-            return (int)(maxVec.y - minVec.y); 
-        }
-        @Override public int depth() { 
-            Vec3d minVec = min.asNativeVec3d();
-            Vec3d maxVec = max.asNativeVec3d();
-            return (int)(maxVec.z - minVec.z); 
-        }
-        
-        @Override public Object asNative() { return this; }
     }
 }

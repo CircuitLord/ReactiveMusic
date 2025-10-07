@@ -1,6 +1,7 @@
 package circuitlord.reactivemusic.impl.songpack;
 
 import circuitlord.reactivemusic.ReactiveMusicDebug;
+
 import circuitlord.reactivemusic.api.songpack.RuntimeEntry;
 import net.fabricmc.loader.api.FabricLoader;
 import org.rm_yaml.snakeyaml.Yaml;
@@ -77,6 +78,78 @@ public class RMSongpackLoader {
         }
 
         return null;
+    }
+    
+    @SuppressWarnings("unchecked")
+    private static RMSongpackConfig populateConfigFromMap(Map<String, Object> configMap) {
+        RMSongpackConfig config = new RMSongpackConfig();
+        
+        // Populate top-level config properties
+        if (configMap.containsKey("name")) config.name = (String) configMap.get("name");
+        if (configMap.containsKey("description")) config.description = (String) configMap.get("description");
+        if (configMap.containsKey("author")) config.author = (String) configMap.get("author");
+        if (configMap.containsKey("version")) config.version = (String) configMap.get("version");
+        
+        // Process entries array
+        if (configMap.containsKey("entries") && configMap.get("entries") instanceof List) {
+            List<Map<String, Object>> entriesList = (List<Map<String, Object>>) configMap.get("entries");
+            config.entries = new RMSongpackEntry[entriesList.size()];
+            
+            for (int i = 0; i < entriesList.size(); i++) {
+                config.entries[i] = populateEntryFromMap(entriesList.get(i));
+            }
+        }
+        
+        return config;
+    }
+    
+    @SuppressWarnings("unchecked")
+    private static RMSongpackEntry populateEntryFromMap(Map<String, Object> entryMap) {
+        RMSongpackEntry entry = new RMSongpackEntry();
+        
+        // Store all keys in entryMap first
+        entry.entryMap.putAll(entryMap);
+        
+        // Populate known properties that exist in RMSongpackEntry
+        if (entryMap.containsKey("events") && entryMap.get("events") instanceof List) {
+            List<String> eventsList = (List<String>) entryMap.get("events");
+            entry.events = eventsList.toArray(new String[0]);
+        }
+        if (entryMap.containsKey("songs") && entryMap.get("songs") instanceof List) {
+            List<String> songsList = (List<String>) entryMap.get("songs");
+            entry.songs = songsList.toArray(new String[0]);
+        }
+        
+        // Handle zones array (this will also be stored in entryMap for external options)
+        if (entryMap.containsKey("zones") && entryMap.get("zones") instanceof List) {
+            List<String> zonesList = (List<String>) entryMap.get("zones");
+            // Zones is not a standard property, so it stays only in entryMap for external options
+        }
+        if (entryMap.containsKey("allowFallback")) entry.allowFallback = (Boolean) entryMap.get("allowFallback");
+        if (entryMap.containsKey("useOverlay")) entry.useOverlay = (Boolean) entryMap.get("useOverlay");
+        if (entryMap.containsKey("forceStopMusicOnValid")) entry.forceStopMusicOnValid = (Boolean) entryMap.get("forceStopMusicOnValid");
+        if (entryMap.containsKey("forceStopMusicOnInvalid")) entry.forceStopMusicOnInvalid = (Boolean) entryMap.get("forceStopMusicOnInvalid");
+        if (entryMap.containsKey("forceStartMusicOnValid")) entry.forceStartMusicOnValid = (Boolean) entryMap.get("forceStartMusicOnValid");
+        Object forceChance = entryMap.get("forceChance");
+        if (forceChance instanceof Number) {
+            entry.forceChance = ((Number) forceChance).floatValue();
+        } else if (forceChance instanceof String) {
+            try {
+                String forceChanceStr = (String) forceChance;
+                // Remove 'f' suffix if present
+                if (forceChanceStr.endsWith("f") || forceChanceStr.endsWith("F")) {
+                    forceChanceStr = forceChanceStr.substring(0, forceChanceStr.length() - 1);
+                }
+                entry.forceChance = Float.parseFloat(forceChanceStr);
+            } catch (NumberFormatException e) {
+                ReactiveMusicDebug.LOGGER.warn("Failed to parse forceChance value: " + forceChance + ", using default");
+            }
+        }
+        if (entryMap.containsKey("stackable")) entry.stackable = (Boolean) entryMap.get("stackable");
+        if (entryMap.containsKey("alwaysPlay")) entry.alwaysPlay = (Boolean) entryMap.get("alwaysPlay");
+        if (entryMap.containsKey("alwaysStop")) entry.alwaysStop = (Boolean) entryMap.get("alwaysStop");
+        
+        return entry;
     }
 
     public static void fetchAvailableSongpacks() {
@@ -175,7 +248,12 @@ public class RMSongpackLoader {
         Yaml yaml = new Yaml();
 
         try {
-            songpackZip.config = yaml.loadAs(configResource.inputStream, RMSongpackConfig.class);
+            // Load as generic Map to capture all keys, then manually populate
+            @SuppressWarnings("unchecked")
+            Map<String, Object> configMap = yaml.load(configResource.inputStream);
+            ReactiveMusicDebug.LOGGER.info("YAML loaded successfully, config keys: " + (configMap != null ? configMap.keySet() : "null"));
+            songpackZip.config = populateConfigFromMap(configMap);
+            ReactiveMusicDebug.LOGGER.info("Config populated successfully");
         } catch (Exception e) {
             songpackZip.config = new RMSongpackConfig();
             songpackZip.config.name = songpackPath != null ? songpackPath.getFileName().toString() : "Embedded";
@@ -183,6 +261,7 @@ public class RMSongpackLoader {
             songpackZip.blockLoading = true;
 
             ReactiveMusicDebug.LOGGER.error("Failed to load properties! Embedded=" + embedded + " Exception:" + e.toString());
+            e.printStackTrace();
         }
 
         if (!Constructor.errorString.isEmpty()) {

@@ -13,3 +13,5 @@ circuitlord.reactivemusic.plugins.WeatherAltitudePlugin
 circuitlord.reactivemusic.plugins.BossBarPlugin
 
 rocamocha.mochamix.plugins.ImmersiveAircraftPlugin
+rocamocha.mochamix.plugins.ZoneAreaPlugin
+rocamocha.mochamix.plugins.EntityInteractionPlugin

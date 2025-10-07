@@ -55,7 +55,8 @@ public class HelpCommandHandlers {
         
         .helpline("info", "Not implemented.", Formatting.RED)
         .helpline("entry current", "Info for the current songpack entry.", Formatting.WHITE)
-        .helpline("entry list", "Lists all entries. Valid entries are highlighted.", Formatting.WHITE);
+        .helpline("entry list", "Lists all entries. Valid entries are highlighted.", Formatting.WHITE)
+        .helpline("events list", "Lists all registered events. Active events are highlighted.", Formatting.WHITE);
         
         ctx.getSource().sendFeedback(help.build());
         return 1;

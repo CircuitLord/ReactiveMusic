@@ -6,13 +6,13 @@ import rocamocha.mochamix.impl.vector3.Vector3Socket;
 import rocamocha.mochamix.api.minecraft.util.MinecraftBox;
 import rocamocha.mochamix.api.io.MinecraftView;
 
-public class BoxView implements MinecraftBox {
+public class BoxSocket implements MinecraftBox {
     protected final Box box;
 
     protected final MinecraftVector3.Vector3d min;
     protected final MinecraftVector3.Vector3d max;
 
-    BoxView(MinecraftVector3 min, MinecraftVector3 max) {
+    public BoxSocket(MinecraftVector3 min, MinecraftVector3 max) {
         this.min = (MinecraftVector3.Vector3d) min.asVec3d();
         this.max = (MinecraftVector3.Vector3d) max.asVec3d();
         this.box = new Box(

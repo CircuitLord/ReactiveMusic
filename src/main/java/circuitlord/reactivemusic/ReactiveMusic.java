@@ -215,6 +215,12 @@ public class ReactiveMusic implements ModInitializer {
 								.executes(SongpackCommandHandlers::indexedEntrySongs))
 						)
 					)
+					.then(literal("events")
+						.then(literal("list")
+							.executes(SongpackCommandHandlers::listEvents))
+					)
+					.then(literal("external")
+						.executes(SongpackCommandHandlers::externalOptionsInfo))
 				)
 
 				.then(literal("plugin")
