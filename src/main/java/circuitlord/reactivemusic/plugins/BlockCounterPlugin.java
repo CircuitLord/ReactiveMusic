@@ -1,6 +1,5 @@
 package circuitlord.reactivemusic.plugins;
 
-import circuitlord.reactivemusic.SongPicker;
 import circuitlord.reactivemusic.ReactiveMusicDebug.TextBuilder;
 import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
@@ -24,7 +23,9 @@ public final class BlockCounterPlugin extends ReactiveMusicPlugin {
 
     // --- plugin-owned state (removed from SongPicker) ---
     private static boolean queuedToPrint = false;
+    private static boolean queuedToPrintBlockCounter = false;
     private static Map<String, Integer> blockCounterMap = new HashMap<>();
+    private static Map<String, Integer> cachedBlockChecker = new HashMap<>();
     private static MinecraftVector3 cachedBlockCounterOrigin;
     private static int currentBlockCounterX = 99999; // start out-of-range to force snap to origin on first wrap
     // Note: your Y sweep is commented-out in the original; we keep the same single-axis sweep.
@@ -73,8 +74,8 @@ public final class BlockCounterPlugin extends ReactiveMusicPlugin {
             }
 
             // publish to the cache that isEntryValid() reads
-            SongPicker.cachedBlockChecker.clear();
-            SongPicker.cachedBlockChecker.putAll(blockCounterMap);
+            cachedBlockChecker.clear();
+            cachedBlockChecker.putAll(blockCounterMap);
 
             // reset for next sweep
             blockCounterMap.clear();
@@ -93,6 +94,27 @@ public final class BlockCounterPlugin extends ReactiveMusicPlugin {
 
     public static void queueToPrint() { queuedToPrint = true; }
 
+    // Public accessor methods for external use (e.g., SongPicker)
+    public static Map<String, Integer> getBlockCounterMap() {
+        return new HashMap<>(blockCounterMap);
+    }
+
+    public static Map<String, Integer> getCachedBlockChecker() {
+        return cachedBlockChecker;
+    }
+
+    public static boolean isQueuedToPrintBlockCounter() {
+        return queuedToPrintBlockCounter;
+    }
+
+    public static void setQueuedToPrintBlockCounter(boolean queued) {
+        queuedToPrintBlockCounter = queued;
+    }
+
+    public static MinecraftVector3 getCachedBlockCounterOrigin() {
+        return cachedBlockCounterOrigin;
+    }
+
     // helper for the log
     static String indentByCount(int c) {
         String s = "";
@@ -106,6 +128,4 @@ public final class BlockCounterPlugin extends ReactiveMusicPlugin {
         }
         return s + "> ";
     }
-
-
 }

@@ -23,13 +23,25 @@ public final class DimensionPlugin extends ReactiveMusicPlugin {
         END       = SongpackEvent.get("END");
     }
 
+    // Moved from SongPicker - now owned by this plugin
+    private static String currentDimName = "";
+    
+    // Public accessor for SongPicker.isEntryValid()
+    public static String getCurrentDimName() {
+        return currentDimName;
+    }
+
     @Override
     public void gameTick(MinecraftPlayer player, MinecraftWorld world, Map<EventRecord, Boolean> eventMap) {
         if (world == null) return;
 
-        boolean isOverworld = world.dimension().id() == "minecraft:overworld";
-        boolean isNether    = world.dimension().id() == "minecraft:the_nether" ;
-        boolean isEnd       = world.dimension().id() == "minecraft:the_end";
+        // Update current dimension name for SongPicker validation
+        currentDimName = world.dimension().id();
+
+        // Existing specific dimension event logic
+        boolean isOverworld = world.dimension().id().equals("minecraft:overworld");
+        boolean isNether    = world.dimension().id().equals("minecraft:the_nether");
+        boolean isEnd       = world.dimension().id().equals("minecraft:the_end");
 
         eventMap.put(OVERWORLD, isOverworld);
         eventMap.put(NETHER,    isNether);

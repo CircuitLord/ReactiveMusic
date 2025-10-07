@@ -1,24 +1,23 @@
 package circuitlord.reactivemusic;
 
 import circuitlord.reactivemusic.ReactiveMusicDebug.ChangeLogger;
-import circuitlord.reactivemusic.ReactiveMusicDebug.LogCategory;
 import circuitlord.reactivemusic.api.*;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 import circuitlord.reactivemusic.api.songpack.RuntimeEntry;
 import circuitlord.reactivemusic.api.songpack.SongpackEvent;
+import circuitlord.reactivemusic.plugins.BiomeTagPlugin;
+import circuitlord.reactivemusic.plugins.BiomeIdentityPlugin;
+import circuitlord.reactivemusic.plugins.BlockCounterPlugin;
+import circuitlord.reactivemusic.plugins.DimensionPlugin;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.CreditsScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
-//import net.minecraft.registry.tag.BiomeTags;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
 import rocamocha.mochamix.api.minecraft.MinecraftPlayer;
 import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 import rocamocha.mochamix.api.io.MinecraftView;
+import rocamocha.mochamix.plugins.ZoneAreaPlugin;
 
-import java.lang.reflect.Field;
 import java.util.*;
 
 import org.jetbrains.annotations.NotNull;
@@ -27,70 +26,6 @@ public final class SongPicker {
     private static final ChangeLogger CHANGE_LOGGER = ReactiveMusic.debugTools.new ChangeLogger();
 
     static int pluginTickCounter = 0;
-    // TODO: Put this stuff in the plugins, silly 😝
-    //-------------------------------------------------------------------------------------
-
-    public static Map<TagKey<Biome>, Boolean> biomeTagEventMap = new HashMap<>();
-
-    public static boolean queuedToPrintBlockCounter = false;
-    public static BlockPos cachedBlockCounterOrigin;
-
-
-    public static Map<String, Integer> blockCounterMap = new HashMap<>();
-    public static Map<String, Integer> cachedBlockChecker = new HashMap<>();
-
-    public static String currentBiomeName = "";
-    public static String currentDimName = "";
-    
-    // Zone tracking for specific zone validation
-    public static Set<String> currentZoneNames = new HashSet<>();
-
-    private static final String[] CONVENTIONAL_BIOME_TAGS_CANDIDATES = {
-        "net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags",
-        "net.fabricmc.fabric.api.tag.convention.v1.ConventionalBiomeTags"
-    };
-
-    private static final Class<?> CONVENTIONAL_BIOME_TAGS_CLASS = resolveConventionalBiomeTagsClass();
-    public static final Field[] BIOME_TAG_FIELDS = CONVENTIONAL_BIOME_TAGS_CLASS != null ? CONVENTIONAL_BIOME_TAGS_CLASS.getDeclaredFields() : new Field[0];
-    public static final List<TagKey<Biome>> BIOME_TAGS = new ArrayList<>();
-
-    private static Class<?> resolveConventionalBiomeTagsClass() {
-        for (String candidate : CONVENTIONAL_BIOME_TAGS_CANDIDATES) {
-            try {
-                return Class.forName(candidate);
-            } catch (ClassNotFoundException ignored) {
-            }
-        }
-        ReactiveMusicDebug.LOGGER.warn("Could not locate Fabric ConventionalBiomeTags class on the classpath.");
-        return null;
-    }
-
-    static {
-
-        for (Field field : BIOME_TAG_FIELDS) {
-            TagKey<Biome> biomeTag = getBiomeTagFromField(field);
-
-            if (biomeTag == null) {
-                continue;
-            }
-
-            BIOME_TAGS.add(biomeTag);
-            biomeTagEventMap.put(biomeTag, false);
-        }
-    }
-
-    public static TagKey<Biome> getBiomeTagFromField(Field field) {
-        if (field.getType() == TagKey.class) {
-            try {
-                @SuppressWarnings("unchecked")
-                TagKey<Biome> tag = (TagKey<Biome>) field.get(null);
-                return tag;
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            }
-        }
-        return null;
-    }
 
     public static void tickEventMap() {
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -174,7 +109,7 @@ public final class SongPicker {
 
             boolean blocksValid = false;
             for (var blockCond : condition.blocks) {
-                for (var kvp : cachedBlockChecker.entrySet()) {
+                for (var kvp : BlockCounterPlugin.getCachedBlockChecker().entrySet()) {
                     if (kvp.getKey().contains(blockCond.block) && kvp.getValue() >= blockCond.requiredCount) {
                         blocksValid = true;
                         break;
@@ -184,7 +119,7 @@ public final class SongPicker {
 
             boolean biomeTypesValid = false;
             for (var biome : condition.biomeTypes) {
-                if (currentBiomeName.contains(biome)) {
+                if (BiomeIdentityPlugin.getCurrentBiomeName().contains(biome)) {
                     biomeTypesValid = true;
                     break;
                 }
@@ -192,7 +127,7 @@ public final class SongPicker {
 
             boolean biomeTagsValid = false;
             for (var biomeTag : condition.biomeTags) {
-                if (biomeTagEventMap.containsKey(biomeTag) && biomeTagEventMap.get(biomeTag)) {
+                if (BiomeTagPlugin.getBiomeTagEventMap().containsKey(biomeTag) && BiomeTagPlugin.getBiomeTagEventMap().get(biomeTag)) {
                     biomeTagsValid = true;
                     break;
                 }
@@ -200,7 +135,7 @@ public final class SongPicker {
 
             boolean dimsValid = false;
             for (var dim : condition.dimTypes) {
-                if (currentDimName.contains(dim)) {
+                if (DimensionPlugin.getCurrentDimName().contains(dim)) {
                     dimsValid = true;
                     break;
                 }
@@ -223,7 +158,7 @@ public final class SongPicker {
                 // Handle zones as a list of strings
                 for (Object zoneObj : zonesList) {
                     if (zoneObj instanceof String zoneName) {
-                        if (currentZoneNames.contains(zoneName)) {
+                        if (ZoneAreaPlugin.getCurrentZoneNames().contains(zoneName)) {
                             zoneNameMatches = true;
                             CHANGE_LOGGER.writeInfoSmart("Entry [" + entry.getEventString() + "] zone name validated: " + zoneName);
                             break;
@@ -232,14 +167,14 @@ public final class SongPicker {
                 }
             } else if (zonesOption instanceof String singleZone) {
                 // Handle single zone as string
-                if (currentZoneNames.contains(singleZone)) {
+                if (ZoneAreaPlugin.getCurrentZoneNames().contains(singleZone)) {
                     zoneNameMatches = true;
                     CHANGE_LOGGER.writeInfo("Entry [" + entry.getEventString() + "] zone name validated: " + singleZone);
                 }
             }
             
             if (!zoneNameMatches) {
-                CHANGE_LOGGER.writeInfo("Entry [" + entry.getEventString() + "] failed zone name validation. Required zones: " + zonesOption + ", Current zones: " + currentZoneNames);
+                CHANGE_LOGGER.writeInfo("Entry [" + entry.getEventString() + "] failed zone name validation. Required zones: " + zonesOption + ", Current zones: " + ZoneAreaPlugin.getCurrentZoneNames());
                 return false;
             }
         }

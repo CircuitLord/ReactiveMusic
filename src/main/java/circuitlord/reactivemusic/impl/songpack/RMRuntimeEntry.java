@@ -1,9 +1,9 @@
 package circuitlord.reactivemusic.impl.songpack;
 
-import circuitlord.reactivemusic.SongPicker;
 import circuitlord.reactivemusic.api.eventsys.EventRecord;
 import circuitlord.reactivemusic.api.songpack.RuntimeEntry;
 import circuitlord.reactivemusic.api.songpack.SongpackEvent;
+import circuitlord.reactivemusic.plugins.BiomeTagPlugin;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,14 +37,11 @@ public class RMRuntimeEntry implements RuntimeEntry {
         return entryMap.get(key);
     }
     
-    // should import values in the yaml that are *NOT* predefined
-    // this means plugin devs can create custom options for events
-    // that live in the YAML
-    //
-    // TODO: Not implemented - need to figure out how to change
-    // the RMSongpackLoader to import the unknown keys with SnakeYAML
-    //
-    // TODO: Maybe the built-ins should just use this pattern as well?
+    /** 
+     * Should import values in the yaml that are *NOT* predefined
+     * this means plugin devs can create custom options for events
+     * that live in the YAML
+     */
     public void setExternalOption(String key, Object value) {
         java.util.Set<String> knownOptions = java.util.Set.of(
             // Actual RMSongpackEntry properties
@@ -166,17 +163,17 @@ public class RMRuntimeEntry implements RuntimeEntry {
 
                     boolean foundMatch = false;
 
-                    for (int k = 0; k < SongPicker.BIOME_TAG_FIELDS.length; k++) {
+                    for (int k = 0; k < BiomeTagPlugin.getBiomeTagFields().length; k++) {
 
                         // i love creating GC
-                        String fieldName = SongPicker.BIOME_TAG_FIELDS[k].getName();
+                        String fieldName = BiomeTagPlugin.getBiomeTagFields()[k].getName();
 
                         // convert our cached field tag to the v2 format (even with v1) since we did the same for the loaded one
                         fieldName = cleanBiomeTagString(fieldName);
 
                         if (fieldName.equals(biomeTagName)) {
 
-                            var biomeTag = SongPicker.getBiomeTagFromField(SongPicker.BIOME_TAG_FIELDS[k]);
+                            var biomeTag = BiomeTagPlugin.getBiomeTagFromField(BiomeTagPlugin.getBiomeTagFields()[k]);
 
                             if (biomeTag != null) {
                                 // We found a match, now put the biometag key into the condition so we can use it later

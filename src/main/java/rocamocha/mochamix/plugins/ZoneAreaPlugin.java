@@ -8,8 +8,10 @@ import rocamocha.mochamix.api.minecraft.MinecraftWorld;
 import rocamocha.mochamix.zones.ZoneData;
 import rocamocha.mochamix.zones.ZoneUtils;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ZoneAreaPlugin extends ReactiveMusicPlugin {
     public ZoneAreaPlugin() {
@@ -17,6 +19,9 @@ public class ZoneAreaPlugin extends ReactiveMusicPlugin {
     }
 
     static EventRecord ZONE, AREA;
+    
+    // Plugin-owned zone tracking
+    private static Set<String> currentZoneNames = new HashSet<>();
     
     @Override public void init() {
         registerSongpackEvents("ZONE", "AREA");
@@ -34,9 +39,9 @@ public class ZoneAreaPlugin extends ReactiveMusicPlugin {
         boolean inZone = !zonesContainingPlayer.isEmpty();
         
         // Update the current zone names for specific zone validation
-        circuitlord.reactivemusic.SongPicker.currentZoneNames.clear();
+        currentZoneNames.clear();
         for (ZoneData zone : zonesContainingPlayer) {
-            circuitlord.reactivemusic.SongPicker.currentZoneNames.add(zone.getZoneName());
+            currentZoneNames.add(zone.getZoneName());
         }
         
         // Set generic zone/area events for OR logic with other conditions
@@ -88,5 +93,13 @@ public class ZoneAreaPlugin extends ReactiveMusicPlugin {
             return ZoneUtils.deleteZone(zones.get(0).getUniqueId());
         }
         return false;
+    }
+    
+    /**
+     * Get the current zone names that the player is in.
+     * Used by SongPicker for zone-specific validation.
+     */
+    public static Set<String> getCurrentZoneNames() {
+        return currentZoneNames;
     }
 }
