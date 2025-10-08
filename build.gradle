@@ -14,6 +14,14 @@ ext {
             modMenuVersion: "11.0.3",
             yaclVersion: "3.6.2+1.21-fabric"
         ],
+        "1_21_5": [
+            minecraftVersion: "1.21.5",
+            yarnMappings: "1.21.5+build.1",
+            loaderVersion: "0.17.1",
+            fabricApiVersion: "0.127.0+1.21.5",
+            modMenuVersion: "14.0.0-rc.2",
+            yaclVersion: "3.7.0+1.21.5-fabric"
+        ],
         "1_20_4": [
             minecraftVersion: "1.20.4", 
             yarnMappings: "1.20.4+build.3",
@@ -59,9 +67,80 @@ if (activeProject != null) {
         
         sourceSets {
             main {
-                java.srcDirs = ["src/main/java", "../src/main/java"]
-                resources.srcDirs = ["src/main/resources", "../src/main/resources"]
+                // Source directory precedence: adapter-specific FIRST, then root, then inherited
+                if (activeAdapter == "1_21_5") {
+                    // 1.21.5 overrides everything: 1.21.5 -> root -> 1.21.1
+                    java.srcDirs = [
+                        "src/main/java",           // 1.21.5 adapter (highest precedence)
+                        "../src/main/java",        // Root/common (middle precedence)  
+                        "../adapters-1_21_1/src/main/java"  // 1.21.1 base (lowest precedence)
+                    ]
+                    resources.srcDirs = [
+                        "src/main/resources", 
+                        "../src/main/resources",
+                        "../adapters-1_21_1/src/main/resources"
+                    ]
+                } else {
+                    // Default behavior for other adapters
+                    java.srcDirs = ["src/main/java", "../src/main/java"]
+                    resources.srcDirs = ["src/main/resources", "../src/main/resources"]
+                }
             }
+        }
+        
+        // For 1.21.5: Handle duplicate class files by creating a merged source tree
+        if (activeAdapter == "1_21_5") {
+            def mergedSourceDir = file("${buildDir}/merged-sources/main/java")
+            
+            task mergeSources(type: Copy) {
+                // Copy in reverse precedence order, so later copies overwrite earlier ones
+                
+                // First: Copy 1.21.1 base classes (lowest precedence)
+                from "../adapters-1_21_1/src/main/java"
+                into mergedSourceDir
+                
+                // Second: Copy root/common classes (middle precedence)  
+                from "../src/main/java"
+                into mergedSourceDir
+                duplicatesStrategy = DuplicatesStrategy.INCLUDE // Allow overwriting
+                
+                // Third: Copy 1.21.5 specific classes (highest precedence)
+                from "src/main/java"  
+                into mergedSourceDir
+                duplicatesStrategy = DuplicatesStrategy.INCLUDE // Allow overwriting
+            }
+            
+            // Update source sets to use merged directory
+            sourceSets.main.java.srcDirs = [mergedSourceDir]
+            
+            // Ensure merge happens before compilation
+            compileJava.dependsOn mergeSources
+            
+            // Also merge resources
+            def mergedResourceDir = file("${buildDir}/merged-sources/main/resources")
+            task mergeResources(type: Copy) {
+                from "../adapters-1_21_1/src/main/resources"
+                from "../src/main/resources"  
+                from "src/main/resources"
+                into mergedResourceDir
+                duplicatesStrategy = DuplicatesStrategy.INCLUDE
+            }
+            
+            sourceSets.main.resources.srcDirs = [mergedResourceDir]
+            processResources.dependsOn mergeResources
+            
+            // Fix task dependencies for sourcesJar - do this after evaluation
+            afterEvaluate {
+                tasks.named('sourcesJar').configure {
+                    dependsOn mergeSources, mergeResources
+                }
+            }
+        }
+        
+        // Ensure compilation uses source directory priority order correctly
+        tasks.withType(JavaCompile) {
+            options.compilerArgs += ['-Xlint:-options']
+            // Gradle should handle duplicate classes by source directory priority
         }
         
         dependencies {

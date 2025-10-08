@@ -17,7 +17,7 @@ def getActiveAdapter() {
     propsFile.withInputStream { props.load(it) }
     
     def adapter = props.getProperty('reactivemusic.adapter', '1_21_1')
-    def validAdapters = ['1_20_4', '1_21_1', 'latest']
+    def validAdapters = ['1_20_4', '1_21_1', '1_21_5', 'latest']
     
     return validAdapters.contains(adapter) ? adapter : '1_21_1'
 }
@@ -40,6 +40,14 @@ def getDependencyVersions(String adapter) {
             fabricApi: '0.114.0+1.21.1',
             modMenu: '11.0.3', 
             yacl: '3.6.2+1.21-fabric'
+        ],
+        '1_21_5': [
+            minecraft: '1.21.5',
+            yarn: '1.21.5+build.1',
+            loader: '0.17.1',
+            fabricApi: '0.127.0+1.21.5',
+            modMenu: '14.0.0',
+            yacl: '3.7.0+1.21.5-fabric'
         ],
         'latest': [
             minecraft: '1.21.6',
