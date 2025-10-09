@@ -1,0 +1,11 @@
+{
+    "required": true,
+    "package": "rocamocha.PROJECT_ID_HERE.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "refmap": "PROJECT_ID_HERE.refmap.json",
+    "mixins": [
+    ],
+    "client": [
+    ],
+    "minVersion": "0.8"
+}

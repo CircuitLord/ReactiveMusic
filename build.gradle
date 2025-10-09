@@ -3,10 +3,13 @@ plugins {
 }
 
 ext {
-    activeAdapter = findProperty("reactivemusic.adapter") ?: "1_21_1"
+    // Read active project and adapter from gradle.properties
+    activeProject = findProperty("mochamix.project") ?: "mochamix"
+    activeAdapter = findProperty("mochamix.adapter") ?: "v1_21_1"
     
+    // Map adapter names to Minecraft version configurations
     minecraftTargets = [
-        "1_21_1": [
+        "v1_21_1": [
             minecraftVersion: "1.21.1",
             yarnMappings: "1.21.1+build.3",
             loaderVersion: "0.16.14",
@@ -14,7 +17,7 @@ ext {
             modMenuVersion: "11.0.3",
             yaclVersion: "3.6.2+1.21-fabric"
         ],
-        "1_21_5": [
+        "v1_21_5": [
             minecraftVersion: "1.21.5",
             yarnMappings: "1.21.5+build.1",
             loaderVersion: "0.17.1",
@@ -22,21 +25,13 @@ ext {
             modMenuVersion: "14.0.0-rc.2",
             yaclVersion: "3.7.0+1.21.5-fabric"
         ],
-        "1_20_4": [
+        "v1_20_4": [
             minecraftVersion: "1.20.4", 
             yarnMappings: "1.20.4+build.3",
             loaderVersion: "0.15.11",
             fabricApiVersion: "0.97.0+1.20.4",
             modMenuVersion: "11.0.3",
             yaclVersion: "3.6.2+1.21-fabric"
-        ],
-        "latest": [
-            minecraftVersion: "1.21.6",
-            yarnMappings: "1.21.6+build.1", 
-            loaderVersion: "0.17.2",
-            fabricApiVersion: "0.128.2+1.21.6",
-            modMenuVersion: "15.0.0",
-            yaclVersion: "3.8.0+1.21.6-fabric"
         ]
     ]
     
@@ -47,11 +42,11 @@ allprojects {
     group = maven_group
 }
 
-def activeProjectName = "adapters-${activeAdapter}"
-def activeProject = findProject(":${activeProjectName}")
+def activeProjectPath = ":projects:${activeProject}:${activeAdapter}"
+def targetProject = findProject(activeProjectPath)
 
-if (activeProject != null) {
-    configure(activeProject) {
+if (targetProject != null) {
+    configure(targetProject) {
         apply plugin: "fabric-loom"
         apply plugin: "java"
         
@@ -67,44 +62,50 @@ if (activeProject != null) {
         
         sourceSets {
             main {
-                // Source directory precedence: adapter-specific FIRST, then root, then inherited
-                if (activeAdapter == "1_21_5") {
-                    // 1.21.5 overrides everything: 1.21.5 -> root -> 1.21.1
+                // Source directory precedence: adapter-specific FIRST, then common, then base version for overrides
+                if (activeAdapter == "v1_21_5") {
+                    // v1_21_5 overrides: v1_21_5 -> common -> v1_21_1 base
                     java.srcDirs = [
-                        "src/main/java",           // 1.21.5 adapter (highest precedence)
-                        "../src/main/java",        // Root/common (middle precedence)  
-                        "../adapters-1_21_1/src/main/java"  // 1.21.1 base (lowest precedence)
+                        "src/main/java",                    // v1_21_5 adapter (highest precedence)
+                        "../common/src/main/java",          // Common shared code (middle precedence)
+                        "../v1_21_1/src/main/java"          // v1_21_1 base version (lowest precedence)
                     ]
                     resources.srcDirs = [
                         "src/main/resources", 
-                        "../src/main/resources",
-                        "../adapters-1_21_1/src/main/resources"
+                        "../common/src/main/resources",
+                        "../v1_21_1/src/main/resources"
                     ]
                 } else {
-                    // Default behavior for other adapters
-                    java.srcDirs = ["src/main/java", "../src/main/java"]
-                    resources.srcDirs = ["src/main/resources", "../src/main/resources"]
+                    // Base version (v1_21_1): adapter-specific + common
+                    java.srcDirs = [
+                        "src/main/java",                    // Adapter-specific code (highest precedence)
+                        "../common/src/main/java"           // Common shared code (lower precedence)
+                    ]
+                    resources.srcDirs = [
+                        "src/main/resources", 
+                        "../common/src/main/resources"
+                    ]
                 }
             }
         }
         
-        // For 1.21.5: Handle duplicate class files by creating a merged source tree
-        if (activeAdapter == "1_21_5") {
+        // For v1_21_5: Handle duplicate class files by creating a merged source tree
+        if (activeAdapter == "v1_21_5") {
             def mergedSourceDir = file("${buildDir}/merged-sources/main/java")
             
             task mergeSources(type: Copy) {
                 // Copy in reverse precedence order, so later copies overwrite earlier ones
                 
-                // First: Copy 1.21.1 base classes (lowest precedence)
-                from "../adapters-1_21_1/src/main/java"
+                // First: Copy v1_21_1 base classes (lowest precedence)
+                from "../v1_21_1/src/main/java"
                 into mergedSourceDir
                 
-                // Second: Copy root/common classes (middle precedence)  
-                from "../src/main/java"
+                // Second: Copy common classes (middle precedence)  
+                from "../common/src/main/java"
                 into mergedSourceDir
                 duplicatesStrategy = DuplicatesStrategy.INCLUDE // Allow overwriting
                 
-                // Third: Copy 1.21.5 specific classes (highest precedence)
+                // Third: Copy v1_21_5 specific classes (highest precedence)
                 from "src/main/java"  
                 into mergedSourceDir
                 duplicatesStrategy = DuplicatesStrategy.INCLUDE // Allow overwriting
@@ -119,8 +120,8 @@ if (activeProject != null) {
             // Also merge resources
             def mergedResourceDir = file("${buildDir}/merged-sources/main/resources")
             task mergeResources(type: Copy) {
-                from "../adapters-1_21_1/src/main/resources"
-                from "../src/main/resources"  
+                from "../v1_21_1/src/main/resources"
+                from "../common/src/main/resources"
                 from "src/main/resources"
                 into mergedResourceDir
                 duplicatesStrategy = DuplicatesStrategy.INCLUDE
@@ -154,6 +155,18 @@ if (activeProject != null) {
         
         loom {
             mixin.defaultRefmapName = "reactivemusic.refmap.json"
+            
+            // Use organized nested run directories by client/server and version
+            runConfigs {
+                client {
+                    // All projects using same adapter share: run/client/v1_21_1/, run/client/v1_21_5/, etc.
+                    runDir = "../../../run/client/${activeAdapter}"
+                }
+                server {
+                    // All projects using same adapter share: run/server/v1_21_1/, run/server/v1_21_5/, etc.
+                    runDir = "../../../run/server/${activeAdapter}"
+                }
+            }
         }
         
         java {

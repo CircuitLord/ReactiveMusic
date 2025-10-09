@@ -9,20 +9,28 @@ pluginManagement {
     }
 }
 
-rootProject.name = "ReactiveMusic"
+rootProject.name = "MochaMix"
 
-// Read adapter from gradle.properties or use default
-def adapterProperty = providers.gradleProperty('reactivemusic.adapter')
-def adapterVersion = adapterProperty.isPresent() ? adapterProperty.get() : '1_21_1'
-def adapter = "adapters-${adapterVersion}"
+// Read project and adapter from gradle.properties or use defaults
+def projectProperty = providers.gradleProperty('mochamix.project')
+def activeProject = projectProperty.isPresent() ? projectProperty.get() : 'mochamix'
 
+def adapterProperty = providers.gradleProperty('mochamix.adapter')  
+def activeAdapter = adapterProperty.isPresent() ? adapterProperty.get() : 'v1_21_1'
 
-// Only include the active adapter - common code is included via sourceSets
-include adapter
+// Include the active project's adapter
+def projectAdapter = ":projects:${activeProject}:${activeAdapter}"
+include projectAdapter
 
-// Validate that the adapter directory exists
-def adapterDir = file(adapter)
+// Validate that the project and adapter directories exist
+def projectDir = file("projects/${activeProject}")
+if (!projectDir.exists()) {
+    def availableProjects = fileTree(dir: 'projects', include: '*').files.collect { it.name }
+    throw new GradleException("Project directory 'projects/${activeProject}' not found. Available projects: ${availableProjects}")
+}
+
+def adapterDir = file("projects/${activeProject}/${activeAdapter}")  
 if (!adapterDir.exists()) {
-    def availableAdapters = fileTree(dir: '.', include: 'adapters-*').files.collect { it.name }
-    throw new GradleException("Adapter directory '$adapter' not found. Available adapters: ${availableAdapters}")
+    def availableAdapters = fileTree(dir: "projects/${activeProject}", include: '*').files.collect { it.name }
+    throw new GradleException("Adapter directory 'projects/${activeProject}/${activeAdapter}' not found. Available adapters: ${availableAdapters}")
 }

@@ -1,0 +1,31 @@
+{
+    "schemaVersion": 1,
+    "id": "PROJECT_ID_HERE",
+    "version": "${version}",
+    "name": "PROJECT_NAME_HERE",
+    "description": "PROJECT_DESCRIPTION_HERE",
+    "authors": ["rocamocha"],
+    "contact": {
+        "homepage": "https://modrinth.com/mod/PROJECT_ID_HERE",
+        "sources": "https://github.com/rocamocha/MochaMix"
+    },
+    "license": "GPLv3",
+    "icon": "assets/PROJECT_ID_HERE/icon.png",
+    "environment": "client",
+    "entrypoints": {
+        "main": ["rocamocha.PROJECT_ID_HERE.PROJECT_MAIN_CLASS_HERE"]
+    },
+    "mixins": ["PROJECT_ID_HERE.mixins.json"],
+    "depends": {
+        "fabricloader": ">=0.16.14",
+        "minecraft": ["1.21.1", "1.21.5"],
+        "java": ">=21"
+    },
+    "custom": {
+        "modmenu": {
+            "links": {
+                "modmenu.discord": "https://discord.gg/vJ6BCjPR3R"
+            }
+        }
+    }
+}

@@ -1,0 +1,12 @@
+// Template build.gradle for new project adapters
+// This file is automatically configured by the root build.gradle  
+// No additional configuration needed - all settings are inherited from root project
+
+// Optional: Add project-specific tasks or configurations here
+// Example:
+// 
+// task customTask {
+//     doLast {
+//         println "Custom task for this adapter"
+//     }
+// }

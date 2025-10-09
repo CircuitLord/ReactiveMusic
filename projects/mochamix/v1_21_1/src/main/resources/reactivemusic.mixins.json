@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "rocamocha.reactivemusic.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "MinecraftClientMixin",
+    "MusicTrackerMixin",
+    "SoundManagerMixin",
+    "BossBarHudAccessor"
+  ]
+}

@@ -1,4 +1,4 @@
-// Standalone IDE Context Generator for ReactiveMusic
+// Standalone IDE Context Generator for MochaMix
 // This is a separate build file that can be run independently to generate IDE context
 // Usage: gradle -b ide-context.gradle generateContext
 
@@ -6,34 +6,41 @@ plugins {
     id 'java-library'
 }
 
-// Read the adapter setting
-def getActiveAdapter() {
+// Read the project and adapter settings
+def getActiveProject() {
     def propsFile = file('gradle.properties')
     if (!propsFile.exists()) {
-        return '1_21_1'
+        return 'mochamix'
     }
     
     def props = new Properties()
     propsFile.withInputStream { props.load(it) }
     
-    def adapter = props.getProperty('reactivemusic.adapter', '1_21_1')
-    def validAdapters = ['1_20_4', '1_21_1', '1_21_5', 'latest']
+    def project = props.getProperty('mochamix.project', 'mochamix')
+    def validProjects = ['mochamix', 'logical-loadouts']
     
-    return validAdapters.contains(adapter) ? adapter : '1_21_1'
+    return validProjects.contains(project) ? project : 'mochamix'
 }
 
-// Static dependency configurations
+def getActiveAdapter() {
+    def propsFile = file('gradle.properties')
+    if (!propsFile.exists()) {
+        return 'v1_21_1'
+    }
+    
+    def props = new Properties()
+    propsFile.withInputStream { props.load(it) }
+    
+    def adapter = props.getProperty('mochamix.adapter', 'v1_21_1')
+    def validAdapters = ['v1_21_1', 'v1_21_5']
+    
+    return validAdapters.contains(adapter) ? adapter : 'v1_21_1'
+}
+
+// Static dependency configurations mapped to new adapter names
 def getDependencyVersions(String adapter) {
     def configs = [
-        '1_20_4': [
-            minecraft: '1.20.4',
-            yarn: '1.20.4+build.3',
-            loader: '0.15.11',
-            fabricApi: '0.97.0+1.20.4',
-            modMenu: '11.0.3',
-            yacl: '3.6.2+1.21-fabric'
-        ],
-        '1_21_1': [
+        'v1_21_1': [
             minecraft: '1.21.1', 
             yarn: '1.21.1+build.3',
             loader: '0.16.14',
@@ -41,24 +48,16 @@ def getDependencyVersions(String adapter) {
             modMenu: '11.0.3', 
             yacl: '3.6.2+1.21-fabric'
         ],
-        '1_21_5': [
+        'v1_21_5': [
             minecraft: '1.21.5',
             yarn: '1.21.5+build.1',
             loader: '0.17.1',
             fabricApi: '0.127.0+1.21.5',
-            modMenu: '14.0.0',
+            modMenu: '14.0.0-rc.2',
             yacl: '3.7.0+1.21.5-fabric'
-        ],
-        'latest': [
-            minecraft: '1.21.6',
-            yarn: '1.21.6+build.1', 
-            loader: '0.17.2',
-            fabricApi: '0.128.2+1.21.6',
-            modMenu: '15.0.0',
-            yacl: '3.8.0+1.21.6-fabric'
         ]
     ]
-    return configs[adapter] ?: configs['1_21_1']
+    return configs[adapter] ?: configs['v1_21_1']
 }
 
 repositories {
@@ -79,17 +78,42 @@ java {
     }
 }
 
+def project = getActiveProject()
 def adapter = getActiveAdapter()
 def versions = getDependencyVersions(adapter)
 
-// Configure source sets to point to common module
+// Configure source sets to point to new project structure
 sourceSets {
     main {
         java {
-            srcDirs = ['src/main/java']
+            if (adapter == "v1_21_5") {
+                // v1_21_5 uses merged source pattern: v1_21_5 -> common -> v1_21_1
+                srcDirs = [
+                    "projects/${project}/${adapter}/src/main/java",
+                    "projects/${project}/common/src/main/java",
+                    "projects/${project}/v1_21_1/src/main/java"
+                ]
+            } else {
+                // Base version (v1_21_1): adapter-specific + common
+                srcDirs = [
+                    "projects/${project}/${adapter}/src/main/java",
+                    "projects/${project}/common/src/main/java"
+                ]
+            }
         }
         resources {
-            srcDirs = ['src/main/resources']
+            if (adapter == "v1_21_5") {
+                srcDirs = [
+                    "projects/${project}/${adapter}/src/main/resources",
+                    "projects/${project}/common/src/main/resources", 
+                    "projects/${project}/v1_21_1/src/main/resources"
+                ]
+            } else {
+                srcDirs = [
+                    "projects/${project}/${adapter}/src/main/resources",
+                    "projects/${project}/common/src/main/resources"
+                ]
+            }
         }
     }
 }
@@ -112,10 +136,19 @@ tasks.withType(Test) { enabled = false }
 
 task generateContext {
     doLast {
-        println "IDE context generated for adapter: ${adapter}"
+        println "IDE context generated for project: ${project}, adapter: ${adapter}"
         println "Minecraft: ${versions.minecraft}"
         println "Yarn: ${versions.yarn}"
         println "Fabric API: ${versions.fabricApi}"
+        println ""
+        println "Source directories:"
+        sourceSets.main.java.srcDirs.each { dir ->
+            if (file(dir).exists()) {
+                println "  ✓ ${dir}"
+            } else {
+                println "  ✗ ${dir} (missing)"
+            }
+        }
         println ""
         println "Dependencies resolved successfully!"
         println "Refresh your IDE to see updated context."

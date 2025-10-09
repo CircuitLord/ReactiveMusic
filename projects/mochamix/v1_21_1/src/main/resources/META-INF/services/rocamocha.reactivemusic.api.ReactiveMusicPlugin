@@ -1,0 +1,17 @@
+rocamocha.reactivemusic.plugins.ActionsPlugin
+rocamocha.reactivemusic.plugins.AtHomePlugin
+rocamocha.reactivemusic.plugins.BiomeIdentityPlugin
+rocamocha.reactivemusic.plugins.BiomeTagPlugin
+rocamocha.reactivemusic.plugins.BlockCounterPlugin
+rocamocha.reactivemusic.plugins.BossBarPlugin
+rocamocha.reactivemusic.plugins.CombatPlugin
+rocamocha.reactivemusic.plugins.DimensionPlugin
+rocamocha.reactivemusic.plugins.OverlayTrackPlugin
+rocamocha.reactivemusic.plugins.ProximityPlugin
+rocamocha.reactivemusic.plugins.TimeOfDayPlugin
+rocamocha.reactivemusic.plugins.WeatherAltitudePlugin
+rocamocha.reactivemusic.plugins.BossBarPlugin
+
+rocamocha.mochamix.plugins.ImmersiveAircraftPlugin
+rocamocha.mochamix.plugins.ZoneAreaPlugin
+rocamocha.mochamix.plugins.EntityInteractionPlugin

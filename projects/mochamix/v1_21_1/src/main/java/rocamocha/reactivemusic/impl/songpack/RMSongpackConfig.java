@@ -1,0 +1,24 @@
+package rocamocha.reactivemusic.impl.songpack;
+
+import rocamocha.reactivemusic.config.MusicDelayLength;
+import rocamocha.reactivemusic.config.MusicSwitchSpeed;
+
+public class RMSongpackConfig {
+
+    public String name;
+    public String version = "";
+    public String author = "";
+    public String description = "";
+
+    public String credits = "";
+
+    public MusicDelayLength musicDelayLength = MusicDelayLength.NORMAL;
+
+    public MusicSwitchSpeed musicSwitchSpeed = MusicSwitchSpeed.NORMAL;
+
+    public RMSongpackEntry[] entries;
+
+
+}
+
+

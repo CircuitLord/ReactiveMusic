@@ -1,0 +1,30 @@
+{
+    "schemaVersion": 1,
+    "id": "logical-loadouts",
+    "version": "1.0.0",
+    "name": "Logical Loadouts",
+    "description": "Equipment loadout management system for Minecraft",
+    "authors": ["MochaMix"],
+    "contact": {},
+    "license": "MIT",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "com.mochamix.logicalloadouts.LogicalLoadouts"
+        ],
+        "client": [
+            "com.mochamix.logicalloadouts.LogicalLoadoutsClient"
+        ]
+    },
+    "mixins": [
+        "logicalloadouts.mixins.json"
+    ],
+    "depends": {
+        "fabricloader": ">=0.16.0",
+        "minecraft": ">=1.21.0",
+        "java": ">=21"
+    },
+    "suggests": {
+        "fabric-api": "*"
+    }
+}
