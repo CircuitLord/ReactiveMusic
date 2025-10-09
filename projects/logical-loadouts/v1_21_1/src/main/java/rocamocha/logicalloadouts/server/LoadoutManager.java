@@ -1,0 +1,346 @@
+package rocamocha.logicalloadouts.server;
+
+import rocamocha.logicalloadouts.LogicalLoadouts;
+import rocamocha.logicalloadouts.data.Loadout;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.util.WorldSavePath;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Server-side manager for player loadouts with persistent storage and validation.
+ * Handles all server-side operations including permissions, limits, and data persistence.
+ */
+public class LoadoutManager {
+    private static final String LOADOUTS_DIRECTORY = "logical-loadouts";
+    private static final String LOADOUTS_FILE_EXTENSION = ".nbt";
+    private static final int DEFAULT_MAX_LOADOUTS_PER_PLAYER = 10;
+    
+    private final MinecraftServer server;
+    private final Path loadoutsPath;
+    
+    // In-memory cache for active players (UUID -> Map of loadout ID -> Loadout)
+    private final Map<UUID, Map<UUID, Loadout>> playerLoadouts = new ConcurrentHashMap<>();
+    
+    // Configuration
+    private int maxLoadoutsPerPlayer = DEFAULT_MAX_LOADOUTS_PER_PLAYER;
+    private final Set<String> bannedItems = new HashSet<>(); // Item IDs that can't be stored in loadouts
+    
+    public LoadoutManager(MinecraftServer server) {
+        this.server = server;
+        this.loadoutsPath = server.getSavePath(WorldSavePath.ROOT).resolve(LOADOUTS_DIRECTORY);
+        
+        try {
+            Files.createDirectories(loadoutsPath);
+        } catch (IOException e) {
+            LogicalLoadouts.LOGGER.error("Failed to create loadouts directory", e);
+        }
+        
+        LogicalLoadouts.LOGGER.info("LoadoutManager initialized with storage at: {}", loadoutsPath);
+    }
+    
+    /**
+     * Load a player's loadouts from disk when they join
+     */
+    public void loadPlayerData(UUID playerUuid) {
+        if (playerLoadouts.containsKey(playerUuid)) {
+            return; // Already loaded
+        }
+        
+        Map<UUID, Loadout> loadouts = new HashMap<>();
+        Path playerFile = getPlayerLoadoutsFile(playerUuid);
+        
+        if (Files.exists(playerFile)) {
+            try {
+                NbtCompound playerData = NbtIo.readCompressed(playerFile, net.minecraft.nbt.NbtSizeTracker.ofUnlimitedBytes());
+                
+                if (playerData.contains("loadouts")) {
+                    NbtCompound loadoutsNbt = playerData.getCompound("loadouts");
+                    
+                    for (String key : loadoutsNbt.getKeys()) {
+                        try {
+                            UUID loadoutId = UUID.fromString(key);
+                            Loadout loadout = Loadout.fromNbt(loadoutsNbt.getCompound(key));
+                            
+                            if (loadout.isValid()) {
+                                loadouts.put(loadoutId, loadout);
+                            } else {
+                                LogicalLoadouts.LOGGER.warn("Invalid loadout found for player {}: {}", playerUuid, loadout.getName());
+                            }
+                        } catch (Exception e) {
+                            LogicalLoadouts.LOGGER.error("Failed to load loadout for player " + playerUuid, e);
+                        }
+                    }
+                }
+                
+                LogicalLoadouts.LOGGER.debug("Loaded {} loadouts for player {}", loadouts.size(), playerUuid);
+            } catch (IOException e) {
+                LogicalLoadouts.LOGGER.error("Failed to read loadouts file for player " + playerUuid, e);
+            }
+        }
+        
+        playerLoadouts.put(playerUuid, loadouts);
+    }
+    
+    /**
+     * Save a player's loadouts to disk
+     */
+    public void savePlayerData(UUID playerUuid) {
+        Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
+        if (loadouts == null || loadouts.isEmpty()) {
+            return;
+        }
+        
+        try {
+            NbtCompound playerData = new NbtCompound();
+            NbtCompound loadoutsNbt = new NbtCompound();
+            
+            for (Map.Entry<UUID, Loadout> entry : loadouts.entrySet()) {
+                loadoutsNbt.put(entry.getKey().toString(), entry.getValue().toNbt());
+            }
+            
+            playerData.put("loadouts", loadoutsNbt);
+            playerData.putLong("lastSaved", System.currentTimeMillis());
+            
+            Path playerFile = getPlayerLoadoutsFile(playerUuid);
+            Files.createDirectories(playerFile.getParent());
+            NbtIo.writeCompressed(playerData, playerFile);
+            
+            LogicalLoadouts.LOGGER.debug("Saved {} loadouts for player {}", loadouts.size(), playerUuid);
+        } catch (IOException e) {
+            LogicalLoadouts.LOGGER.error("Failed to save loadouts for player " + playerUuid, e);
+        }
+    }
+    
+    /**
+     * Unload a player's data when they leave (saves to disk)
+     */
+    public void unloadPlayerData(UUID playerUuid) {
+        savePlayerData(playerUuid);
+        playerLoadouts.remove(playerUuid);
+        LogicalLoadouts.LOGGER.debug("Unloaded data for player {}", playerUuid);
+    }
+    
+    /**
+     * Create a new loadout for a player
+     */
+    public LoadoutOperationResult createLoadout(UUID playerUuid, String name) {
+        Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
+        if (loadouts == null) {
+            return LoadoutOperationResult.error("Player data not loaded");
+        }
+        
+        // Check limits
+        if (loadouts.size() >= maxLoadoutsPerPlayer) {
+            return LoadoutOperationResult.error("Maximum number of loadouts reached (" + maxLoadoutsPerPlayer + ")");
+        }
+        
+        // Check for duplicate names
+        for (Loadout existingLoadout : loadouts.values()) {
+            if (existingLoadout.getName().equalsIgnoreCase(name)) {
+                return LoadoutOperationResult.error("A loadout with that name already exists");
+            }
+        }
+        
+        try {
+            Loadout newLoadout = new Loadout(name);
+            loadouts.put(newLoadout.getId(), newLoadout);
+            
+            LogicalLoadouts.LOGGER.debug("Created loadout '{}' for player {}", name, playerUuid);
+            return LoadoutOperationResult.success(newLoadout);
+        } catch (IllegalArgumentException e) {
+            return LoadoutOperationResult.error(e.getMessage());
+        }
+    }
+    
+    /**
+     * Delete a loadout
+     */
+    public LoadoutOperationResult deleteLoadout(UUID playerUuid, UUID loadoutId) {
+        Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
+        if (loadouts == null) {
+            return LoadoutOperationResult.error("Player data not loaded");
+        }
+        
+        Loadout removed = loadouts.remove(loadoutId);
+        if (removed == null) {
+            return LoadoutOperationResult.error("Loadout not found");
+        }
+        
+        LogicalLoadouts.LOGGER.debug("Deleted loadout '{}' for player {}", removed.getName(), playerUuid);
+        return LoadoutOperationResult.success(removed);
+    }
+    
+    /**
+     * Get a specific loadout
+     */
+    public LoadoutOperationResult getLoadout(UUID playerUuid, UUID loadoutId) {
+        Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
+        if (loadouts == null) {
+            return LoadoutOperationResult.error("Player data not loaded");
+        }
+        
+        Loadout loadout = loadouts.get(loadoutId);
+        if (loadout == null) {
+            return LoadoutOperationResult.error("Loadout not found");
+        }
+        
+        return LoadoutOperationResult.success(loadout);
+    }
+    
+    /**
+     * Get all loadouts for a player
+     */
+    public List<Loadout> getPlayerLoadouts(UUID playerUuid) {
+        Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
+        if (loadouts == null) {
+            return new ArrayList<>();
+        }
+        
+        return new ArrayList<>(loadouts.values());
+    }
+    
+    /**
+     * Update an existing loadout
+     */
+    public LoadoutOperationResult updateLoadout(UUID playerUuid, Loadout loadout) {
+        Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
+        if (loadouts == null) {
+            return LoadoutOperationResult.error("Player data not loaded");
+        }
+        
+        if (!loadouts.containsKey(loadout.getId())) {
+            return LoadoutOperationResult.error("Loadout not found");
+        }
+        
+        if (!loadout.isValid()) {
+            return LoadoutOperationResult.error("Invalid loadout data");
+        }
+        
+        // Additional server-side validation
+        if (!validateLoadoutForServer(loadout)) {
+            return LoadoutOperationResult.error("Loadout contains forbidden items");
+        }
+        
+        loadouts.put(loadout.getId(), loadout);
+        LogicalLoadouts.LOGGER.debug("Updated loadout '{}' for player {}", loadout.getName(), playerUuid);
+        return LoadoutOperationResult.success(loadout);
+    }
+    
+    /**
+     * Server-side validation for loadouts (checks banned items, etc.)
+     */
+    private boolean validateLoadoutForServer(Loadout loadout) {
+        // Check for banned items
+        return !containsBannedItems(loadout.getHotbar()) &&
+               !containsBannedItems(loadout.getMainInventory()) &&
+               !containsBannedItems(loadout.getArmor()) &&
+               !containsBannedItems(loadout.getOffhand());
+    }
+    
+    private boolean containsBannedItems(net.minecraft.item.ItemStack[] items) {
+        for (net.minecraft.item.ItemStack item : items) {
+            if (!item.isEmpty()) {
+                String itemId = net.minecraft.registry.Registries.ITEM.getId(item.getItem()).toString();
+                if (bannedItems.contains(itemId)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Check if a player has permission for a certain operation
+     */
+    public boolean hasPermission(ServerPlayerEntity player, String permission) {
+        // Basic implementation - can be extended with permission mods
+        return switch (permission) {
+            case "logical-loadouts.create" -> true; // All players can create loadouts
+            case "logical-loadouts.unlimited" -> player.hasPermissionLevel(2); // Ops can exceed limits
+            case "logical-loadouts.admin" -> player.hasPermissionLevel(2); // Admin commands
+            default -> false;
+        };
+    }
+    
+    /**
+     * Get the maximum number of loadouts for a player (respects permissions)
+     */
+    public int getMaxLoadouts(ServerPlayerEntity player) {
+        if (hasPermission(player, "logical-loadouts.unlimited")) {
+            return Integer.MAX_VALUE;
+        }
+        return maxLoadoutsPerPlayer;
+    }
+    
+    private Path getPlayerLoadoutsFile(UUID playerUuid) {
+        return loadoutsPath.resolve(playerUuid.toString() + LOADOUTS_FILE_EXTENSION);
+    }
+    
+    // Configuration methods
+    public void setMaxLoadoutsPerPlayer(int max) {
+        this.maxLoadoutsPerPlayer = Math.max(1, max);
+    }
+    
+    public int getMaxLoadoutsPerPlayer() {
+        return maxLoadoutsPerPlayer;
+    }
+    
+    public void addBannedItem(String itemId) {
+        bannedItems.add(itemId);
+    }
+    
+    public void removeBannedItem(String itemId) {
+        bannedItems.remove(itemId);
+    }
+    
+    public Set<String> getBannedItems() {
+        return new HashSet<>(bannedItems);
+    }
+    
+    /**
+     * Save all loaded player data (called on server shutdown)
+     */
+    public void saveAll() {
+        LogicalLoadouts.LOGGER.info("Saving all loadout data...");
+        for (UUID playerUuid : playerLoadouts.keySet()) {
+            savePlayerData(playerUuid);
+        }
+        LogicalLoadouts.LOGGER.info("All loadout data saved");
+    }
+    
+    /**
+     * Result wrapper for loadout operations
+     */
+    public static class LoadoutOperationResult {
+        private final boolean success;
+        private final String message;
+        private final Loadout loadout;
+        
+        private LoadoutOperationResult(boolean success, String message, Loadout loadout) {
+            this.success = success;
+            this.message = message;
+            this.loadout = loadout;
+        }
+        
+        public static LoadoutOperationResult success(Loadout loadout) {
+            return new LoadoutOperationResult(true, null, loadout);
+        }
+        
+        public static LoadoutOperationResult error(String message) {
+            return new LoadoutOperationResult(false, message, null);
+        }
+        
+        public boolean isSuccess() { return success; }
+        public String getMessage() { return message; }
+        public Loadout getLoadout() { return loadout; }
+    }
+}

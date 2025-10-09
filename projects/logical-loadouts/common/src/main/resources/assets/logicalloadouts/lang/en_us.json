@@ -1,0 +1,51 @@
+{
+  "key.categories.logicalloadouts": "Logical Loadouts",
+  
+  "key.logicalloadouts.open_gui": "Open Loadouts Menu",
+  "key.logicalloadouts.quick_save": "Quick Save to Global Slot 1",
+  "key.logicalloadouts.apply_1": "Apply Global Slot 1",
+  "key.logicalloadouts.apply_2": "Apply Global Slot 2", 
+  "key.logicalloadouts.apply_3": "Apply Global Slot 3",
+  "key.logicalloadouts.apply_4": "Apply Loadout 4",
+  "key.logicalloadouts.apply_5": "Apply Loadout 5",
+  
+  "gui.logicalloadouts.title": "Logical Loadouts",
+  "gui.logicalloadouts.create_new": "Create New Loadout",
+  "gui.logicalloadouts.delete": "Delete Loadout",
+  "gui.logicalloadouts.apply": "Apply Loadout",
+  "gui.logicalloadouts.save_current": "Save Current",
+  "gui.logicalloadouts.back": "Back",
+  
+  "gui.logicalloadouts.create_dialog.title": "Create New Loadout",
+  "gui.logicalloadouts.create_dialog.name_label": "Loadout Name:",
+  "gui.logicalloadouts.create_dialog.create": "Create",
+  "gui.logicalloadouts.create_dialog.cancel": "Cancel",
+  
+  "gui.logicalloadouts.info.no_selection": "Select a loadout to see details",
+  "gui.logicalloadouts.info.name": "Name: %s",
+  "gui.logicalloadouts.info.items": "Items: %d",
+  "gui.logicalloadouts.info.modified": "Modified: %s",
+  "gui.logicalloadouts.info.created": "Created: %s",
+  
+  "gui.logicalloadouts.status.connected": "Server Mode (with Global Slots)",
+  "gui.logicalloadouts.status.offline": "Local Mode (with Global Slots)",
+  "gui.logicalloadouts.status.loading": "Loading...",
+  
+  "gui.logicalloadouts.global_slot": "Global Slot %d",
+  "gui.logicalloadouts.global_slot_empty": "Empty Global Slot",
+  "gui.logicalloadouts.save_to_global": "Save to Global Slot %d",
+  "gui.logicalloadouts.mode.local": "Local",
+  "gui.logicalloadouts.mode.global": "Global",
+  "gui.logicalloadouts.mode.server": "Server",
+  
+  "gui.logicalloadouts.error.name_empty": "Name cannot be empty",
+  "gui.logicalloadouts.error.name_exists": "A loadout with this name already exists",
+  "gui.logicalloadouts.error.no_selection": "Please select a loadout first",
+  
+  "message.logicalloadouts.saved": "Loadout '%s' saved successfully",
+  "message.logicalloadouts.applied": "Applied loadout '%s'",
+  "message.logicalloadouts.deleted": "Deleted loadout '%s'",
+  "message.logicalloadouts.error.not_found": "Loadout not found",
+  "message.logicalloadouts.error.permission": "You don't have permission to perform this action",
+  "message.logicalloadouts.error.banned_items": "Cannot save loadout with banned items"
+}

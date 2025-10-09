@@ -10,10 +10,10 @@
     "environment": "*",
     "entrypoints": {
         "main": [
-            "com.mochamix.logicalloadouts.LogicalLoadouts"
+            "rocamocha.logicalloadouts.LogicalLoadouts"
         ],
         "client": [
-            "com.mochamix.logicalloadouts.LogicalLoadoutsClient"
+            "rocamocha.logicalloadouts.LogicalLoadoutsClient"
         ]
     },
     "mixins": [
