@@ -36,6 +36,11 @@ ext {
     ]
     
     activeConfig = minecraftTargets[activeAdapter]
+
+    mod_version = [
+        "mochamix": findProperty("mochamix_version"),
+        "logical-loadouts": findProperty("logical_loadouts_version")
+    ]
 }
 
 allprojects {
@@ -55,10 +60,10 @@ if (targetProject != null) {
             maven { url "https://maven.fabricmc.net/" }
             maven { url "https://maven.terraformersmc.com/releases/" }
             maven { url "https://maven.isxander.dev/releases" }
-        }
+        } 
         
-        version = "${mod_version}+${activeConfig.minecraftVersion}"
-        base.archivesName = "${archives_base_name}-${activeAdapter}"
+        version = mod_version[activeProject]  + "+" + activeConfig.minecraftVersion
+        base.archivesName = activeProject
         
         sourceSets {
             main {

@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "name": "Logical Loadouts",
     "description": "Equipment loadout management system for Minecraft",
-    "authors": ["MochaMix"],
+    "authors": ["rocamocha"],
     "contact": {},
     "license": "MIT",
     "environment": "*",
