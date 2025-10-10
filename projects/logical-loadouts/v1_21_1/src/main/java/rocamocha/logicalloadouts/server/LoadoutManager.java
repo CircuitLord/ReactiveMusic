@@ -130,7 +130,41 @@ public class LoadoutManager {
     }
     
     /**
-     * Create a new loadout for a player
+     * Create a new loadout for a player from their current inventory
+     */
+    public LoadoutOperationResult createLoadout(net.minecraft.entity.player.PlayerEntity player, String name) {
+        UUID playerUuid = player.getUuid();
+        Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
+        if (loadouts == null) {
+            return LoadoutOperationResult.error("Player data not loaded");
+        }
+        
+        // Check limits
+        if (loadouts.size() >= maxLoadoutsPerPlayer) {
+            return LoadoutOperationResult.error("Maximum number of loadouts reached (" + maxLoadoutsPerPlayer + ")");
+        }
+        
+        // Check for duplicate names
+        for (Loadout existingLoadout : loadouts.values()) {
+            if (existingLoadout.getName().equalsIgnoreCase(name)) {
+                return LoadoutOperationResult.error("A loadout with that name already exists");
+            }
+        }
+        
+        try {
+            // Create loadout from player's current inventory
+            Loadout newLoadout = Loadout.fromPlayer(player, name);
+            loadouts.put(newLoadout.getId(), newLoadout);
+            
+            LogicalLoadouts.LOGGER.debug("Created loadout '{}' for player {} with current inventory", name, playerUuid);
+            return LoadoutOperationResult.success(newLoadout);
+        } catch (IllegalArgumentException e) {
+            return LoadoutOperationResult.error(e.getMessage());
+        }
+    }
+    
+    /**
+     * Create a new loadout for a player (deprecated - use createLoadout(PlayerEntity, String) instead)
      */
     public LoadoutOperationResult createLoadout(UUID playerUuid, String name) {
         Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
@@ -150,15 +184,8 @@ public class LoadoutManager {
             }
         }
         
-        try {
-            Loadout newLoadout = new Loadout(name);
-            loadouts.put(newLoadout.getId(), newLoadout);
-            
-            LogicalLoadouts.LOGGER.debug("Created loadout '{}' for player {}", name, playerUuid);
-            return LoadoutOperationResult.success(newLoadout);
-        } catch (IllegalArgumentException e) {
-            return LoadoutOperationResult.error(e.getMessage());
-        }
+        // This method is deprecated - use createLoadout(PlayerEntity, String) instead
+        return LoadoutOperationResult.error("createLoadout requires player entity - use createLoadout(PlayerEntity, String) instead");
     }
     
     /**

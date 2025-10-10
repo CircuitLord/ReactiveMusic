@@ -375,28 +375,6 @@ public class Loadout {
         
         // Force synchronization
         player.getInventory().markDirty();
-        
-        // Additional synchronization approach for client players
-        if (player instanceof net.minecraft.client.network.ClientPlayerEntity clientPlayer) {
-            // Schedule a delayed synchronization to ensure the changes stick
-            net.minecraft.client.MinecraftClient.getInstance().execute(() -> {
-                // Force the client to re-synchronize inventory state
-                clientPlayer.playerScreenHandler.sendContentUpdates();
-                
-                // Trigger a slot update by briefly selecting a different slot
-                int currentSlot = clientPlayer.getInventory().selectedSlot;
-                if (currentSlot < 8) {
-                    clientPlayer.getInventory().selectedSlot = currentSlot + 1;
-                } else {
-                    clientPlayer.getInventory().selectedSlot = 0;
-                }
-                
-                // Schedule restoration of the original slot
-                net.minecraft.client.MinecraftClient.getInstance().execute(() -> {
-                    clientPlayer.getInventory().selectedSlot = currentSlot;
-                });
-            });
-        }
     }
     
     /**

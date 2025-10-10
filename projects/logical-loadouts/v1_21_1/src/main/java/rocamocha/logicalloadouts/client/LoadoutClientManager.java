@@ -142,7 +142,8 @@ public class LoadoutClientManager {
         // Check server loadouts if connected
         if (isConnectedToServer && serverLoadouts.containsKey(loadoutId)) {
             System.out.println("DEBUG: Found in server loadouts, applying...");
-            return applyServerLoadout(loadoutId);
+            Loadout loadout = serverLoadouts.get(loadoutId);
+            return applyLocalLoadout(loadout);  // Use same approach as local/global loadouts
         }
         
         lastOperationSuccess = false;
@@ -159,9 +160,9 @@ public class LoadoutClientManager {
             if (client.player != null) {
                 System.out.println("DEBUG: applyGlobalLoadout - checking if server-side sync needed");
                 
-                // Check if we're in a world where server-side synchronization is needed
-                if (client.getNetworkHandler() != null && client.getServer() != null) {
-                    // Single-player or integrated server - need server-side sync for survival mode
+                // Check if we're connected to any server (single-player or multiplayer)
+                if (client.getNetworkHandler() != null) {
+                    // Connected to server (single-player or multiplayer) - need server-side sync for survival mode
                     System.out.println("DEBUG: applyGlobalLoadout - taking server path for sync, sending loadout data");
                     
                     // Send the global loadout data to server for proper synchronization
@@ -170,8 +171,8 @@ public class LoadoutClientManager {
                     lastOperationSuccess = true;
                     lastOperationResult = "Sent global loadout data to server for sync: " + loadout.getName();
                 } else {
-                    // Pure client-side (shouldn't normally happen for global loadouts)
-                    System.out.println("DEBUG: applyGlobalLoadout - taking client-only path");
+                    // Not connected to server - apply client-side only (should be rare)
+                    System.out.println("DEBUG: applyGlobalLoadout - not connected to server, taking client-only path");
                     loadout.applyToPlayer(client.player);
                     
                     lastOperationSuccess = true;
@@ -218,9 +219,9 @@ public class LoadoutClientManager {
             if (client.player != null) {
                 System.out.println("DEBUG: applyLocalLoadout - checking if server-side sync needed");
                 
-                // Check if we're in a world where server-side synchronization is needed
-                if (client.getNetworkHandler() != null && client.getServer() != null) {
-                    // Single-player or integrated server - need server-side sync for survival mode
+                // Check if we're connected to any server (single-player or multiplayer)
+                if (client.getNetworkHandler() != null) {
+                    // Connected to server (single-player or multiplayer) - need server-side sync for survival mode
                     System.out.println("DEBUG: applyLocalLoadout - taking server path for sync, sending loadout data");
                     
                     // Send the local loadout data to server for proper synchronization
@@ -229,8 +230,8 @@ public class LoadoutClientManager {
                     lastOperationSuccess = true;
                     lastOperationResult = "Sent local loadout data to server for sync: " + loadout.getName();
                 } else {
-                    // Pure client-side (shouldn't normally happen for local loadouts)
-                    System.out.println("DEBUG: applyLocalLoadout - taking client-only path");
+                    // Not connected to server - apply client-side only (should be rare)
+                    System.out.println("DEBUG: applyLocalLoadout - not connected to server, taking client-only path");
                     loadout.applyToPlayer(client.player);
                     
                     lastOperationSuccess = true;

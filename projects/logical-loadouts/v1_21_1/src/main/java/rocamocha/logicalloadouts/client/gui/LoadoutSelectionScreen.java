@@ -294,36 +294,30 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     }
     
     private void saveCurrentToLoadout() {
+        // Always create a new loadout (same as "Create" button) - this works correctly
+        String name;
         if (selectedLoadout != null) {
-            // Overwrite the selected loadout with current inventory
-            System.out.println("Overwriting selected loadout: " + selectedLoadout.getName());
-            boolean success = manager.saveLocalLoadout(selectedLoadout.getName());
-            if (success) {
-                System.out.println("Successfully updated loadout: " + selectedLoadout.getName());
-                
-                // Server-side loadout application will handle inventory changes properly
-                System.out.println("Loadout saved - inventory clearing will be handled by server-side sync");
-                
-                refreshLoadouts();
-            } else {
-                System.out.println("Failed to update loadout: " + manager.getLastOperationResult());
-            }
+            // Use the selected loadout's name but create a new loadout (overwrite behavior)
+            name = selectedLoadout.getName();
+            System.out.println("Creating new loadout with existing name: " + name);
         } else {
             // No selection - create a new loadout with timestamp name
-            String name = "Loadout_" + System.currentTimeMillis();
+            name = "Loadout_" + System.currentTimeMillis();
             System.out.println("Creating new loadout: " + name);
-            boolean success = manager.saveLocalLoadout(name);
-            if (success) {
-                System.out.println("Successfully created new loadout: " + name);
-                
-                // In survival mode, clear inventory after saving (representing storing items in the loadout)
-                // Server-side loadout application will handle inventory changes properly
-                System.out.println("New loadout saved - inventory clearing will be handled by server-side sync");
-                
-                refreshLoadouts();
-            } else {
-                System.out.println("Failed to create new loadout: " + manager.getLastOperationResult());
-            }
+        }
+        
+        // Use the same method as "Create" button - this works perfectly
+        boolean success = manager.createLoadout(name);
+        System.out.println("Create loadout result: " + success);
+        if (success) {
+            System.out.println("Success! Refreshing loadouts.");
+            
+            // Server-side loadout application will handle inventory changes properly
+            System.out.println("Loadout created - inventory clearing will be handled by server-side sync");
+            
+            refreshLoadouts();
+        } else {
+            System.out.println("Failed to create loadout: " + manager.getLastOperationResult());
         }
     }
     
@@ -488,8 +482,6 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
             }
         }
     }
-    
-
     
     // LoadoutUpdateListener implementation
     @Override

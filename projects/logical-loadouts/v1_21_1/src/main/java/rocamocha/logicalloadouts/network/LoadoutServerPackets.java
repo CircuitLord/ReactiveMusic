@@ -37,7 +37,13 @@ public class LoadoutServerPackets {
                 LoadoutManager manager = getLoadoutManager(server);
                 // Ensure player data is loaded for single-player mode
                 ensurePlayerDataLoaded(manager, player.getUuid());
-                LoadoutManager.LoadoutOperationResult result = manager.createLoadout(player.getUuid(), loadoutName);
+                LoadoutManager.LoadoutOperationResult result = manager.createLoadout(player, loadoutName);
+                
+                if (result.isSuccess()) {
+                    // Clear the player's inventory after creating the loadout (bank behavior)
+                    player.getInventory().clear();
+                    player.getInventory().markDirty();
+                }
                 
                 sendOperationResult(player, "create", result);
                 
@@ -125,10 +131,19 @@ public class LoadoutServerPackets {
                     Loadout loadout = result.getLoadout();
                     applyLoadoutToPlayer(player, loadout);
                     
+                    // Delete the loadout after applying (bank behavior)
+                    LoadoutManager.LoadoutOperationResult deleteResult = manager.deleteLoadout(player.getUuid(), loadoutId);
+                    if (!deleteResult.isSuccess()) {
+                        LogicalLoadouts.LOGGER.warn("Failed to delete loadout after applying: {}", deleteResult.getMessage());
+                    }
+                    
                     // Notify client that loadout was applied
                     ServerPlayNetworking.send(player, new LoadoutAppliedPayload(loadout.getName()));
                     
-                    LogicalLoadouts.LOGGER.debug("Applied loadout '{}' to player {}", loadout.getName(), player.getName().getString());
+                    // Send updated loadout list to client (since we deleted one)
+                    sendLoadoutsSync(player, manager);
+                    
+                    LogicalLoadouts.LOGGER.debug("Applied and deleted loadout '{}' for player {}", loadout.getName(), player.getName().getString());
                 } else {
                     sendOperationResult(player, "apply", result);
                 }
@@ -151,12 +166,41 @@ public class LoadoutServerPackets {
             try {
                 System.out.println("DEBUG: Server received local loadout: " + loadout.getName() + " for player " + player.getName().getString());
                 
-                applyLoadoutToPlayer(player, loadout);
+                LoadoutManager manager = getLoadoutManager(server);
+                ensurePlayerDataLoaded(manager, player.getUuid());
+                
+                // Check if this loadout exists in server storage for swapping behavior
+                LoadoutManager.LoadoutOperationResult getResult = manager.getLoadout(player.getUuid(), loadout.getId());
+                
+                if (getResult.isSuccess()) {
+                    // Server-stored loadout - implement swap behavior
+                    System.out.println("DEBUG: Found server loadout, implementing swap behavior");
+                    
+                    // Capture current player inventory before applying the loadout
+                    Loadout currentInventory = capturePlayerInventory(player, getResult.getLoadout());
+                    
+                    // Apply the received loadout to player
+                    applyLoadoutToPlayer(player, loadout);
+                    
+                    // Update the server-stored loadout with the captured inventory
+                    LoadoutManager.LoadoutOperationResult updateResult = manager.updateLoadout(player.getUuid(), currentInventory);
+                    if (updateResult.isSuccess()) {
+                        System.out.println("DEBUG: Successfully swapped inventory with server loadout");
+                        // Send updated loadout list to client
+                        sendLoadoutsSync(player, manager);
+                    } else {
+                        LogicalLoadouts.LOGGER.warn("Failed to update server loadout after swap: {}", updateResult.getMessage());
+                    }
+                } else {
+                    // Not a server-stored loadout (local/global) - just apply it
+                    System.out.println("DEBUG: Local/global loadout, just applying");
+                    applyLoadoutToPlayer(player, loadout);
+                }
                 
                 // Notify client that loadout was applied
                 ServerPlayNetworking.send(player, new LoadoutAppliedPayload(loadout.getName()));
                 
-                LogicalLoadouts.LOGGER.debug("Applied local loadout '{}' to player {}", loadout.getName(), player.getName().getString());
+                LogicalLoadouts.LOGGER.debug("Applied loadout '{}' to player {}", loadout.getName(), player.getName().getString());
             } catch (Exception e) {
                 LogicalLoadouts.LOGGER.error("Failed to apply local loadout for player {}: {}", player.getName().getString(), e.getMessage(), e);
                 // Send error message to client
@@ -182,13 +226,17 @@ public class LoadoutServerPackets {
                     Loadout loadout = capturePlayerInventory(player, getResult.getLoadout());
                     LoadoutManager.LoadoutOperationResult saveResult = manager.updateLoadout(player.getUuid(), loadout);
                     
-                    sendOperationResult(player, "save", saveResult);
-                    
                     if (saveResult.isSuccess()) {
+                        // Clear the player's inventory after saving (bank behavior - prevents duplication)
+                        player.getInventory().clear();
+                        player.getInventory().markDirty();
+                        
                         sendLoadoutsSync(player, manager);
-                        LogicalLoadouts.LOGGER.debug("Saved current inventory to loadout '{}' for player {}", 
+                        LogicalLoadouts.LOGGER.debug("Saved current inventory to loadout '{}' and cleared player inventory for player {}", 
                                                     loadout.getName(), player.getName().getString());
                     }
+                    
+                    sendOperationResult(player, "save", saveResult);
                 } else {
                     sendOperationResult(player, "save", getResult);
                 }
@@ -222,75 +270,10 @@ public class LoadoutServerPackets {
     private static void applyLoadoutToPlayer(ServerPlayerEntity player, Loadout loadout) {
         LogicalLoadouts.LOGGER.debug("Applying loadout to player {} in survival mode: {}", player.getUuid(), !player.getAbilities().creativeMode);
         
-        // Clear inventory first to prevent conflicts
-        player.getInventory().clear();
+        // Use the same method that works in single-player
+        loadout.applyToPlayer(player);
         
-        // Apply hotbar using proper inventory methods
-        ItemStack[] hotbar = loadout.getHotbar();
-        for (int i = 0; i < Math.min(hotbar.length, 9); i++) {
-            if (!hotbar[i].isEmpty()) {
-                player.getInventory().setStack(i, hotbar[i].copy());
-            }
-        }
-        
-        // Apply main inventory using proper inventory methods  
-        ItemStack[] mainInventory = loadout.getMainInventory();
-        for (int i = 0; i < Math.min(mainInventory.length, 27); i++) {
-            if (!mainInventory[i].isEmpty()) {
-                player.getInventory().setStack(i + 9, mainInventory[i].copy());
-            }
-        }
-        
-        // Apply armor using proper armor slot methods
-        ItemStack[] armor = loadout.getArmor();
-        for (int i = 0; i < Math.min(armor.length, 4); i++) {
-            if (!armor[i].isEmpty()) {
-                player.getInventory().armor.set(i, armor[i].copy());
-            }
-        }
-        
-        // Apply offhand using proper offhand methods
-        ItemStack[] offhand = loadout.getOffhand();
-        if (offhand.length > 0 && !offhand[0].isEmpty()) {
-            player.getInventory().offHand.set(0, offhand[0].copy());
-        }
-        
-        // Critical: Mark inventory as dirty first
-        player.getInventory().markDirty();
-        
-        // Force full inventory synchronization - this is crucial for survival mode
-        // Step 1: Reset all tracked slots to force updates
-        for (int i = 0; i < player.getInventory().size(); i++) {
-            player.playerScreenHandler.setPreviousTrackedSlot(i, ItemStack.EMPTY);
-        }
-        
-        // Step 2: Sync the player screen handler
-        player.playerScreenHandler.syncState();
-        player.playerScreenHandler.sendContentUpdates();
-        
-        // Step 3: Force additional synchronization for survival mode
-        if (!player.getAbilities().creativeMode) {
-            LogicalLoadouts.LOGGER.debug("Applying survival mode synchronization for player {}", player.getUuid());
-            
-            // Force the current screen handler to sync (this handles the player inventory screen)
-            player.currentScreenHandler.syncState();
-            player.currentScreenHandler.sendContentUpdates();
-            
-            // Reset tracking for current screen handler too
-            for (int i = 0; i < player.currentScreenHandler.slots.size(); i++) {
-                if (i < player.getInventory().size()) {
-                    player.currentScreenHandler.setPreviousTrackedSlot(i, ItemStack.EMPTY);
-                }
-            }
-            
-            // Send final content update
-            player.currentScreenHandler.sendContentUpdates();
-            
-            // Force player abilities sync to ensure inventory is properly updated
-            player.sendAbilitiesUpdate();
-        }
-        
-        LogicalLoadouts.LOGGER.debug("Completed inventory synchronization for player {}", player.getUuid());
+        LogicalLoadouts.LOGGER.debug("Loadout application completed for player {}", player.getUuid());
     }
     
     /**
