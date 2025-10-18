@@ -43,7 +43,7 @@ public final class SongPicker {
     public static Map<Entity, Long> recentEntityDamageSources = new HashMap<>();
 
 
-    private static final Set<String> BLOCK_COUNTER_BLACKLIST = Set.of("ore", "debris");
+    private static final Set<String> BLOCK_COUNTER_BLACKLIST = Set.of(); // = Set.of("ore", "debris");
 
     public static boolean queuedToPrintBlockCounter = false;
     public static BlockPos cachedBlockCounterOrigin;
@@ -137,7 +137,7 @@ public final class SongPicker {
 
         // TODO: someone help me I have no idea how to get the name of the world/server but if you know how then put it instead of "saved"
         if (!wasSleeping && player.isSleeping()) {
-            ReactiveMusic.config.savedHomePositions.put("saved", player.getPos());
+            ReactiveMusic.config.savedHomePositions.put("saved", player.getEntityPos());
 
             ModConfig.saveConfig();
         }
@@ -149,7 +149,7 @@ public final class SongPicker {
 
         if (ReactiveMusic.config.savedHomePositions.containsKey("saved")) {
 
-            Vec3d dist = player.getPos().subtract(ReactiveMusic.config.savedHomePositions.get("saved"));
+            Vec3d dist = player.getEntityPos().subtract(ReactiveMusic.config.savedHomePositions.get("saved"));
 
             songpackEventMap.put(SongpackEventType.HOME, dist.length() < 45.0f);
         }
@@ -189,8 +189,8 @@ public final class SongPicker {
         songpackEventMap.put(SongpackEventType.UNDERWATER, player.isSubmergedInWater());
 
         // Weather
-        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation(playerPos) == Biome.Precipitation.RAIN);
-        songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitation(playerPos) == Biome.Precipitation.SNOW);
+        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation(playerPos, world.getSeaLevel()) == Biome.Precipitation.RAIN);
+        songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitation(playerPos, world.getSeaLevel()) == Biome.Precipitation.SNOW);
 
         songpackEventMap.put(SongpackEventType.STORM, world.isThundering());
 
@@ -330,7 +330,7 @@ public final class SongPicker {
 
             if (queuedToPrintBlockCounter) {
 
-                player.sendMessage(Text.of("[ReactiveMusic]: Logging Block Counter map!"));
+                player.sendMessage(Text.of("[ReactiveMusic]: Logging Block Counter map! Radius: " + RADIUS), false);
 
                 blockCounterMap.entrySet().stream()
                         .sorted(Map.Entry.<String, Integer>comparingByValue(Comparator.reverseOrder()))

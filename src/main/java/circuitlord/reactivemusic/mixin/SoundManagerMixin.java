@@ -1,20 +1,33 @@
 package circuitlord.reactivemusic.mixin;
 
 import circuitlord.reactivemusic.ReactiveMusic;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.client.sound.SoundManager;
+import net.minecraft.client.sound.SoundSystem;
+import net.minecraft.text.Text;
+import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(SoundManager.class)
 public class SoundManagerMixin {
 
-    @Inject(method = "Lnet/minecraft/client/sound/SoundManager;play(Lnet/minecraft/client/sound/SoundInstance;)V", at = @At("HEAD"), cancellable = true)
-    private void play(SoundInstance soundInstance, CallbackInfo ci) {
+    @Inject(method = "play(Lnet/minecraft/client/sound/SoundInstance;)Lnet/minecraft/client/sound/SoundSystem$PlayResult;", at = @At("HEAD"), cancellable = true)
+    private void play(SoundInstance soundInstance, CallbackInfoReturnable<SoundSystem.PlayResult> cir) {
 
         String path = soundInstance.getId().getPath();
+
+
+        MinecraftClient mc = MinecraftClient.getInstance();
+
+
+        if (mc.player != null && ReactiveMusic.printSoundEvents) {
+            mc.player.sendMessage(Text.of("[ReactiveMusic]: Sound: " + path + " Attenuation: " + soundInstance.getAttenuationType()), false);
+        }
 
         if (path.contains("music_disc")) {
             ReactiveMusic.trackedSoundsMuteMusic.add(soundInstance);

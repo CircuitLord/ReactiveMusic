@@ -26,8 +26,8 @@
 		"reactivemusic.mixins.json"
 	],
 	"depends": {
-		"fabricloader": ">=0.15.11",
-		"minecraft": ["1.21", "1.21.1"],
+		"fabricloader": ">=0.17.3",
+		"minecraft": ["1.21.9", "1.21.10", "1.21.11", "1.21.12"],
 		"java": ">=21",
 		"yet_another_config_lib_v3": "*"
 	},

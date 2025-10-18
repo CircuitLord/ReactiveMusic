@@ -81,6 +81,8 @@ public class ReactiveMusic implements ModInitializer {
 	private static List<RMRuntimeEntry> loadedEntries = new ArrayList<>();
 
 
+    public static boolean printSoundEvents = false;
+
 	public static final List<SoundInstance> trackedSoundsMuteMusic = new ArrayList<SoundInstance>();
 
 
@@ -151,6 +153,15 @@ public class ReactiveMusic implements ModInitializer {
 							return 1;
 						})
 				)
+
+                .then(ClientCommandManager.literal("toggleSoundEventLogging")
+                        .executes(context -> {
+
+                            printSoundEvents = !printSoundEvents;
+
+                            return 1;
+                        })
+                )
 
 				.then(ClientCommandManager.literal("blacklistDimension")
 						.executes(context -> {
@@ -640,7 +651,7 @@ public class ReactiveMusic implements ModInitializer {
 				Vec3d pos = new Vec3d(soundInstance.getX(), soundInstance.getY(), soundInstance.getZ());
 
 				if (MinecraftClient.getInstance().player != null) {
-					Vec3d dist = MinecraftClient.getInstance().player.getPos().subtract(pos);
+					Vec3d dist = MinecraftClient.getInstance().player.getEntityPos().subtract(pos);
 
 					if (dist.length() > 65.f) {
 						continue;
