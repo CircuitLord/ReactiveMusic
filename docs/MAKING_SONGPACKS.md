@@ -190,12 +190,33 @@ Dimensions can be specified by doing `DIM=dimname`. Similar to biome events, thi
 
 In version 1.2.0 and above, you can detect nearby blocks in a square 25 block radius.
 
+Use `/reactivemusic logBlockCounter` to print the nearby block counts to get an idea of what numbers to use.
+
 Fortress detection example:
 ```
 # 1000 nether bricks and 2 brick fences within 25 blocks
 [ "DIM=NETHER", "BLOCK=nether_bricks,1000", BLOCK=nether_brick_fence,2" ]
 ```
 
+
+<br><br>
+
+
+# Mod Configuration
+
+## Making Sounds Mute Music
+
+In-game, do `/reactivemusic toggleSoundEventLogging` to start printing the nearby sound events happening into chat.
+
+In the ReactiveMusic.json5 config, you can edit the `soundsMuteMusic` field with the names/partial names of any sound events that you want to mute RM when they play. This requires a game restart to be re-loaded.
+
+Example:
+```
+  # Mute RM when near a beacon block
+	soundsMuteMusic: [
+		"block.beacon.ambient"
+	],
+```
 
 <br><br>
 
