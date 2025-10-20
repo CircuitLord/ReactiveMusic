@@ -8,7 +8,7 @@ if "%1"=="" (
     findstr "mochamix.project=" gradle.properties 2>nul || echo mochamix.project=not set
     findstr "mochamix.adapter=" gradle.properties 2>nul || echo mochamix.adapter=not set
     echo.
-    echo Available projects: mochamix, logical-loadouts
+    echo Available projects: mochamix, logical-loadouts, voidloom
     echo Available adapters: v1_21_1, v1_21_5
     echo Usage: switch-project.bat [project] [adapter]
     echo Example: switch-project.bat mochamix v1_21_1
@@ -18,7 +18,7 @@ if "%1"=="" (
 if "%2"=="" (
     echo Error: Both project and adapter must be specified
     echo Usage: switch-project.bat [project] [adapter]
-    echo Available projects: mochamix, logical-loadouts
+    echo Available projects: mochamix, logical-loadouts, voidloom
     echo Available adapters: v1_21_1, v1_21_5
     goto :eof
 )
@@ -26,8 +26,9 @@ if "%2"=="" (
 REM Validate project
 if "%1"=="mochamix" goto :checkAdapter
 if "%1"=="logical-loadouts" goto :checkAdapter
+if "%1"=="voidloom" goto :checkAdapter
 echo Invalid project: %1
-echo Valid options: mochamix, logical-loadouts
+echo Valid options: mochamix, logical-loadouts, voidloom
 goto :eof
 
 :checkAdapter

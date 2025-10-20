@@ -17,7 +17,7 @@ def getActiveProject() {
     propsFile.withInputStream { props.load(it) }
     
     def project = props.getProperty('mochamix.project', 'mochamix')
-    def validProjects = ['mochamix', 'logical-loadouts']
+    def validProjects = ['mochamix', 'logical-loadouts', 'voidloom']
     
     return validProjects.contains(project) ? project : 'mochamix'
 }

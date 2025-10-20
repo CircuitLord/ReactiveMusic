@@ -1,0 +1,29 @@
+{
+    "schemaVersion": 1,
+    "id": "voidloom",
+    "version": "1.0.0",
+    "name": "Voidloom: Endless Dungeon",
+    "description": "Data-driven endless dungeon crawling!",
+    "authors": ["rocamocha"],
+    "contact": {},
+    "license": "MIT",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "rocamocha.voidloom.fabric.Voidloom"
+        ],
+        "client": [
+        ]
+    },
+    "mixins": [
+        "voidloom.mixins.json"
+    ],
+    "depends": {
+        "fabricloader": ">=0.16.0",
+        "minecraft": ">=1.21.1",
+        "java": ">=21"
+    },
+    "suggests": {
+        "fabric-api": "*"
+    }
+}
