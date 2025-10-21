@@ -1,6 +1,6 @@
 package rocamocha.voidloom;
 
-import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,15 +14,15 @@ import org.slf4j.LoggerFactory;
  * - projects/[project]/common/src/main/java/rocamocha/[project]/ (for shared code)
  * - projects/[project]/v1_21_1/src/main/java/rocamocha/[project]/ (for version-specific code)
  */
-public class Voidloom implements ClientModInitializer {
+public class Voidloom implements ModInitializer {
     public static final String MOD_ID = "voidloom";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     @Override
-    public void onInitializeClient() {
+    public void onInitialize() {
         LOGGER.info("Initializing Voidloom...");
         
-        // Add your mod initialization code here
+        VoidloomDimensionBootstrap.registerLifecycleCallbacks();
         
         LOGGER.info("Voidloom initialized successfully!");
     }

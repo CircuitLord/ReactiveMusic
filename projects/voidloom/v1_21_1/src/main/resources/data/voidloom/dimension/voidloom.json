@@ -1,0 +1,26 @@
+{
+  "type": "voidloom:voidloom_void",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "layers": [
+        {
+          "block": "minecraft:air",
+          "height": 384
+        }
+      ],
+      "biome": "voidloom:voidloom_depths",
+      "lakes": false,
+      "features": false,
+      "structures": {
+        "structures": {
+          "voidloom:devs": {
+            "spacing": 32,
+            "separation": 8,
+            "salt": 123456789
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "temperature": 0.8,
+  "downfall": 0.0,
+  "has_precipitation": false,
+  "temperature_modifier": "none",
+  "precipitation": "none",
+  "effects": {
+    "sky_color": 4152319,
+    "fog_color": 1841942,
+    "water_color": 2236962,
+    "water_fog_color": 855309,
+    "grass_color_modifier": "none",
+    "mood_sound": {
+      "sound": "minecraft:ambient.basalt_deltas.mood",
+      "tick_delay": 6000,
+      "block_search_extent": 8,
+      "offset": 2.0
+    },
+    "music": {
+      "sound": "minecraft:music.nether.basalt_deltas",
+      "min_delay": 12000,
+      "max_delay": 24000,
+      "replace_current_music": false
+    }
+  },
+  "spawners": {},
+  "spawn_costs": {},
+  "carvers": {},
+  "features": [],
+  "starts": [
+    "voidloom:dev"
+  ]
+}

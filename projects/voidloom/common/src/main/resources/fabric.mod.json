@@ -10,7 +10,7 @@
     "environment": "*",
     "entrypoints": {
         "main": [
-            "rocamocha.voidloom.fabric.Voidloom"
+            "rocamocha.voidloom.Voidloom"
         ],
         "client": [
         ]
