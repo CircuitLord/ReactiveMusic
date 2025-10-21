@@ -174,6 +174,25 @@ if (targetProject != null) {
             }
         }
         
+        // Tasks to clear log directories, excluding latest.log
+        task clearClientLogs(type: Delete) {
+            def logsDir = file("../../../run/client/${activeAdapter}/logs")
+            if (logsDir.exists() && logsDir.isDirectory()) {
+                delete logsDir.listFiles().findAll { it.isFile() && it.name != "latest.log" }
+            }
+        }
+        
+        task clearServerLogs(type: Delete) {
+            def logsDir = file("../../../run/server/${activeAdapter}/logs")
+            if (logsDir.exists() && logsDir.isDirectory()) {
+                delete logsDir.listFiles().findAll { it.isFile() && it.name != "latest.log" }
+            }
+        }
+        
+        task clearLogs {
+            dependsOn clearClientLogs, clearServerLogs
+        }
+        
         java {
             toolchain.languageVersion = JavaLanguageVersion.of(21)
             withSourcesJar()
@@ -181,6 +200,90 @@ if (targetProject != null) {
         
         tasks.withType(JavaCompile) {
             options.release = 21
+        }
+    }
+}
+
+// Task to clear logs for all adapters, excluding latest.log
+task clearAllLogs {
+    doLast {
+        minecraftTargets.keySet().each { adapter ->
+            def clientLogsDir = file("run/client/${adapter}/logs")
+            def serverLogsDir = file("run/server/${adapter}/logs")
+            if (clientLogsDir.exists() && clientLogsDir.isDirectory()) {
+                delete(clientLogsDir.listFiles().findAll { it.isFile() && it.name != "latest.log" })
+            }
+            if (serverLogsDir.exists() && serverLogsDir.isDirectory()) {
+                delete(serverLogsDir.listFiles().findAll { it.isFile() && it.name != "latest.log" })
+            }
+        }
+    }
+}
+
+// Task to diff source directories between two adapters, only for files in the latest adapter
+task diffAdapters {
+    def adapter1 = findProperty('adapter1') ?: 'v1_21_1'
+    def adapter2 = findProperty('adapter2') ?: 'v1_21_5'
+    def projectName = activeProject
+    
+    doFirst {
+        println "Comparing files in projects/${projectName}/${adapter2}/src (latest adapter) with projects/${projectName}/${adapter1}/src"
+    }
+    
+    doLast {
+        def dir1 = file("projects/${projectName}/${adapter1}/src")
+        def dir2 = file("projects/${projectName}/${adapter2}/src")
+        
+        fileTree(dir2).each { File file ->
+            def relativePath = dir2.relativePath(file)
+            def file1 = new File(dir1, relativePath)
+            
+            if (file1.exists()) {
+                def path1 = file1.absolutePath?.replace('\\', '/')
+                def path2 = file.absolutePath?.replace('\\', '/')
+                if (path1 && path2) {
+                    def command = ['git', 'diff', '--no-index', path1, path2]
+                    def pb = new ProcessBuilder(command)
+                    pb.redirectErrorStream(true)
+                    def proc = pb.start()
+                    proc.waitFor()
+                    def output = proc.inputStream.text.trim()
+                    if (!output.isEmpty()) {
+                        // Open VSCode diff for this file
+                        exec {
+                            commandLine 'cmd', '/c', "code --diff \"${path1}\" \"${path2}\""
+                            ignoreExitValue = true
+                        }
+                    }
+                } else {
+                    println "Skipping due to null path: path1=${path1}, path2=${path2}"
+                }
+            }
+        }
+    }
+}
+
+// Task to open VSCode diff viewer for the same file in two adapters
+task diffFile {
+    def filePath = findProperty('file') ?: 'main/java/com/example/Test.java'
+    def adapter1 = findProperty('adapter1') ?: 'v1_21_1'
+    def adapter2 = findProperty('adapter2') ?: 'v1_21_5'
+    def projectName = activeProject
+    
+    doLast {
+        def file1 = file("projects/${projectName}/${adapter1}/src/${filePath}")
+        def file2 = file("projects/${projectName}/${adapter2}/src/${filePath}")
+        
+        if (file1.exists() && file2.exists()) {
+            def path1 = file1.absolutePath
+            def path2 = file2.absolutePath
+            println "Opening VSCode diff for ${filePath} between ${adapter1} and ${adapter2}"
+            exec {
+                commandLine 'cmd', '/c', "code --diff \"${path1}\" \"${path2}\""
+                ignoreExitValue = true
+            }
+        } else {
+            println "File ${filePath} does not exist in both adapters: ${adapter1} (${file1.exists()}), ${adapter2} (${file2.exists()})"
         }
     }
 }
