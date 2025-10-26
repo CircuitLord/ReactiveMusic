@@ -10,13 +10,14 @@ import rocamocha.logicalloadouts.LogicalLoadouts;
 
 import java.util.List;
 
-public record LoadoutsSyncPayload(List<NbtCompound> loadouts) implements CustomPayload {
+public record LoadoutsSyncPayload(List<NbtCompound> personalLoadouts, List<NbtCompound> serverSharedLoadouts) implements CustomPayload {
     public static final CustomPayload.Id<LoadoutsSyncPayload> ID = new CustomPayload.Id<>(
         Identifier.of(LogicalLoadouts.MOD_ID, "loadouts_sync")
     );
     
     public static final PacketCodec<RegistryByteBuf, LoadoutsSyncPayload> CODEC = PacketCodec.tuple(
-        PacketCodecs.NBT_COMPOUND.collect(PacketCodecs.toList()), LoadoutsSyncPayload::loadouts,
+        PacketCodecs.NBT_COMPOUND.collect(PacketCodecs.toList()), LoadoutsSyncPayload::personalLoadouts,
+        PacketCodecs.NBT_COMPOUND.collect(PacketCodecs.toList()), LoadoutsSyncPayload::serverSharedLoadouts,
         LoadoutsSyncPayload::new
     );
     

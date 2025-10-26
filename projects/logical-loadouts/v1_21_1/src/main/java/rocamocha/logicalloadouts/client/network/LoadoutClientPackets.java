@@ -37,21 +37,29 @@ public class LoadoutClientPackets {
      */
     private static void handleLoadoutsSync(LoadoutsSyncPayload payload, ClientPlayNetworking.Context context) {
         MinecraftClient client = context.client();
-        List<NbtCompound> loadoutNbts = payload.loadouts();
+        List<NbtCompound> personalLoadoutNbts = payload.personalLoadouts();
+        List<NbtCompound> serverSharedLoadoutNbts = payload.serverSharedLoadouts();
         
         client.execute(() -> {
             try {
-                List<Loadout> loadouts = new ArrayList<>();
-                for (NbtCompound nbt : loadoutNbts) {
+                List<Loadout> personalLoadouts = new ArrayList<>();
+                for (NbtCompound nbt : personalLoadoutNbts) {
                     Loadout loadout = Loadout.fromNbt(nbt);
-                    loadouts.add(loadout);
+                    personalLoadouts.add(loadout);
+                }
+                
+                List<Loadout> serverSharedLoadouts = new ArrayList<>();
+                for (NbtCompound nbt : serverSharedLoadoutNbts) {
+                    Loadout loadout = Loadout.fromNbt(nbt);
+                    serverSharedLoadouts.add(loadout);
                 }
                 
                 // Update client manager with server loadouts
                 LoadoutClientManager manager = LoadoutClientManager.getInstance();
-                manager.handleServerLoadoutsSync(loadouts);
+                manager.handleServerLoadoutsSync(personalLoadouts, serverSharedLoadouts);
                 
-                LogicalLoadouts.LOGGER.debug("Synchronized {} loadouts from server", loadouts.size());
+                LogicalLoadouts.LOGGER.debug("Synchronized {} personal and {} server-shared loadouts from server", 
+                    personalLoadouts.size(), serverSharedLoadouts.size());
             } catch (Exception e) {
                 LogicalLoadouts.LOGGER.error("Failed to handle loadouts sync", e);
             }

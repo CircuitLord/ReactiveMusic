@@ -322,15 +322,25 @@ public class LoadoutServerPackets {
      * Send complete loadout list to client
      */
     private static void sendLoadoutsSync(ServerPlayerEntity player, LoadoutManager manager) {
-        List<Loadout> loadouts = manager.getPlayerLoadouts(player.getUuid());
+        UUID playerUuid = player.getUuid();
         
-        // Convert loadouts to NBT compound list for transmission
-        List<NbtCompound> loadoutNbts = loadouts.stream()
+        // Get personal loadouts for this player
+        List<Loadout> personalLoadouts = manager.getPersonalLoadouts(playerUuid);
+        
+        // Get server-shared loadouts (available to all players)
+        List<Loadout> serverSharedLoadouts = manager.getServerSharedLoadouts();
+        
+        // Convert to NBT for transmission
+        List<NbtCompound> personalLoadoutNbts = personalLoadouts.stream()
+            .map(Loadout::toNbt)
+            .collect(Collectors.toList());
+            
+        List<NbtCompound> serverSharedLoadoutNbts = serverSharedLoadouts.stream()
             .map(Loadout::toNbt)
             .collect(Collectors.toList());
         
         // Send using modern CustomPayload system
-        ServerPlayNetworking.send(player, new LoadoutsSyncPayload(loadoutNbts));
+        ServerPlayNetworking.send(player, new LoadoutsSyncPayload(personalLoadoutNbts, serverSharedLoadoutNbts));
     }
     
     /**

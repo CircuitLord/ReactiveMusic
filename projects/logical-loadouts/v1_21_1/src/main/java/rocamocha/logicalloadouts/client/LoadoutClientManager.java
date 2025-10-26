@@ -6,10 +6,10 @@ import rocamocha.logicalloadouts.data.Loadout;
 import rocamocha.logicalloadouts.network.packets.*;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.nio.file.Path;
 
 /**
  * Hybrid client-side manager for loadout data.
@@ -21,6 +21,7 @@ public class LoadoutClientManager {
     
     // Server loadouts (when connected to a server with loadout support)
     private final Map<UUID, Loadout> serverLoadouts = new LinkedHashMap<>();
+    private final Map<UUID, Loadout> serverSharedLoadouts = new LinkedHashMap<>();
     
     // Local storage for client-side and global loadouts
     private final LocalLoadoutStorage localStorage = LocalLoadoutStorage.getInstance();
@@ -79,10 +80,34 @@ public class LoadoutClientManager {
             case LOCAL:
                 return localStorage.getLocalLoadouts();
             case SERVER:
-                return new ArrayList<>(serverLoadouts.values());
+                return new ArrayList<>(serverSharedLoadouts.values());
             default:
                 return new ArrayList<>();
         }
+    }
+    
+    /**
+     * Get personal loadouts (global + local + personal server loadouts)
+     */
+    public List<Loadout> getPersonalLoadouts() {
+        List<Loadout> personalLoadouts = new ArrayList<>();
+        
+        // Add global loadouts first (these are always available)
+        for (Loadout loadout : localStorage.getGlobalLoadouts()) {
+            if (loadout != null) {
+                personalLoadouts.add(loadout);
+            }
+        }
+        
+        // Add local loadouts
+        personalLoadouts.addAll(localStorage.getLocalLoadouts());
+        
+        // Add personal server loadouts if connected
+        if (isConnectedToServer) {
+            personalLoadouts.addAll(serverLoadouts.values());
+        }
+        
+        return personalLoadouts;
     }
     
     /**
@@ -104,6 +129,7 @@ public class LoadoutClientManager {
         // Add server loadouts if connected
         if (isConnectedToServer) {
             allLoadouts.addAll(serverLoadouts.values());
+            allLoadouts.addAll(serverSharedLoadouts.values());
         }
         
         return allLoadouts;
@@ -143,6 +169,13 @@ public class LoadoutClientManager {
         if (isConnectedToServer && serverLoadouts.containsKey(loadoutId)) {
             System.out.println("DEBUG: Found in server loadouts, applying...");
             Loadout loadout = serverLoadouts.get(loadoutId);
+            return applyLocalLoadout(loadout);  // Use same approach as local/global loadouts
+        }
+        
+        // Check server-shared loadouts if connected
+        if (isConnectedToServer && serverSharedLoadouts.containsKey(loadoutId)) {
+            System.out.println("DEBUG: Found in server-shared loadouts, applying...");
+            Loadout loadout = serverSharedLoadouts.get(loadoutId);
             return applyLocalLoadout(loadout);  // Use same approach as local/global loadouts
         }
         
@@ -247,25 +280,6 @@ public class LoadoutClientManager {
             LogicalLoadouts.LOGGER.error("Failed to apply local loadout", e);
         }
         return false;
-    }
-    
-    /**
-     * Apply a server loadout
-     */
-    private boolean applyServerLoadout(UUID loadoutId) {
-        try {
-            // Send apply loadout request to server using modern CustomPayload system
-            ClientPlayNetworking.send(new ApplyLoadoutPayload(loadoutId));
-            
-            lastOperationSuccess = true;
-            lastOperationResult = "Sent apply request to server for loadout: " + loadoutId;
-            return true;
-        } catch (Exception e) {
-            lastOperationSuccess = false;
-            lastOperationResult = "Failed to send apply request: " + e.getMessage();
-            LogicalLoadouts.LOGGER.error("Failed to apply server loadout", e);
-            return false;
-        }
     }
     
     /**
@@ -405,6 +419,181 @@ public class LoadoutClientManager {
             return false;
         }
     }
+    public boolean exportLoadout(UUID loadoutId, String filename) {
+        try {
+            // Find the loadout
+            Loadout loadout = null;
+            
+            // Check global loadouts first
+            Loadout[] globalLoadouts = localStorage.getGlobalLoadouts();
+            for (Loadout globalLoadout : globalLoadouts) {
+                if (globalLoadout != null && globalLoadout.getId().equals(loadoutId)) {
+                    loadout = globalLoadout;
+                    break;
+                }
+            }
+            
+            // Check local loadouts if not found in global
+            if (loadout == null) {
+                for (Loadout localLoadout : localStorage.getLocalLoadouts()) {
+                    if (localLoadout.getId().equals(loadoutId)) {
+                        loadout = localLoadout;
+                        break;
+                    }
+                }
+            }
+            
+            // Check server loadouts if connected and not found elsewhere
+            if (loadout == null && isConnectedToServer && serverLoadouts.containsKey(loadoutId)) {
+                loadout = serverLoadouts.get(loadoutId);
+            }
+            
+            // Check server-shared loadouts if connected and not found elsewhere
+            if (loadout == null && isConnectedToServer && serverSharedLoadouts.containsKey(loadoutId)) {
+                loadout = serverSharedLoadouts.get(loadoutId);
+            }
+            
+            if (loadout == null) {
+                lastOperationSuccess = false;
+                lastOperationResult = "Loadout not found for export: " + loadoutId;
+                return false;
+            }
+            
+            // Get the exported directory path
+            MinecraftClient client = MinecraftClient.getInstance();
+            Path exportedPath;
+            
+            if (client.getServer() != null) {
+                // Single-player mode - use integrated server save path
+                exportedPath = client.getServer().getSavePath(net.minecraft.util.WorldSavePath.ROOT)
+                    .resolve("logical-loadouts").resolve("exported");
+            } else {
+                // Multiplayer client - use local directory (limited functionality)
+                exportedPath = java.nio.file.Paths.get("logical-loadouts", "exported");
+            }
+            
+            // Create the exported directory if it doesn't exist
+            java.nio.file.Files.createDirectories(exportedPath);
+            
+            // Sanitize filename and add .nbt extension if not present
+            if (!filename.toLowerCase().endsWith(".nbt")) {
+                filename += ".nbt";
+            }
+            filename = filename.replaceAll("[^a-zA-Z0-9_.-]", "_");
+            
+            // Save the loadout
+            Path exportFile = exportedPath.resolve(filename);
+            net.minecraft.nbt.NbtIo.writeCompressed(loadout.toNbt(), exportFile);
+            
+            lastOperationSuccess = true;
+            lastOperationResult = "Exported loadout '" + loadout.getName() + "' to: " + exportFile.toString();
+            
+            LogicalLoadouts.LOGGER.info("Exported loadout '{}' to {}", loadout.getName(), exportFile);
+            return true;
+            
+        } catch (Exception e) {
+            lastOperationSuccess = false;
+            lastOperationResult = "Failed to export loadout: " + e.getMessage();
+            LogicalLoadouts.LOGGER.error("Failed to export loadout", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Load server-shared loadouts from the logical-loadouts/server directory
+     */
+    public List<Loadout> loadServerSharedLoadouts() {
+        List<Loadout> serverLoadouts = new ArrayList<>();
+        
+        try {
+            MinecraftClient client = MinecraftClient.getInstance();
+            Path serverLoadoutsPath;
+            
+            if (client.getServer() != null) {
+                // Single-player mode - use integrated server save path
+                serverLoadoutsPath = client.getServer().getSavePath(net.minecraft.util.WorldSavePath.ROOT)
+                    .resolve("logical-loadouts").resolve("server");
+            } else {
+                // Multiplayer client - this shouldn't happen for server loadouts
+                LogicalLoadouts.LOGGER.warn("Attempted to load server loadouts in multiplayer client mode");
+                return serverLoadouts;
+            }
+            
+            if (!java.nio.file.Files.exists(serverLoadoutsPath)) {
+                java.nio.file.Files.createDirectories(serverLoadoutsPath);
+                return serverLoadouts;
+            }
+            
+            // Load all .nbt files from the server directory
+            try (java.nio.file.DirectoryStream<java.nio.file.Path> stream = 
+                 java.nio.file.Files.newDirectoryStream(serverLoadoutsPath, "*.nbt")) {
+                for (java.nio.file.Path file : stream) {
+                    try {
+                        net.minecraft.nbt.NbtCompound nbt = net.minecraft.nbt.NbtIo.readCompressed(file, net.minecraft.nbt.NbtSizeTracker.ofUnlimitedBytes());
+                        Loadout loadout = Loadout.fromNbt(nbt);
+                        
+                        if (loadout.isValid()) {
+                            serverLoadouts.add(loadout);
+                        } else {
+                            LogicalLoadouts.LOGGER.warn("Invalid server loadout found: {}", file.getFileName());
+                        }
+                    } catch (Exception e) {
+                        LogicalLoadouts.LOGGER.error("Failed to load server loadout: {}", file.getFileName(), e);
+                    }
+                }
+            }
+            
+            LogicalLoadouts.LOGGER.debug("Loaded {} server-shared loadouts", serverLoadouts.size());
+            
+        } catch (Exception e) {
+            LogicalLoadouts.LOGGER.error("Failed to load server-shared loadouts", e);
+        }
+        
+        return serverLoadouts;
+    }
+    
+    /**
+     * Save a loadout to the server-shared directory
+     */
+    public boolean saveServerSharedLoadout(Loadout loadout) {
+        try {
+            MinecraftClient client = MinecraftClient.getInstance();
+            Path serverLoadoutsPath;
+            
+            if (client.getServer() != null) {
+                // Single-player mode - use integrated server save path
+                serverLoadoutsPath = client.getServer().getSavePath(net.minecraft.util.WorldSavePath.ROOT)
+                    .resolve("logical-loadouts").resolve("server");
+            } else {
+                // Multiplayer client - cannot save server loadouts
+                lastOperationSuccess = false;
+                lastOperationResult = "Cannot save server loadouts from multiplayer client";
+                return false;
+            }
+            
+            // Create directory if it doesn't exist
+            java.nio.file.Files.createDirectories(serverLoadoutsPath);
+            
+            // Sanitize filename
+            String filename = loadout.getName().replaceAll("[^a-zA-Z0-9_-]", "_") + ".nbt";
+            Path loadoutFile = serverLoadoutsPath.resolve(filename);
+            
+            // Save the loadout
+            net.minecraft.nbt.NbtIo.writeCompressed(loadout.toNbt(), loadoutFile);
+            
+            lastOperationSuccess = true;
+            lastOperationResult = "Saved server-shared loadout: " + loadout.getName();
+            
+            LogicalLoadouts.LOGGER.info("Saved server-shared loadout '{}' to {}", loadout.getName(), loadoutFile);
+            return true;
+            
+        } catch (Exception e) {
+            lastOperationSuccess = false;
+            lastOperationResult = "Failed to save server-shared loadout: " + e.getMessage();
+            LogicalLoadouts.LOGGER.error("Failed to save server-shared loadout", e);
+            return false;
+        }
+    }
     
     /**
      * Delete a loadout by UUID
@@ -455,6 +644,13 @@ public class LoadoutClientManager {
         if (isConnectedToServer && serverLoadouts.containsKey(loadoutId)) {
             System.out.println("Attempting to delete from server...");
             return deleteServerLoadout(loadoutId);
+        }
+        
+        // Check server-shared loadouts if connected (these are read-only, can't delete)
+        if (isConnectedToServer && serverSharedLoadouts.containsKey(loadoutId)) {
+            lastOperationSuccess = false;
+            lastOperationResult = "Cannot delete server-shared loadouts";
+            return false;
         }
         
         System.out.println("Loadout not found in local or server storage");
@@ -543,6 +739,7 @@ public class LoadoutClientManager {
         
         if (!actuallyConnected) {
             serverLoadouts.clear();
+            serverSharedLoadouts.clear();
         } else {
             // When connecting to a server (or in single-player), request loadouts
             requestLoadoutsFromServer();
@@ -613,16 +810,22 @@ public class LoadoutClientManager {
     /**
      * Handle loadouts synchronization from server
      */
-    public void handleServerLoadoutsSync(List<Loadout> serverLoadouts) {
+    public void handleServerLoadoutsSync(List<Loadout> personalLoadouts, List<Loadout> serverSharedLoadouts) {
         this.serverLoadouts.clear();
+        this.serverSharedLoadouts.clear();
         
-        // Convert list to map with UUID -> Loadout mapping
-        for (Loadout loadout : serverLoadouts) {
+        // Convert personal loadouts list to map with UUID -> Loadout mapping
+        for (Loadout loadout : personalLoadouts) {
             this.serverLoadouts.put(loadout.getId(), loadout);
         }
         
+        // Convert server-shared loadouts list to map with UUID -> Loadout mapping
+        for (Loadout loadout : serverSharedLoadouts) {
+            this.serverSharedLoadouts.put(loadout.getId(), loadout);
+        }
+        
         lastOperationSuccess = true;
-        lastOperationResult = "Synchronized " + serverLoadouts.size() + " loadouts from server";
+        lastOperationResult = "Synchronized " + personalLoadouts.size() + " personal and " + serverSharedLoadouts.size() + " server-shared loadouts from server";
         
         notifyListeners();
     }

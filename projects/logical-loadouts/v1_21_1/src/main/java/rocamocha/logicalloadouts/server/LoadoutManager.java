@@ -8,7 +8,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.WorldSavePath;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,6 +29,12 @@ public class LoadoutManager {
     // In-memory cache for active players (UUID -> Map of loadout ID -> Loadout)
     private final Map<UUID, Map<UUID, Loadout>> playerLoadouts = new ConcurrentHashMap<>();
     
+    // In-memory cache for server-shared loadouts (available to all players)
+    private final Map<UUID, Loadout> serverSharedLoadouts = new ConcurrentHashMap<>();
+    
+    // Path to server-shared loadouts directory
+    private final Path serverLoadoutsPath;
+    
     // Configuration
     private int maxLoadoutsPerPlayer = DEFAULT_MAX_LOADOUTS_PER_PLAYER;
     private final Set<String> bannedItems = new HashSet<>(); // Item IDs that can't be stored in loadouts
@@ -37,14 +42,55 @@ public class LoadoutManager {
     public LoadoutManager(MinecraftServer server) {
         this.server = server;
         this.loadoutsPath = server.getSavePath(WorldSavePath.ROOT).resolve(LOADOUTS_DIRECTORY);
+        this.serverLoadoutsPath = loadoutsPath.resolve("server");
         
         try {
             Files.createDirectories(loadoutsPath);
+            Files.createDirectories(serverLoadoutsPath);
         } catch (IOException e) {
             LogicalLoadouts.LOGGER.error("Failed to create loadouts directory", e);
         }
         
+        // Load server-shared loadouts
+        loadServerSharedLoadouts();
+        
         LogicalLoadouts.LOGGER.info("LoadoutManager initialized with storage at: {}", loadoutsPath);
+    }
+    
+    /**
+     * Load server-shared loadouts from the logical-loadouts/server directory
+     */
+    private void loadServerSharedLoadouts() {
+        serverSharedLoadouts.clear();
+        
+        if (!Files.exists(serverLoadoutsPath)) {
+            LogicalLoadouts.LOGGER.debug("Server loadouts directory does not exist: {}", serverLoadoutsPath);
+            return;
+        }
+        
+        try {
+            Files.walk(serverLoadoutsPath)
+                .filter(path -> path.toString().endsWith(LOADOUTS_FILE_EXTENSION))
+                .forEach(path -> {
+                    try {
+                        NbtCompound nbt = NbtIo.readCompressed(path, net.minecraft.nbt.NbtSizeTracker.ofUnlimitedBytes());
+                        Loadout loadout = Loadout.fromNbt(nbt);
+                        
+                        if (loadout.isValid()) {
+                            serverSharedLoadouts.put(loadout.getId(), loadout);
+                            LogicalLoadouts.LOGGER.debug("Loaded server-shared loadout: {}", loadout.getName());
+                        } else {
+                            LogicalLoadouts.LOGGER.warn("Invalid server-shared loadout found: {}", path.getFileName());
+                        }
+                    } catch (Exception e) {
+                        LogicalLoadouts.LOGGER.error("Failed to load server-shared loadout: {}", path.getFileName(), e);
+                    }
+                });
+                
+            LogicalLoadouts.LOGGER.info("Loaded {} server-shared loadouts", serverSharedLoadouts.size());
+        } catch (Exception e) {
+            LogicalLoadouts.LOGGER.error("Failed to load server-shared loadouts", e);
+        }
     }
     
     /**
@@ -166,27 +212,27 @@ public class LoadoutManager {
     /**
      * Create a new loadout for a player (deprecated - use createLoadout(PlayerEntity, String) instead)
      */
-    public LoadoutOperationResult createLoadout(UUID playerUuid, String name) {
-        Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
-        if (loadouts == null) {
-            return LoadoutOperationResult.error("Player data not loaded");
-        }
+    // public LoadoutOperationResult createLoadout(UUID playerUuid, String name) {
+    //     Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
+    //     if (loadouts == null) {
+    //         return LoadoutOperationResult.error("Player data not loaded");
+    //     }
         
-        // Check limits
-        if (loadouts.size() >= maxLoadoutsPerPlayer) {
-            return LoadoutOperationResult.error("Maximum number of loadouts reached (" + maxLoadoutsPerPlayer + ")");
-        }
+    //     // Check limits
+    //     if (loadouts.size() >= maxLoadoutsPerPlayer) {
+    //         return LoadoutOperationResult.error("Maximum number of loadouts reached (" + maxLoadoutsPerPlayer + ")");
+    //     }
         
-        // Check for duplicate names
-        for (Loadout existingLoadout : loadouts.values()) {
-            if (existingLoadout.getName().equalsIgnoreCase(name)) {
-                return LoadoutOperationResult.error("A loadout with that name already exists");
-            }
-        }
+    //     // Check for duplicate names
+    //     for (Loadout existingLoadout : loadouts.values()) {
+    //         if (existingLoadout.getName().equalsIgnoreCase(name)) {
+    //             return LoadoutOperationResult.error("A loadout with that name already exists");
+    //         }
+    //     }
         
-        // This method is deprecated - use createLoadout(PlayerEntity, String) instead
-        return LoadoutOperationResult.error("createLoadout requires player entity - use createLoadout(PlayerEntity, String) instead");
-    }
+    //     // This method is deprecated - use createLoadout(PlayerEntity, String) instead
+    //     return LoadoutOperationResult.error("createLoadout requires player entity - use createLoadout(PlayerEntity, String) instead");
+    // }
     
     /**
      * Delete a loadout
@@ -224,15 +270,40 @@ public class LoadoutManager {
     }
     
     /**
-     * Get all loadouts for a player
+     * Get all loadouts for a player (includes both personal and server-shared loadouts)
      */
     public List<Loadout> getPlayerLoadouts(UUID playerUuid) {
-        Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
-        if (loadouts == null) {
+        List<Loadout> allLoadouts = new ArrayList<>();
+        
+        // Add server-shared loadouts first (available to all players)
+        allLoadouts.addAll(serverSharedLoadouts.values());
+        
+        // Add player's personal loadouts
+        Map<UUID, Loadout> playerLoadouts = this.playerLoadouts.get(playerUuid);
+        if (playerLoadouts != null) {
+            allLoadouts.addAll(playerLoadouts.values());
+        }
+        
+        return allLoadouts;
+    }
+    
+    /**
+     * Get only personal loadouts for a player
+     */
+    public List<Loadout> getPersonalLoadouts(UUID playerUuid) {
+        Map<UUID, Loadout> playerLoadouts = this.playerLoadouts.get(playerUuid);
+        if (playerLoadouts == null) {
             return new ArrayList<>();
         }
         
-        return new ArrayList<>(loadouts.values());
+        return new ArrayList<>(playerLoadouts.values());
+    }
+    
+    /**
+     * Get server-shared loadouts (available to all players)
+     */
+    public List<Loadout> getServerSharedLoadouts() {
+        return new ArrayList<>(serverSharedLoadouts.values());
     }
     
     /**
