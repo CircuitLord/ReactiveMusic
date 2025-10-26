@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class LoadoutManager {
     private static final String LOADOUTS_DIRECTORY = "logical-loadouts";
     private static final String LOADOUTS_FILE_EXTENSION = ".nbt";
-    private static final int DEFAULT_MAX_LOADOUTS_PER_PLAYER = 10;
+    private static final int DEFAULT_MAX_LOADOUTS_PER_PLAYER = Integer.MAX_VALUE;
     
     private final MinecraftServer server;
     private final Path loadoutsPath;
@@ -44,11 +44,22 @@ public class LoadoutManager {
         this.loadoutsPath = server.getSavePath(WorldSavePath.ROOT).resolve(LOADOUTS_DIRECTORY);
         this.serverLoadoutsPath = loadoutsPath.resolve("server");
         
+        // Ensure the main loadouts directory exists
         try {
             Files.createDirectories(loadoutsPath);
-            Files.createDirectories(serverLoadoutsPath);
+            LogicalLoadouts.LOGGER.info("Created/verified loadouts directory: {}", loadoutsPath);
         } catch (IOException e) {
-            LogicalLoadouts.LOGGER.error("Failed to create loadouts directory", e);
+            LogicalLoadouts.LOGGER.error("Failed to create loadouts directory: {}", loadoutsPath, e);
+            throw new RuntimeException("Could not create loadouts directory", e);
+        }
+        
+        // Ensure the server loadouts directory exists
+        try {
+            Files.createDirectories(serverLoadoutsPath);
+            LogicalLoadouts.LOGGER.info("Created/verified server loadouts directory: {}", serverLoadoutsPath);
+        } catch (IOException e) {
+            LogicalLoadouts.LOGGER.error("Failed to create server loadouts directory: {}", serverLoadoutsPath, e);
+            throw new RuntimeException("Could not create server loadouts directory", e);
         }
         
         // Load server-shared loadouts
@@ -64,7 +75,12 @@ public class LoadoutManager {
         serverSharedLoadouts.clear();
         
         if (!Files.exists(serverLoadoutsPath)) {
-            LogicalLoadouts.LOGGER.debug("Server loadouts directory does not exist: {}", serverLoadoutsPath);
+            LogicalLoadouts.LOGGER.warn("Server loadouts directory does not exist (this should not happen): {}", serverLoadoutsPath);
+            return;
+        }
+        
+        if (!Files.isDirectory(serverLoadoutsPath)) {
+            LogicalLoadouts.LOGGER.error("Server loadouts path exists but is not a directory: {}", serverLoadoutsPath);
             return;
         }
         
@@ -87,9 +103,9 @@ public class LoadoutManager {
                     }
                 });
                 
-            LogicalLoadouts.LOGGER.info("Loaded {} server-shared loadouts", serverSharedLoadouts.size());
+            LogicalLoadouts.LOGGER.info("Loaded {} server-shared loadouts from {}", serverSharedLoadouts.size(), serverLoadoutsPath);
         } catch (Exception e) {
-            LogicalLoadouts.LOGGER.error("Failed to load server-shared loadouts", e);
+            LogicalLoadouts.LOGGER.error("Failed to load server-shared loadouts from {}", serverLoadoutsPath, e);
         }
     }
     
@@ -185,21 +201,20 @@ public class LoadoutManager {
             return LoadoutOperationResult.error("Player data not loaded");
         }
         
-        // Check limits
-        if (loadouts.size() >= maxLoadoutsPerPlayer) {
-            return LoadoutOperationResult.error("Maximum number of loadouts reached (" + maxLoadoutsPerPlayer + ")");
-        }
-        
-        // Check for duplicate names
-        for (Loadout existingLoadout : loadouts.values()) {
-            if (existingLoadout.getName().equalsIgnoreCase(name)) {
-                return LoadoutOperationResult.error("A loadout with that name already exists");
-            }
+        String error = getCreateLoadoutError(loadouts, name);
+        if (error != null) {
+            return LoadoutOperationResult.error(error);
         }
         
         try {
             // Create loadout from player's current inventory
             Loadout newLoadout = Loadout.fromPlayer(player, name);
+            
+            // Check if the loadout would be empty
+            if (isLoadoutEmpty(newLoadout)) {
+                return LoadoutOperationResult.error("Cannot create empty loadout - no items found in inventory");
+            }
+            
             loadouts.put(newLoadout.getId(), newLoadout);
             
             LogicalLoadouts.LOGGER.debug("Created loadout '{}' for player {} with current inventory", name, playerUuid);
@@ -210,6 +225,22 @@ public class LoadoutManager {
     }
     
     /**
+     * Check if a loadout can be created and return error message if not
+     */
+    private String getCreateLoadoutError(Map<UUID, Loadout> loadouts, String name) {
+        if (loadouts.size() >= maxLoadoutsPerPlayer) {
+            return "Maximum number of loadouts reached (" + maxLoadoutsPerPlayer + ")";
+        }
+        
+        for (Loadout existingLoadout : loadouts.values()) {
+            if (existingLoadout.getName().equalsIgnoreCase(name)) {
+                return "A loadout with that name already exists";
+            }
+        }
+        
+        return null;
+    }
+    /**
      * Create a new loadout for a player from provided loadout data
      */
     public LoadoutOperationResult createLoadoutFromData(net.minecraft.entity.player.PlayerEntity player, Loadout loadout) {
@@ -219,22 +250,20 @@ public class LoadoutManager {
             return LoadoutOperationResult.error("Player data not loaded");
         }
         
-        // Check limits
-        if (loadouts.size() >= maxLoadoutsPerPlayer) {
-            return LoadoutOperationResult.error("Maximum number of loadouts reached (" + maxLoadoutsPerPlayer + ")");
-        }
-        
-        // Check for duplicate names
-        for (Loadout existingLoadout : loadouts.values()) {
-            if (existingLoadout.getName().equalsIgnoreCase(loadout.getName())) {
-                return LoadoutOperationResult.error("A loadout with that name already exists");
-            }
+        String error = getCreateLoadoutError(loadouts, loadout.getName());
+        if (error != null) {
+            return LoadoutOperationResult.error(error);
         }
         
         try {
             // Validate the provided loadout
             if (!loadout.isValid()) {
                 return LoadoutOperationResult.error("Invalid loadout data");
+            }
+            
+            // Check if the loadout would be empty
+            if (isLoadoutEmpty(loadout)) {
+                return LoadoutOperationResult.error("Cannot create empty loadout - no items found");
             }
             
             // Additional server-side validation
@@ -396,10 +425,28 @@ public class LoadoutManager {
      */
     private boolean validateLoadoutForServer(Loadout loadout) {
         // Check for banned items
-        return !containsBannedItems(loadout.getHotbar()) &&
-               !containsBannedItems(loadout.getMainInventory()) &&
-               !containsBannedItems(loadout.getArmor()) &&
-               !containsBannedItems(loadout.getOffhand());
+        net.minecraft.item.ItemStack[][] allArrays = {loadout.getHotbar(), loadout.getMainInventory(), loadout.getArmor(), loadout.getOffhand()};
+        for (net.minecraft.item.ItemStack[] array : allArrays) {
+            if (containsBannedItems(array)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    /**
+     * Check if a loadout is completely empty (all sections are empty)
+     */
+    private boolean isLoadoutEmpty(Loadout loadout) {
+        net.minecraft.item.ItemStack[][] allArrays = {loadout.getHotbar(), loadout.getMainInventory(), loadout.getArmor(), loadout.getOffhand()};
+        for (net.minecraft.item.ItemStack[] array : allArrays) {
+            for (net.minecraft.item.ItemStack item : array) {
+                if (!item.isEmpty()) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
     
     private boolean containsBannedItems(net.minecraft.item.ItemStack[] items) {

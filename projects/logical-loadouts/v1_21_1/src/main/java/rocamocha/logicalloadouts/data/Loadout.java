@@ -3,7 +3,6 @@ package rocamocha.logicalloadouts.data;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
-import net.minecraft.util.Identifier;
 
 import java.util.*;
 
@@ -76,10 +75,14 @@ public class Loadout {
     
     public Map<String, String> getMetadata() { return new HashMap<>(metadata); }
     
+    private void updateTimestamp() {
+        this.lastModified = System.currentTimeMillis();
+    }
+    
     // Setters
     public void setName(String name) {
         this.name = validateName(name);
-        this.lastModified = System.currentTimeMillis();
+        updateTimestamp();
     }
     
     public void setHotbarSlot(int slot, ItemStack stack) {
@@ -87,7 +90,7 @@ public class Loadout {
             throw new IllegalArgumentException("Invalid hotbar slot: " + slot);
         }
         hotbar[slot] = stack == null ? ItemStack.EMPTY : stack.copy();
-        this.lastModified = System.currentTimeMillis();
+        updateTimestamp();
     }
     
     public void setMainInventorySlot(int slot, ItemStack stack) {
@@ -95,7 +98,7 @@ public class Loadout {
             throw new IllegalArgumentException("Invalid main inventory slot: " + slot);
         }
         mainInventory[slot] = stack == null ? ItemStack.EMPTY : stack.copy();
-        this.lastModified = System.currentTimeMillis();
+        updateTimestamp();
     }
     
     public void setArmorSlot(int slot, ItemStack stack) {
@@ -103,7 +106,7 @@ public class Loadout {
             throw new IllegalArgumentException("Invalid armor slot: " + slot);
         }
         armor[slot] = stack == null ? ItemStack.EMPTY : stack.copy();
-        this.lastModified = System.currentTimeMillis();
+        updateTimestamp();
     }
     
     public void setOffhandSlot(int slot, ItemStack stack) {
@@ -111,7 +114,7 @@ public class Loadout {
             throw new IllegalArgumentException("Invalid offhand slot: " + slot);
         }
         offhand[slot] = stack == null ? ItemStack.EMPTY : stack.copy();
-        this.lastModified = System.currentTimeMillis();
+        updateTimestamp();
     }
     
     /**
@@ -123,13 +126,6 @@ public class Loadout {
     nbt.putUuid("id", id);
     nbt.putString("name", name);
     nbt.putLong("lastModified", lastModified);
-
-    // Debug: count non-empty items before saving
-    System.out.println("[Loadout.toNbt] Saving loadout '" + name + "' (" + id + ")");
-    System.out.println("  Hotbar: " + countNonEmptyItems(hotbar) + " items");
-    System.out.println("  MainInventory: " + countNonEmptyItems(mainInventory) + " items");
-    System.out.println("  Armor: " + countNonEmptyItems(armor) + " items");
-    System.out.println("  Offhand: " + countNonEmptyItems(offhand) + " items");
 
     // Serialize inventory slots
     nbt.put("hotbar", serializeItemArray(hotbar));
@@ -161,13 +157,6 @@ public class Loadout {
         deserializeItemArray(nbt.getList("armor", 10), loadout.armor);
         deserializeItemArray(nbt.getList("offhand", 10), loadout.offhand);
 
-        // Debug: count non-empty items after loading
-        System.out.println("[Loadout.fromNbt] Loaded loadout '" + name + "' (" + id + ")");
-        System.out.println("  Hotbar: " + countNonEmptyItems(loadout.hotbar) + " items");
-        System.out.println("  MainInventory: " + countNonEmptyItems(loadout.mainInventory) + " items");
-        System.out.println("  Armor: " + countNonEmptyItems(loadout.armor) + " items");
-        System.out.println("  Offhand: " + countNonEmptyItems(loadout.offhand) + " items");
-
         // Deserialize metadata
         if (nbt.contains("metadata")) {
             NbtCompound metaNbt = nbt.getCompound("metadata");
@@ -179,18 +168,8 @@ public class Loadout {
         return loadout;
     }
     
-    // Helper for debug output
-    private static int countNonEmptyItems(ItemStack[] items) {
-        int count = 0;
-        for (ItemStack item : items) {
-            if (item != null && !item.isEmpty()) count++;
-        }
-        return count;
-    }
-    
     private NbtList serializeItemArray(ItemStack[] items) {
         NbtList list = new NbtList();
-        System.out.println("  [serializeItemArray] Processing " + items.length + " slots");
         for (int i = 0; i < items.length; i++) {
             NbtCompound itemNbt = new NbtCompound();
             if (!items[i].isEmpty()) {
@@ -200,24 +179,18 @@ public class Loadout {
                 for (String key : itemData.getKeys()) {
                     itemNbt.put(key, itemData.get(key));
                 }
-                System.out.println("    Slot " + i + ": " + items[i].toString() + " -> " + itemNbt.getKeys());
-            } else {
-                System.out.println("    Slot " + i + ": EMPTY");
             }
             itemNbt.putInt("Slot", i);
             list.add(itemNbt);
         }
-        System.out.println("  [serializeItemArray] Created NBT list with " + list.size() + " entries");
         return list;
     }
     
     private static void deserializeItemArray(NbtList list, ItemStack[] items) {
         Arrays.fill(items, ItemStack.EMPTY);
-        System.out.println("  [deserializeItemArray] Processing " + list.size() + " entries");
         for (int i = 0; i < list.size(); i++) {
             NbtCompound itemNbt = list.getCompound(i);
             int slot = itemNbt.getInt("Slot");
-            System.out.println("    Entry " + i + ": slot=" + slot + ", nbtKeys=" + itemNbt.getKeys());
             if (slot >= 0 && slot < items.length) {
                 // Only try to deserialize if there's actual item data (not just a Slot entry)
                 if (itemNbt.getKeys().size() > 1) { // More than just "Slot" key
@@ -230,10 +203,8 @@ public class Loadout {
                     }
                     ItemStack stack = ItemStack.fromNbt(net.minecraft.registry.DynamicRegistryManager.EMPTY, itemData).orElse(ItemStack.EMPTY);
                     items[slot] = stack;
-                    System.out.println("      -> Loaded: " + (stack.isEmpty() ? "EMPTY" : stack.toString()));
                 } else {
                     items[slot] = ItemStack.EMPTY;
-                    System.out.println("      -> Empty slot (no item data)");
                 }
             }
         }
@@ -341,7 +312,7 @@ public class Loadout {
         }
         
         // Copy offhand
-        ItemStack offhandStack = player.getInventory().getStack(40); // Offhand slot is 40
+        ItemStack offhandStack = player.getOffHandStack();
         setOffhandSlot(0, offhandStack);
         
         // Update timestamp
@@ -383,11 +354,19 @@ public class Loadout {
     public Loadout copy() {
         Loadout copy = new Loadout(this.name + " (Copy)");
         
-        // Copy all inventory slots
-        System.arraycopy(this.hotbar, 0, copy.hotbar, 0, HOTBAR_SIZE);
-        System.arraycopy(this.mainInventory, 0, copy.mainInventory, 0, MAIN_INVENTORY_SIZE);
-        System.arraycopy(this.armor, 0, copy.armor, 0, ARMOR_SIZE);
-        System.arraycopy(this.offhand, 0, copy.offhand, 0, OFFHAND_SIZE);
+        // Deep copy all inventory slots
+        for (int i = 0; i < HOTBAR_SIZE; i++) {
+            copy.hotbar[i] = this.hotbar[i].copy();
+        }
+        for (int i = 0; i < MAIN_INVENTORY_SIZE; i++) {
+            copy.mainInventory[i] = this.mainInventory[i].copy();
+        }
+        for (int i = 0; i < ARMOR_SIZE; i++) {
+            copy.armor[i] = this.armor[i].copy();
+        }
+        for (int i = 0; i < OFFHAND_SIZE; i++) {
+            copy.offhand[i] = this.offhand[i].copy();
+        }
         
         // Copy metadata
         copy.metadata.putAll(this.metadata);

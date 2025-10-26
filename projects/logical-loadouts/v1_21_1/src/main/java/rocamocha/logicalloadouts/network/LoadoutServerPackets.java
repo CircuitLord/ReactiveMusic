@@ -76,6 +76,19 @@ public class LoadoutServerPackets {
         System.out.println("  Armor: " + countNonEmptyItems(loadout.getArmor()) + " items");
         System.out.println("  Offhand: " + (loadout.getOffhand().length > 0 && !loadout.getOffhand()[0].isEmpty() ? 1 : 0) + " items");
         
+        // Validate that the loadout is not empty before creating it
+        if (isLoadoutEmpty(loadout)) {
+            System.out.println("SERVER: Rejecting empty loadout creation for '" + loadout.getName() + "'");
+            System.out.println("  Hotbar items: " + countNonEmptyItems(loadout.getHotbar()));
+            System.out.println("  MainInventory items: " + countNonEmptyItems(loadout.getMainInventory()));
+            System.out.println("  Armor items: " + countNonEmptyItems(loadout.getArmor()));
+            System.out.println("  Offhand items: " + countNonEmptyItems(loadout.getOffhand()));
+            server.execute(() -> {
+                sendOperationResult(player, "create", LoadoutManager.LoadoutOperationResult.error("Cannot create empty loadout"));
+            });
+            return;
+        }
+        
         server.execute(() -> {
             try {
                 LoadoutManager manager = getLoadoutManager(server);
@@ -85,8 +98,8 @@ public class LoadoutServerPackets {
                 // Use the provided loadout data instead of capturing from player
                 LoadoutManager.LoadoutOperationResult result = manager.createLoadoutFromData(player, loadout);
                 
-                // NOTE: Section loadouts should NOT clear the player's inventory
-                // Only personal loadouts (full inventory deposits) clear the inventory
+                // For section loadouts, clear the corresponding section from player's inventory
+                clearPlayerSectionAfterLoadoutCreation(player, loadout);
                 
                 sendOperationResult(player, "create", result);
                 
@@ -101,13 +114,65 @@ public class LoadoutServerPackets {
         });
     }
     
-    // Helper method for debug output
-    private static int countNonEmptyItems(net.minecraft.item.ItemStack[] items) {
-        int count = 0;
-        for (net.minecraft.item.ItemStack item : items) {
-            if (item != null && !item.isEmpty()) count++;
+    /**
+     * Clear the player's inventory section that was just saved to a loadout
+     */
+    private static void clearPlayerSectionAfterLoadoutCreation(ServerPlayerEntity player, Loadout loadout) {
+        // Check which sections have items in the loadout and clear those sections from player
+        boolean hasArmor = false;
+        boolean hasHotbar = false;
+        boolean hasInventory = false;
+        
+        // Check armor
+        for (net.minecraft.item.ItemStack item : loadout.getArmor()) {
+            if (!item.isEmpty()) {
+                hasArmor = true;
+                break;
+            }
         }
-        return count;
+        
+        // Check hotbar
+        for (net.minecraft.item.ItemStack item : loadout.getHotbar()) {
+            if (!item.isEmpty()) {
+                hasHotbar = true;
+                break;
+            }
+        }
+        
+        // Check main inventory
+        for (net.minecraft.item.ItemStack item : loadout.getMainInventory()) {
+            if (!item.isEmpty()) {
+                hasInventory = true;
+                break;
+            }
+        }
+        
+        // Clear the sections that have items
+        if (hasArmor) {
+            for (int i = 0; i < 4; i++) {
+                player.getInventory().armor.set(i, net.minecraft.item.ItemStack.EMPTY);
+            }
+            LogicalLoadouts.LOGGER.debug("Cleared armor section from player {} after creating loadout", player.getName().getString());
+        }
+        
+        if (hasHotbar) {
+            for (int i = 0; i < 9; i++) {
+                player.getInventory().setStack(i, net.minecraft.item.ItemStack.EMPTY);
+            }
+            LogicalLoadouts.LOGGER.debug("Cleared hotbar section from player {} after creating loadout", player.getName().getString());
+        }
+        
+        if (hasInventory) {
+            for (int i = 0; i < 27; i++) {
+                player.getInventory().setStack(i + 9, net.minecraft.item.ItemStack.EMPTY);
+            }
+            LogicalLoadouts.LOGGER.debug("Cleared inventory section from player {} after creating loadout", player.getName().getString());
+        }
+        
+        // Mark inventory as dirty to synchronize changes
+        if (hasArmor || hasHotbar || hasInventory) {
+            player.getInventory().markDirty();
+        }
     }
     
     /**
@@ -213,10 +278,11 @@ public class LoadoutServerPackets {
         ServerPlayerEntity player = context.player();
         MinecraftServer server = context.server();
         Loadout loadout = payload.loadout();
+        boolean consumeAfterApply = payload.consumeAfterApply();
         
         server.execute(() -> {
             try {
-                System.out.println("DEBUG: Server received local loadout: " + loadout.getName() + " for player " + player.getName().getString());
+                System.out.println("DEBUG: Server received local loadout: " + loadout.getName() + " for player " + player.getName().getString() + ", consume=" + consumeAfterApply);
                 
                 LoadoutManager manager = getLoadoutManager(server);
                 ensurePlayerDataLoaded(manager, player.getUuid());
@@ -238,6 +304,17 @@ public class LoadoutServerPackets {
                     LoadoutManager.LoadoutOperationResult updateResult = manager.updateLoadout(player.getUuid(), currentInventory);
                     if (updateResult.isSuccess()) {
                         System.out.println("DEBUG: Successfully swapped inventory with server loadout");
+                        
+                        // Check if the updated loadout is now empty and delete it if so
+                        if (isLoadoutEmpty(currentInventory)) {
+                            LoadoutManager.LoadoutOperationResult deleteResult = manager.deleteLoadout(player.getUuid(), loadout.getId());
+                            if (deleteResult.isSuccess()) {
+                                System.out.println("DEBUG: Deleted empty loadout after swap: " + loadout.getName());
+                            } else {
+                                LogicalLoadouts.LOGGER.warn("Failed to delete empty loadout after swap: {}", deleteResult.getMessage());
+                            }
+                        }
+                        
                         // Send updated loadout list to client
                         sendLoadoutsSync(player, manager);
                     } else {
@@ -247,6 +324,14 @@ public class LoadoutServerPackets {
                     // Not a server-stored loadout (local/global) - just apply it
                     System.out.println("DEBUG: Local/global loadout, just applying");
                     applyLoadoutToPlayer(player, loadout);
+                    
+                    // If consumeAfterApply is true, delete the personal loadout after applying
+                    if (consumeAfterApply) {
+                        System.out.println("DEBUG: Consuming personal loadout after application");
+                        // For personal loadouts, we need to notify the client to remove it from their local storage
+                        // Since personal loadouts are client-side, we can't delete them server-side
+                        // The client has already handled the consumption in the GUI
+                    }
                 }
                 
                 // Notify client that loadout was applied
@@ -300,18 +385,112 @@ public class LoadoutServerPackets {
     }
     
     /**
-     * Handle client request for all loadouts (sent when joining server or refreshing)
+     * Handle client request to apply a section from a loadout to their inventory
      */
-    public static void handleRequestLoadouts(RequestLoadoutsPayload payload, ServerPlayNetworking.Context context) {
+    public static void handleApplySection(ApplySectionPayload payload, ServerPlayNetworking.Context context) {
         ServerPlayerEntity player = context.player();
         MinecraftServer server = context.server();
+        UUID loadoutId = payload.loadoutId();
+        String sectionName = payload.sectionName();
         
         server.execute(() -> {
             try {
                 LoadoutManager manager = getLoadoutManager(server);
-                sendLoadoutsSync(player, manager);
+                // Ensure player data is loaded for single-player mode
+                ensurePlayerDataLoaded(manager, player.getUuid());
+                LoadoutManager.LoadoutOperationResult getResult = manager.getLoadout(player.getUuid(), loadoutId);
+                
+                if (getResult.isSuccess()) {
+                    Loadout loadout = getResult.getLoadout();
+                    
+                    // Capture player's original section items BEFORE applying loadout items (for swap behavior)
+                    ItemStack[] playerOriginalItems = capturePlayerSectionItems(player, sectionName);
+                    
+                    // Apply the specific section from loadout to player
+                    applySectionFromLoadoutToPlayer(player, loadout, sectionName);
+                    
+                    // Mark inventory as dirty to synchronize changes to client
+                    player.getInventory().markDirty();
+                    
+                    // Update the loadout with the player's original items (swap behavior)
+                    Loadout updatedLoadout = createUpdatedLoadoutWithPlayerItems(loadout, sectionName, playerOriginalItems);
+                    LoadoutManager.LoadoutOperationResult updateResult = manager.updateLoadout(player.getUuid(), updatedLoadout);
+                    
+                    if (updateResult.isSuccess()) {
+                        // Check if the updated loadout is now empty and delete it if so
+                        if (isLoadoutEmpty(updatedLoadout)) {
+                            LoadoutManager.LoadoutOperationResult deleteResult = manager.deleteLoadout(player.getUuid(), loadout.getId());
+                            if (deleteResult.isSuccess()) {
+                                LogicalLoadouts.LOGGER.debug("Deleted empty loadout after section apply: {}", loadout.getName());
+                            } else {
+                                LogicalLoadouts.LOGGER.warn("Failed to delete empty loadout after section apply: {}", deleteResult.getMessage());
+                            }
+                        }
+                        
+                        // Send updated loadout list to client
+                        sendLoadoutsSync(player, manager);
+                        LogicalLoadouts.LOGGER.debug("Applied section '{}' from loadout '{}' to player {}", 
+                                                    sectionName, loadout.getName(), player.getName().getString());
+                    } else {
+                        sendOperationResult(player, "apply_section", updateResult);
+                    }
+                } else {
+                    sendOperationResult(player, "apply_section", getResult);
+                }
             } catch (Exception e) {
-                LogicalLoadouts.LOGGER.error("Error handling request loadouts packet", e);
+                LogicalLoadouts.LOGGER.error("Error handling apply section packet", e);
+                sendOperationResult(player, "apply_section", LoadoutManager.LoadoutOperationResult.error("Failed to apply section"));
+            }
+        });
+    }
+    
+    /**
+     * Handle client request to deposit a section from their inventory into a loadout
+     */
+    public static void handleDepositSection(DepositSectionPayload payload, ServerPlayNetworking.Context context) {
+        ServerPlayerEntity player = context.player();
+        MinecraftServer server = context.server();
+        UUID loadoutId = payload.loadoutId();
+        String sectionName = payload.sectionName();
+        
+        server.execute(() -> {
+            try {
+                LoadoutManager manager = getLoadoutManager(server);
+                // Ensure player data is loaded for single-player mode
+                ensurePlayerDataLoaded(manager, player.getUuid());
+                LoadoutManager.LoadoutOperationResult getResult = manager.getLoadout(player.getUuid(), loadoutId);
+                
+                if (getResult.isSuccess()) {
+                    Loadout loadout = getResult.getLoadout();
+                    
+                    // Check if loadout section is empty (deposit requirement)
+                    if (isLoadoutSectionEmpty(loadout, sectionName)) {
+                        // Deposit the section from player to loadout
+                        Loadout updatedLoadout = depositSectionFromPlayerToLoadout(player, loadout, sectionName);
+                        
+                        // Mark inventory as dirty to synchronize changes to client
+                        player.getInventory().markDirty();
+                        
+                        LoadoutManager.LoadoutOperationResult updateResult = manager.updateLoadout(player.getUuid(), updatedLoadout);
+                        
+                        if (updateResult.isSuccess()) {
+                            // Send updated loadout list to client
+                            sendLoadoutsSync(player, manager);
+                            LogicalLoadouts.LOGGER.debug("Deposited section '{}' from player {} to loadout '{}'", 
+                                                        sectionName, player.getName().getString(), loadout.getName());
+                        } else {
+                            sendOperationResult(player, "deposit_section", updateResult);
+                        }
+                    } else {
+                        sendOperationResult(player, "deposit_section", 
+                                          LoadoutManager.LoadoutOperationResult.error("Loadout section is not empty"));
+                    }
+                } else {
+                    sendOperationResult(player, "deposit_section", getResult);
+                }
+            } catch (Exception e) {
+                LogicalLoadouts.LOGGER.error("Error handling deposit section packet", e);
+                sendOperationResult(player, "deposit_section", LoadoutManager.LoadoutOperationResult.error("Failed to deposit section"));
             }
         });
     }
@@ -427,5 +606,212 @@ public class LoadoutServerPackets {
             // Always try to load, even if checking failed
             manager.loadPlayerData(playerUuid);
         }
+    }
+    
+    /**
+     * Apply a specific section from a loadout to a player's inventory
+     */
+    private static void applySectionFromLoadoutToPlayer(ServerPlayerEntity player, Loadout loadout, String sectionName) {
+        switch (sectionName.toUpperCase()) {
+            case "ARMOR":
+                for (int i = 0; i < 4; i++) {
+                    player.getInventory().armor.set(i, loadout.getArmor()[i].copy());
+                }
+                break;
+            case "HOTBAR":
+                for (int i = 0; i < 9; i++) {
+                    player.getInventory().setStack(i, loadout.getHotbar()[i].copy());
+                }
+                break;
+            case "INVENTORY":
+                for (int i = 0; i < 27; i++) {
+                    player.getInventory().setStack(i + 9, loadout.getMainInventory()[i].copy());
+                }
+                break;
+        }
+    }
+    
+    /**
+     * Capture a player's section items before they are replaced
+     */
+    private static ItemStack[] capturePlayerSectionItems(ServerPlayerEntity player, String sectionName) {
+        switch (sectionName.toUpperCase()) {
+            case "ARMOR":
+                ItemStack[] armorItems = new ItemStack[4];
+                for (int i = 0; i < 4; i++) {
+                    armorItems[i] = player.getInventory().getArmorStack(i).copy();
+                }
+                return armorItems;
+            case "HOTBAR":
+                ItemStack[] hotbarItems = new ItemStack[9];
+                for (int i = 0; i < 9; i++) {
+                    hotbarItems[i] = player.getInventory().getStack(i).copy();
+                }
+                return hotbarItems;
+            case "INVENTORY":
+                ItemStack[] inventoryItems = new ItemStack[27];
+                for (int i = 0; i < 27; i++) {
+                    inventoryItems[i] = player.getInventory().getStack(i + 9).copy();
+                }
+                return inventoryItems;
+            default:
+                return new ItemStack[0];
+        }
+    }
+    
+    /**
+     * Create an updated loadout with the player's original items in the specified section
+     */
+    private static Loadout createUpdatedLoadoutWithPlayerItems(Loadout loadout, String sectionName, ItemStack[] playerItems) {
+        Loadout updatedLoadout = new Loadout(loadout.getId(), loadout.getName());
+        
+        // Copy all existing data first
+        for (int i = 0; i < 9; i++) updatedLoadout.setHotbarSlot(i, loadout.getHotbar()[i].copy());
+        for (int i = 0; i < 27; i++) updatedLoadout.setMainInventorySlot(i, loadout.getMainInventory()[i].copy());
+        for (int i = 0; i < 4; i++) updatedLoadout.setArmorSlot(i, loadout.getArmor()[i].copy());
+        for (int i = 0; i < 1; i++) updatedLoadout.setOffhandSlot(i, loadout.getOffhand()[i].copy());
+        
+        // Update the specific section with player's original items
+        switch (sectionName.toUpperCase()) {
+            case "ARMOR":
+                for (int i = 0; i < 4 && i < playerItems.length; i++) {
+                    updatedLoadout.setArmorSlot(i, playerItems[i]);
+                }
+                break;
+            case "HOTBAR":
+                for (int i = 0; i < 9 && i < playerItems.length; i++) {
+                    updatedLoadout.setHotbarSlot(i, playerItems[i]);
+                }
+                break;
+            case "INVENTORY":
+                for (int i = 0; i < 27 && i < playerItems.length; i++) {
+                    updatedLoadout.setMainInventorySlot(i, playerItems[i]);
+                }
+                break;
+        }
+        
+        return updatedLoadout;
+    }
+    
+    /**
+     * Deposit a specific section from player to loadout
+     */
+    private static Loadout depositSectionFromPlayerToLoadout(ServerPlayerEntity player, Loadout loadout, String sectionName) {
+        Loadout updatedLoadout = new Loadout(loadout.getId(), loadout.getName());
+        
+        // Copy all existing data first
+        for (int i = 0; i < 9; i++) updatedLoadout.setHotbarSlot(i, loadout.getHotbar()[i].copy());
+        for (int i = 0; i < 27; i++) updatedLoadout.setMainInventorySlot(i, loadout.getMainInventory()[i].copy());
+        for (int i = 0; i < 4; i++) updatedLoadout.setArmorSlot(i, loadout.getArmor()[i].copy());
+        for (int i = 0; i < 1; i++) updatedLoadout.setOffhandSlot(i, loadout.getOffhand()[i].copy());
+        
+        // Update the specific section with player's items and clear player's section
+        switch (sectionName.toUpperCase()) {
+            case "ARMOR":
+                for (int i = 0; i < 4; i++) {
+                    updatedLoadout.setArmorSlot(i, player.getInventory().getArmorStack(i).copy());
+                    player.getInventory().armor.set(i, net.minecraft.item.ItemStack.EMPTY);
+                }
+                break;
+            case "HOTBAR":
+                for (int i = 0; i < 9; i++) {
+                    updatedLoadout.setHotbarSlot(i, player.getInventory().getStack(i).copy());
+                    player.getInventory().setStack(i, net.minecraft.item.ItemStack.EMPTY);
+                }
+                break;
+            case "INVENTORY":
+                for (int i = 0; i < 27; i++) {
+                    updatedLoadout.setMainInventorySlot(i, player.getInventory().getStack(i + 9).copy());
+                    player.getInventory().setStack(i + 9, net.minecraft.item.ItemStack.EMPTY);
+                }
+                break;
+        }
+        
+        return updatedLoadout;
+    }
+    
+    /**
+     * Check if a specific section in a loadout is empty
+     */
+    private static boolean isLoadoutSectionEmpty(Loadout loadout, String sectionName) {
+        switch (sectionName.toUpperCase()) {
+            case "ARMOR":
+                for (net.minecraft.item.ItemStack item : loadout.getArmor()) {
+                    if (!item.isEmpty()) return false;
+                }
+                return true;
+            case "HOTBAR":
+                for (net.minecraft.item.ItemStack item : loadout.getHotbar()) {
+                    if (!item.isEmpty()) return false;
+                }
+                return true;
+            case "INVENTORY":
+                for (net.minecraft.item.ItemStack item : loadout.getMainInventory()) {
+                    if (!item.isEmpty()) return false;
+                }
+                return true;
+            default:
+                return true;
+        }
+    }
+    
+    /**
+     * Handle client request for loadout list
+     */
+    public static void handleRequestLoadouts(RequestLoadoutsPayload payload, ServerPlayNetworking.Context context) {
+        ServerPlayerEntity player = context.player();
+        MinecraftServer server = context.server();
+        
+        server.execute(() -> {
+            try {
+                LoadoutManager manager = getLoadoutManager(server);
+                // Ensure player data is loaded for single-player mode
+                ensurePlayerDataLoaded(manager, player.getUuid());
+                
+                // Send loadout list to client
+                sendLoadoutsSync(player, manager);
+                
+                LogicalLoadouts.LOGGER.debug("Sent loadout list to player {}", player.getName().getString());
+            } catch (Exception e) {
+                LogicalLoadouts.LOGGER.error("Error handling request loadouts packet", e);
+                sendOperationResult(player, "request_loadouts", LoadoutManager.LoadoutOperationResult.error("Failed to retrieve loadouts"));
+            }
+        });
+    }
+    
+    // Helper method for debug output
+    private static int countNonEmptyItems(net.minecraft.item.ItemStack[] items) {
+        int count = 0;
+        for (net.minecraft.item.ItemStack item : items) {
+            if (item != null && !item.isEmpty()) count++;
+        }
+        return count;
+    }
+    
+    /**
+     * Check if a loadout is completely empty (no items in any section)
+     */
+    private static boolean isLoadoutEmpty(Loadout loadout) {
+        // Check armor
+        for (net.minecraft.item.ItemStack item : loadout.getArmor()) {
+            if (!item.isEmpty()) return false;
+        }
+        
+        // Check hotbar
+        for (net.minecraft.item.ItemStack item : loadout.getHotbar()) {
+            if (!item.isEmpty()) return false;
+        }
+        
+        // Check main inventory
+        for (net.minecraft.item.ItemStack item : loadout.getMainInventory()) {
+            if (!item.isEmpty()) return false;
+        }
+        
+        // Check offhand
+        for (net.minecraft.item.ItemStack item : loadout.getOffhand()) {
+            if (!item.isEmpty()) return false;
+        }
+        
+        return true;
     }
 }

@@ -438,14 +438,46 @@ public class LoadoutListWidget extends AlwaysSelectedEntryListWidget<LoadoutList
             this.y = y;
             this.entry = entry;
             
-            // Create menu items
+            // Create menu items dynamically based on loadout and player state
             items = new java.util.ArrayList<>();
-            items.add(new MenuItem("Take Armor", () -> applySection(LoadoutSelectionScreen.LoadoutTab.ARMOR)));
-            items.add(new MenuItem("Take Hotbar", () -> applySection(LoadoutSelectionScreen.LoadoutTab.HOTBAR)));
-            items.add(new MenuItem("Take Inventory", () -> applySection(LoadoutSelectionScreen.LoadoutTab.INVENTORY)));
+            
+            // Add menu items for each section
+            addSectionMenuItem(LoadoutSelectionScreen.LoadoutTab.ARMOR);
+            addSectionMenuItem(LoadoutSelectionScreen.LoadoutTab.HOTBAR);
+            addSectionMenuItem(LoadoutSelectionScreen.LoadoutTab.INVENTORY);
             
             // Adjust position to fit on screen
             adjustPosition();
+        }
+        
+        private void addSectionMenuItem(LoadoutSelectionScreen.LoadoutTab section) {
+            if (parent == null) return;
+            
+            Loadout loadout = entry.loadout;
+            boolean loadoutSectionEmpty = parent.checkLoadoutSectionEmpty(loadout, section);
+            boolean playerHasItems = parent.checkPlayerHasSectionItems(section);
+            
+            String actionText;
+            Runnable action;
+            
+            if (loadoutSectionEmpty && playerHasItems) {
+                // Deposit section
+                actionText = "Deposit " + section.getDisplayName().toLowerCase();
+                action = () -> parent.depositSectionIntoLoadout(loadout, section);
+            } else if (!loadoutSectionEmpty && playerHasItems) {
+                // Swap section
+                actionText = "Swap " + section.getDisplayName().toLowerCase();
+                action = () -> parent.applySectionFromLoadout(loadout, section);
+            } else if (!loadoutSectionEmpty && !playerHasItems) {
+                // Apply section
+                actionText = "Apply " + section.getDisplayName().toLowerCase();
+                action = () -> parent.applySectionFromLoadout(loadout, section);
+            } else {
+                // No valid action (loadout section empty and player has no items)
+                return;
+            }
+            
+            items.add(new MenuItem(actionText, action));
         }
         
         private void adjustPosition() {
@@ -488,12 +520,7 @@ public class LoadoutListWidget extends AlwaysSelectedEntryListWidget<LoadoutList
             }
         }
         
-        private void applySection(LoadoutSelectionScreen.LoadoutTab section) {
-            if (parent != null) {
-                parent.applySectionFromLoadout(entry.loadout, section);
-            }
-            closeMenu();
-        }
+
         
         private void closeMenu() {
             visible = false;
@@ -545,6 +572,7 @@ public class LoadoutListWidget extends AlwaysSelectedEntryListWidget<LoadoutList
                     if (mouseX >= x && mouseX <= x + width && 
                         mouseY >= itemY && mouseY <= itemY + 16) {
                         items.get(i).action.run();
+                        closeMenu();
                         return true;
                     }
                     itemY += 18;

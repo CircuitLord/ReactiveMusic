@@ -1,13 +1,7 @@
 {
-  "key.categories.logicalloadouts": "Logical Loadouts",
+  "key.categories.logicalloadouts": "Loadouts",
   
-  "key.logicalloadouts.open_gui": "Open Loadouts Menu",
-  "key.logicalloadouts.quick_save": "Quick Save to Global Slot 1",
-  "key.logicalloadouts.apply_1": "Apply Global Slot 1",
-  "key.logicalloadouts.apply_2": "Apply Global Slot 2", 
-  "key.logicalloadouts.apply_3": "Apply Global Slot 3",
-  "key.logicalloadouts.apply_4": "Apply Loadout 4",
-  "key.logicalloadouts.apply_5": "Apply Loadout 5",
+  "key.logicalloadouts.open_gui": "Loadout Menu",
   
   "gui.logicalloadouts.title": "Logical Loadouts",
   "gui.logicalloadouts.create_new": "Create New Loadout",

@@ -185,44 +185,40 @@ public class LoadoutClientManager {
     }
     
     /**
-     * Apply a global loadout directly
+     * Apply a loadout with server synchronization if connected
      */
-    public boolean applyGlobalLoadout(Loadout loadout) {
+    private boolean applyLoadoutWithSync(Loadout loadout, String syncMessage) {
         try {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player != null) {
-                System.out.println("DEBUG: applyGlobalLoadout - checking if server-side sync needed");
-                
-                // Check if we're connected to any server (single-player or multiplayer)
                 if (client.getNetworkHandler() != null) {
-                    // Connected to server (single-player or multiplayer) - need server-side sync for survival mode
-                    System.out.println("DEBUG: applyGlobalLoadout - taking server path for sync, sending loadout data");
-                    
-                    // Send the global loadout data to server for proper synchronization
-                    ClientPlayNetworking.send(new ApplyLocalLoadoutPayload(loadout));
-                    
+                    // Connected to server - send for sync
+                    ClientPlayNetworking.send(new ApplyLocalLoadoutPayload(loadout, false)); // Global loadouts are not consumed
                     lastOperationSuccess = true;
-                    lastOperationResult = "Sent global loadout data to server for sync: " + loadout.getName();
+                    lastOperationResult = syncMessage;
                 } else {
-                    // Not connected to server - apply client-side only (should be rare)
-                    System.out.println("DEBUG: applyGlobalLoadout - not connected to server, taking client-only path");
+                    // Not connected - apply locally
                     loadout.applyToPlayer(client.player);
-                    
                     lastOperationSuccess = true;
-                    lastOperationResult = "Applied global loadout client-side: " + loadout.getName();
+                    lastOperationResult = syncMessage.replace("Sent", "Applied").replace("data to server for sync", "locally");
                 }
-                
                 notifyListeners();
                 return true;
             }
         } catch (Exception e) {
             lastOperationSuccess = false;
             lastOperationResult = "Failed to apply loadout: " + e.getMessage();
-            LogicalLoadouts.LOGGER.error("Failed to apply global loadout", e);
+            LogicalLoadouts.LOGGER.error("Failed to apply loadout", e);
         }
         return false;
     }
     
+    /**
+     * Apply a global loadout directly
+     */
+    public boolean applyGlobalLoadout(Loadout loadout) {
+        return applyLoadoutWithSync(loadout, "Sent global loadout data to server for sync: " + loadout.getName());
+    }
     /**
      * Apply a global loadout by slot (1-3)
      */
@@ -247,39 +243,7 @@ public class LoadoutClientManager {
      * Apply a local loadout
      */
     private boolean applyLocalLoadout(Loadout loadout) {
-        try {
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.player != null) {
-                System.out.println("DEBUG: applyLocalLoadout - checking if server-side sync needed");
-                
-                // Check if we're connected to any server (single-player or multiplayer)
-                if (client.getNetworkHandler() != null) {
-                    // Connected to server (single-player or multiplayer) - need server-side sync for survival mode
-                    System.out.println("DEBUG: applyLocalLoadout - taking server path for sync, sending loadout data");
-                    
-                    // Send the local loadout data to server for proper synchronization
-                    ClientPlayNetworking.send(new ApplyLocalLoadoutPayload(loadout));
-                    
-                    lastOperationSuccess = true;
-                    lastOperationResult = "Sent local loadout data to server for sync: " + loadout.getName();
-                } else {
-                    // Not connected to server - apply client-side only (should be rare)
-                    System.out.println("DEBUG: applyLocalLoadout - not connected to server, taking client-only path");
-                    loadout.applyToPlayer(client.player);
-                    
-                    lastOperationSuccess = true;
-                    lastOperationResult = "Applied local loadout client-side: " + loadout.getName();
-                }
-                
-                notifyListeners();
-                return true;
-            }
-        } catch (Exception e) {
-            lastOperationSuccess = false;
-            lastOperationResult = "Failed to apply loadout: " + e.getMessage();
-            LogicalLoadouts.LOGGER.error("Failed to apply local loadout", e);
-        }
-        return false;
+        return applyLoadoutWithSync(loadout, "Sent local loadout data to server for sync: " + loadout.getName());
     }
     
     /**
@@ -929,8 +893,12 @@ public class LoadoutClientManager {
         LogicalLoadouts.LOGGER.debug("Server operation {}: {} - {}", operation, success ? "SUCCESS" : "FAILED", message);
         
         // If operation was successful and affects loadout list, request refresh
+        // Skip for section operations since server already sends updated loadouts directly
         if (success && (operation.equals("create") || operation.equals("delete") || operation.equals("update"))) {
-            requestLoadoutsFromServer();
+            // Don't request loadouts for section operations - server sends them directly
+            if (!operation.equals("apply_section") && !operation.equals("deposit_section")) {
+                requestLoadoutsFromServer();
+            }
         }
         
         notifyListeners();

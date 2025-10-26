@@ -1,7 +1,10 @@
 package rocamocha.logicalloadouts.client.gui;
 
-import rocamocha.logicalloadouts.client.LoadoutClientManager;
-import rocamocha.logicalloadouts.data.Loadout;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import rocamocha.logicalloadouts.network.packets.ApplySectionPayload;
+import rocamocha.logicalloadouts.network.packets.ApplyLocalLoadoutPayload;
+import rocamocha.logicalloadouts.network.packets.DepositSectionPayload;
+
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -10,6 +13,9 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+
+import rocamocha.logicalloadouts.client.LoadoutClientManager;
+import rocamocha.logicalloadouts.data.Loadout;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -26,11 +32,11 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     
     // Tab system
     public enum LoadoutTab {
-        PERSONAL("Personal", 0xFF4A90E2),
-        SERVER("Server", 0xFF50C878),
-        ARMOR("Armor", 0xFFFFD700),
+        PERSONAL("Loadouts", 0xFF4A90E2),
+        INVENTORY("Inventory", 0xFF8A2BE2),
         HOTBAR("Hotbar", 0xFFFF6B35),
-        INVENTORY("Inventory", 0xFF8A2BE2);
+        ARMOR("Armor", 0xFFFFD700),
+        SERVER("Server", 0xFF50C878);
         
         private final String displayName;
         private final int color;
@@ -93,15 +99,18 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         int leftPanelWidth = (this.width * 2) / 3 - 20; // 2/3 minus some margin
         int rightPanelX = leftPanelWidth + 20; // Start of right panel
         
+        // Calculate dynamic item height based on active tab
+        int dynamicItemHeight = getDynamicItemHeight(activeTab);
+        
         // Create personal loadout list widget
         int listHeight = this.height - 110; // More space for taller loadout entries and tabs
-        personalLoadoutList = new LoadoutListWidget(this.client, leftPanelWidth, listHeight, startY, 130, this.personalLoadouts, this);
+        personalLoadoutList = new LoadoutListWidget(this.client, leftPanelWidth, listHeight, startY, dynamicItemHeight, this.personalLoadouts, this);
         personalLoadoutList.setX(10); // Start with small margin from left edge
         this.addSelectableChild(personalLoadoutList);
         
         // Create server loadout list widget (only if connected to server)
         if (manager.isConnectedToServer()) {
-            serverLoadoutList = new LoadoutListWidget(this.client, leftPanelWidth, listHeight, startY, 130, this.serverLoadouts, this);
+            serverLoadoutList = new LoadoutListWidget(this.client, leftPanelWidth, listHeight, startY, dynamicItemHeight, this.serverLoadouts, this);
             serverLoadoutList.setX(10);
             this.addSelectableChild(serverLoadoutList);
         }
@@ -230,7 +239,7 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     private void renderTabs(DrawContext context, int mouseX, int mouseY) {
         int startY = 48; // Loadout list start position
         int tabHeight = 18;
-        int tabSpacing = 5; // Add spacing between tabs to prevent accidental clicks
+        int tabSpacing = 0; // Add spacing between tabs to prevent accidental clicks
         int tabY = startY - tabHeight; // Position tabs so bottom edge meets top of list
         
         // Left-align tabs with the loadout list (starts at x=10)
@@ -250,6 +259,45 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
                                          currentTabX + personalTabWidth / 2, tabY + 6, 0xFFFFFF);
         currentTabX += personalTabWidth + tabSpacing;
         
+        // Inventory tab
+        int inventoryTabWidth = 70;
+        boolean inventoryHovered = mouseX >= currentTabX && mouseX <= currentTabX + inventoryTabWidth && 
+                                 mouseY >= tabY && mouseY <= tabY + tabHeight;
+        
+        int inventoryColor = activeTab == LoadoutTab.INVENTORY ? LoadoutTab.INVENTORY.getColor() : 
+                           (inventoryHovered ? 0xFFA855E8 : 0xFF2A2A2A);
+        
+        context.fill(currentTabX, tabY, currentTabX + inventoryTabWidth, tabY + tabHeight, inventoryColor);
+        context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Inventory"), 
+                                         currentTabX + inventoryTabWidth / 2, tabY + 6, 0xFFFFFF);
+        currentTabX += inventoryTabWidth + tabSpacing;
+        
+        // Hotbar tab
+        int hotbarTabWidth = 60;
+        boolean hotbarHovered = mouseX >= currentTabX && mouseX <= currentTabX + hotbarTabWidth && 
+                              mouseY >= tabY && mouseY <= tabY + tabHeight;
+        
+        int hotbarColor = activeTab == LoadoutTab.HOTBAR ? LoadoutTab.HOTBAR.getColor() : 
+                         (hotbarHovered ? 0xFFFF8B5A : 0xFF2A2A2A);
+        
+        context.fill(currentTabX, tabY, currentTabX + hotbarTabWidth, tabY + tabHeight, hotbarColor);
+        context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Hotbar"), 
+                                         currentTabX + hotbarTabWidth / 2, tabY + 6, 0xFFFFFF);
+        currentTabX += hotbarTabWidth + tabSpacing;
+        
+        // Armor tab
+        int armorTabWidth = 50;
+        boolean armorHovered = mouseX >= currentTabX && mouseX <= currentTabX + armorTabWidth && 
+                             mouseY >= tabY && mouseY <= tabY + tabHeight;
+        
+        int armorColor = activeTab == LoadoutTab.ARMOR ? LoadoutTab.ARMOR.getColor() : 
+                        (armorHovered ? 0xFFFFE55C : 0xFF2A2A2A);
+        
+        context.fill(currentTabX, tabY, currentTabX + armorTabWidth, tabY + tabHeight, armorColor);
+        context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Armor"), 
+                                         currentTabX + armorTabWidth / 2, tabY + 6, 0xFFFFFF);
+        currentTabX += armorTabWidth + tabSpacing;
+        
         // Server tab (only if connected to server)
         if (manager.isConnectedToServer()) {
             int serverTabWidth = 60;
@@ -265,44 +313,6 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
                                              currentTabX + serverTabWidth / 2, tabY + 6, 0xFFFFFF);
             currentTabX += serverTabWidth + tabSpacing;
         }
-        
-        // Armor tab
-        int armorTabWidth = 50;
-        boolean armorHovered = mouseX >= currentTabX && mouseX <= currentTabX + armorTabWidth && 
-                             mouseY >= tabY && mouseY <= tabY + tabHeight;
-        
-        int armorColor = activeTab == LoadoutTab.ARMOR ? LoadoutTab.ARMOR.getColor() : 
-                        (armorHovered ? 0xFFFFE55C : 0xFF2A2A2A);
-        
-        context.fill(currentTabX, tabY, currentTabX + armorTabWidth, tabY + tabHeight, armorColor);
-        context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Armor"), 
-                                         currentTabX + armorTabWidth / 2, tabY + 6, 0xFFFFFF);
-        currentTabX += armorTabWidth + tabSpacing;
-        
-        // Hotbar tab
-        int hotbarTabWidth = 60;
-        boolean hotbarHovered = mouseX >= currentTabX && mouseX <= currentTabX + hotbarTabWidth && 
-                              mouseY >= tabY && mouseY <= tabY + tabHeight;
-        
-        int hotbarColor = activeTab == LoadoutTab.HOTBAR ? LoadoutTab.HOTBAR.getColor() : 
-                         (hotbarHovered ? 0xFFFF8B5A : 0xFF2A2A2A);
-        
-        context.fill(currentTabX, tabY, currentTabX + hotbarTabWidth, tabY + tabHeight, hotbarColor);
-        context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Hotbar"), 
-                                         currentTabX + hotbarTabWidth / 2, tabY + 6, 0xFFFFFF);
-        currentTabX += hotbarTabWidth + tabSpacing;
-        
-        // Inventory tab
-        int inventoryTabWidth = 70;
-        boolean inventoryHovered = mouseX >= currentTabX && mouseX <= currentTabX + inventoryTabWidth && 
-                                 mouseY >= tabY && mouseY <= tabY + tabHeight;
-        
-        int inventoryColor = activeTab == LoadoutTab.INVENTORY ? LoadoutTab.INVENTORY.getColor() : 
-                           (inventoryHovered ? 0xFFA855E8 : 0xFF2A2A2A);
-        
-        context.fill(currentTabX, tabY, currentTabX + inventoryTabWidth, tabY + tabHeight, inventoryColor);
-        context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Inventory"), 
-                                         currentTabX + inventoryTabWidth / 2, tabY + 6, 0xFFFFFF);
     }
     
     private void renderModernButtons(DrawContext context, int mouseX, int mouseY) {
@@ -452,9 +462,9 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) { // Left click
             // Check if clicking on tabs first
-            int startY = 50; // Loadout list start position
+            int startY = 48; // Loadout list start position
             int tabHeight = 18;
-            int tabSpacing = 5; // Add spacing between tabs to prevent accidental clicks
+            int tabSpacing = 0; // Add spacing between tabs to prevent accidental clicks
             int tabY = startY - tabHeight; // Position tabs so bottom edge meets top of list
             
             // Left-align tabs with the loadout list (starts at x=10)
@@ -470,25 +480,14 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
             }
             currentTabX += personalTabWidth + tabSpacing;
             
-            // Server tab (only if connected to server)
-            if (manager.isConnectedToServer()) {
-                int serverTabWidth = 60;
-                if (mouseX >= currentTabX && mouseX <= currentTabX + serverTabWidth && 
-                    mouseY >= tabY && mouseY <= tabY + tabHeight) {
-                    switchToTab(LoadoutTab.SERVER);
-                    return true;
-                }
-                currentTabX += serverTabWidth + tabSpacing;
-            }
-            
-            // Armor tab
-            int armorTabWidth = 50;
-            if (mouseX >= currentTabX && mouseX <= currentTabX + armorTabWidth && 
+            // Inventory tab
+            int inventoryTabWidth = 70;
+            if (mouseX >= currentTabX && mouseX <= currentTabX + inventoryTabWidth && 
                 mouseY >= tabY && mouseY <= tabY + tabHeight) {
-                switchToTab(LoadoutTab.ARMOR);
+                switchToTab(LoadoutTab.INVENTORY);
                 return true;
             }
-            currentTabX += armorTabWidth + tabSpacing;
+            currentTabX += inventoryTabWidth + tabSpacing;
             
             // Hotbar tab
             int hotbarTabWidth = 60;
@@ -499,12 +498,24 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
             }
             currentTabX += hotbarTabWidth + tabSpacing;
             
-            // Inventory tab
-            int inventoryTabWidth = 70;
-            if (mouseX >= currentTabX && mouseX <= currentTabX + inventoryTabWidth && 
+            // Armor tab
+            int armorTabWidth = 50;
+            if (mouseX >= currentTabX && mouseX <= currentTabX + armorTabWidth && 
                 mouseY >= tabY && mouseY <= tabY + tabHeight) {
-                switchToTab(LoadoutTab.INVENTORY);
+                switchToTab(LoadoutTab.ARMOR);
                 return true;
+            }
+            currentTabX += armorTabWidth + tabSpacing;
+            
+            // Server tab (only if connected to server)
+            if (manager.isConnectedToServer()) {
+                int serverTabWidth = 60;
+                if (mouseX >= currentTabX && mouseX <= currentTabX + serverTabWidth && 
+                    mouseY >= tabY && mouseY <= tabY + tabHeight) {
+                    switchToTab(LoadoutTab.SERVER);
+                    return true;
+                }
+                currentTabX += serverTabWidth + tabSpacing;
             }
             
             // Check if clicking in the loadout list area - only allow if on active tab
@@ -532,8 +543,67 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
             activeTab = newTab;
             selectedLoadout = null; // Clear selection when switching tabs
             updateButtonStates();
+            
+            // Recreate the loadout list widget with appropriate height for the new tab
+            recreateLoadoutListWidget();
+            
             // Refresh loadouts to apply filtering for the new tab
             onLoadoutsUpdated();
+        }
+    }
+    
+    /**
+     * Recreate the loadout list widget with dynamic height based on active tab
+     */
+    private void recreateLoadoutListWidget() {
+        // Remove existing widgets
+        if (personalLoadoutList != null) {
+            this.remove(personalLoadoutList);
+        }
+        if (serverLoadoutList != null) {
+            this.remove(serverLoadoutList);
+        }
+        
+        int startY = 50; // Leave space for tabs above
+        
+        // Layout: 2/3 left for loadout list, 1/3 right for info box
+        int leftPanelWidth = (this.width * 2) / 3 - 20; // 2/3 minus some margin
+        
+        // Calculate dynamic item height based on active tab
+        int dynamicItemHeight = getDynamicItemHeight(activeTab);
+        
+        // Create personal loadout list widget with dynamic height
+        int listHeight = this.height - 110; // More space for taller loadout entries and tabs
+        personalLoadoutList = new LoadoutListWidget(this.client, leftPanelWidth, listHeight, startY, dynamicItemHeight, this.personalLoadouts, this);
+        personalLoadoutList.setX(10); // Start with small margin from left edge
+        this.addSelectableChild(personalLoadoutList);
+        
+        // Create server loadout list widget (only if connected to server)
+        if (manager.isConnectedToServer()) {
+            serverLoadoutList = new LoadoutListWidget(this.client, leftPanelWidth, listHeight, startY, dynamicItemHeight, this.serverLoadouts, this);
+            serverLoadoutList.setX(10);
+            this.addSelectableChild(serverLoadoutList);
+        }
+    }
+    
+    /**
+     * Get the appropriate item height for a given tab
+     */
+    private int getDynamicItemHeight(LoadoutTab tab) {
+        if (tab.isSectionTab()) {
+            // Section tabs only need space for one section
+            switch (tab) {
+                case ARMOR:
+                case HOTBAR:
+                    return 32; // Single row of items
+                case INVENTORY:
+                    return 96; // 3 rows of inventory items
+                default:
+                    return 32;
+            }
+        } else {
+            // Full tabs (Personal/Server) need space for all sections
+            return 134;
         }
     }
     
@@ -573,33 +643,47 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         // Full loadout application logic
         System.out.println("Applying full loadout: " + selectedLoadout.getName());
         
-        // In survival mode, check inventory state before applying
-        boolean isInSurvival = !this.client.player.getAbilities().creativeMode;
-        boolean inventoryEmpty = isPlayerInventoryEmpty();
-        
         boolean success = false;
-        if (inventoryEmpty) {
-            // Empty inventory - consume the loadout (delete it) regardless of game mode
-            success = manager.applyLoadout(selectedLoadout.getId());
-            if (success) {
-                System.out.println("Player inventory was empty - consuming loadout: " + selectedLoadout.getName());
-                boolean deleteSuccess = manager.deleteLoadout(selectedLoadout.getId());
-                if (deleteSuccess) {
-                    System.out.println("Loadout consumed: " + selectedLoadout.getName());
-                    selectedLoadout = null;
-                    updateButtonStates();
-                    refreshLoadouts();
-                } else {
-                    System.out.println("Failed to delete loadout after use: " + manager.getLastOperationResult());
-                }
+        
+        // Check if we're in multiplayer - if so, always send to server for proper application
+        if (manager.isConnectedToServer()) {
+            System.out.println("In multiplayer - sending loadout to server for application");
+            // Personal loadouts should be consumed when applied to empty inventory, just like in single player
+            boolean inventoryEmpty = isPlayerInventoryEmpty();
+            ApplyLocalLoadoutPayload payload = new ApplyLocalLoadoutPayload(selectedLoadout, inventoryEmpty);
+            ClientPlayNetworking.send(payload);
+            success = true; // Assume success, server will handle the actual application
+            
+            // If inventory was empty, the loadout will be consumed on the server side
+            if (inventoryEmpty) {
+                selectedLoadout = null;
+                updateButtonStates();
+                refreshLoadouts();
             }
         } else {
-            // Non-empty inventory - swap contents with loadout in survival mode
-            if (isInSurvival) {
+            // Single player - handle locally
+            boolean inventoryEmpty = isPlayerInventoryEmpty();
+            
+            if (inventoryEmpty) {
+                // Empty inventory - apply loadout items directly to inventory
+                System.out.println("Player inventory was empty - applying loadout directly");
+                success = applyLoadoutToInventory(selectedLoadout);
+                if (success) {
+                    // Delete the loadout after consuming it
+                    boolean deleteSuccess = manager.deleteLoadout(selectedLoadout.getId());
+                    if (deleteSuccess) {
+                        System.out.println("Loadout consumed: " + selectedLoadout.getName());
+                        selectedLoadout = null;
+                        updateButtonStates();
+                        refreshLoadouts();
+                    } else {
+                        System.out.println("Failed to delete loadout after use: " + manager.getLastOperationResult());
+                    }
+                }
+            } else {
+                // Non-empty inventory - swap contents with loadout
                 System.out.println("Player inventory was not empty - swapping contents with loadout");
                 success = swapInventoryWithLoadout();
-            } else {
-                success = manager.applyLoadout(selectedLoadout.getId());
             }
         }
         
@@ -616,48 +700,22 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
 
         System.out.println("Applying " + activeTab.getDisplayName() + " section from loadout: " + selectedLoadout.getName());
 
-        // For section tabs, always do a swap operation
-        swapSectionWithLoadout(activeTab);
+        // Check if connected to server (multiplayer)
+        boolean isConnectedToServer = manager.isConnectedToServer();
+
+        if (isConnectedToServer) {
+            // In multiplayer: send to server only, let server handle and sync back
+            System.out.println("Connected to server - sending section apply request to server");
+            String sectionName = activeTab.name().toLowerCase();
+            ApplySectionPayload payload = new ApplySectionPayload(selectedLoadout.getId(), sectionName);
+            ClientPlayNetworking.send(payload);
+        } else {
+            // In single-player: perform immediate local update
+            System.out.println("Single-player mode - performing local section apply");
+            swapSectionWithLoadoutProperly(selectedLoadout, activeTab);
+        }
 
         this.close(); // Close the GUI after applying
-    }
-    
-    /**
-     * Checks if the player's specified section is completely empty
-     */
-    private boolean isPlayerSectionEmpty(LoadoutTab section) {
-        if (this.client == null || this.client.player == null) {
-            return true;
-        }
-        
-        switch (section) {
-            case ARMOR:
-                for (int i = 0; i < 4; i++) {
-                    if (!this.client.player.getInventory().armor.get(i).isEmpty()) {
-                        return false;
-                    }
-                }
-                return true;
-                
-            case HOTBAR:
-                for (int i = 0; i < 9; i++) {
-                    if (!this.client.player.getInventory().getStack(i).isEmpty()) {
-                        return false;
-                    }
-                }
-                return true;
-                
-            case INVENTORY:
-                for (int i = 9; i < 36; i++) {
-                    if (!this.client.player.getInventory().getStack(i).isEmpty()) {
-                        return false;
-                    }
-                }
-                return true;
-                
-            default:
-                return true; // Non-section tabs are considered "empty" for this check
-        }
     }
     
     /**
@@ -713,41 +771,94 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     }
     
     /**
-     * Swaps the player's current section with the loadout section (used in survival mode)
+     * Properly swaps a section between the player and loadout (preserves both sets of items)
      */
-    private void swapSectionWithLoadout(LoadoutTab section) {
-        if (selectedLoadout == null || this.client == null || this.client.player == null) {
+    private void swapSectionWithLoadoutProperly(Loadout loadout, LoadoutTab section) {
+        if (loadout == null || this.client == null || this.client.player == null) {
             return;
         }
-        
-        System.out.println("Withdrawing " + section.getDisplayName() + " section from loadout: " + selectedLoadout.getName());
-        
-        // Apply the loadout section to the player
-        applySectionItems(selectedLoadout, section);
-        
-        // Clear the section in the loadout (withdraw the items)
-        clearLoadoutSection(selectedLoadout, section);
-        
-        // Check if the loadout is now empty after clearing the section
-        if (isLoadoutEmpty(selectedLoadout)) {
-            // Delete the empty loadout instead of updating it
-            boolean deleteSuccess = manager.deleteLoadout(selectedLoadout.getId());
-            if (deleteSuccess) {
-                System.out.println("Loadout became empty after withdrawal, successfully deleted: " + selectedLoadout.getName());
-                selectedLoadout = null;
-            } else {
-                System.out.println("Failed to delete empty loadout after withdrawal: " + manager.getLastOperationResult());
+
+        System.out.println("Swapping " + section.getDisplayName() + " section with loadout: " + loadout.getName());
+
+        // Store the player's current items in this section
+        ItemStack[] playerItems = new ItemStack[0];
+        switch (section) {
+            case ARMOR:
+                playerItems = new ItemStack[4];
+                for (int i = 0; i < 4; i++) {
+                    playerItems[i] = this.client.player.getInventory().getArmorStack(i).copy();
+                }
+                break;
+            case HOTBAR:
+                playerItems = new ItemStack[9];
+                for (int i = 0; i < 9; i++) {
+                    playerItems[i] = this.client.player.getInventory().getStack(i).copy();
+                }
+                break;
+            case INVENTORY:
+                playerItems = new ItemStack[27];
+                for (int i = 0; i < 27; i++) {
+                    playerItems[i] = this.client.player.getInventory().getStack(i + 9).copy();
+                }
+                break;
+        }
+
+        // Apply loadout items to player
+        switch (section) {
+            case ARMOR:
+                for (int i = 0; i < 4; i++) {
+                    this.client.player.getInventory().armor.set(i, loadout.getArmor()[i].copy());
+                }
+                break;
+            case HOTBAR:
+                for (int i = 0; i < 9; i++) {
+                    this.client.player.getInventory().setStack(i, loadout.getHotbar()[i].copy());
+                }
+                break;
+            case INVENTORY:
+                for (int i = 0; i < 27; i++) {
+                    this.client.player.getInventory().setStack(i + 9, loadout.getMainInventory()[i].copy());
+                }
+                break;
+        }
+
+        // Update loadout with player's original items
+        switch (section) {
+            case ARMOR:
+                for (int i = 0; i < 4; i++) {
+                    loadout.setArmorSlot(i, playerItems[i]);
+                }
+                break;
+            case HOTBAR:
+                for (int i = 0; i < 9; i++) {
+                    loadout.setHotbarSlot(i, playerItems[i]);
+                }
+                break;
+            case INVENTORY:
+                for (int i = 0; i < 27; i++) {
+                    loadout.setMainInventorySlot(i, playerItems[i]);
+                }
+                break;
+        }
+
+        // Update the loadout in local storage
+        boolean updateSuccess = manager.updateLoadout(loadout);
+        if (updateSuccess) {
+            System.out.println("Successfully swapped " + section.getDisplayName() + " section with loadout");
+            
+            // Check if the loadout is now empty and delete it if so
+            if (isLoadoutEmpty(loadout)) {
+                boolean deleteSuccess = manager.deleteLoadout(loadout.getId());
+                if (deleteSuccess) {
+                    System.out.println("Loadout became empty after section swap, successfully deleted: " + loadout.getName());
+                } else {
+                    System.out.println("Failed to delete empty loadout after section swap: " + manager.getLastOperationResult());
+                }
             }
         } else {
-            // Update the loadout in storage
-            boolean updateSuccess = manager.updateLoadout(selectedLoadout);
-            if (updateSuccess) {
-                System.out.println("Successfully withdrew " + section.getDisplayName() + " section from loadout");
-            } else {
-                System.out.println("Failed to update loadout after withdrawal: " + manager.getLastOperationResult());
-            }
+            System.out.println("Failed to update loadout during section swap: " + manager.getLastOperationResult());
         }
-        
+
         refreshLoadouts();
     }
     
@@ -806,7 +917,7 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         boolean updated = false;
         
         // Check and update armor section if empty
-        if (isLoadoutSectionEmpty(loadout, LoadoutTab.ARMOR)) {
+        if (checkLoadoutSectionEmpty(loadout, LoadoutTab.ARMOR)) {
             System.out.println("Depositing armor into loadout");
             for (int i = 0; i < 4; i++) {
                 net.minecraft.item.ItemStack playerArmor = this.client.player.getInventory().armor.get(i);
@@ -819,7 +930,7 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         }
         
         // Check and update hotbar section if empty
-        if (isLoadoutSectionEmpty(loadout, LoadoutTab.HOTBAR)) {
+        if (checkLoadoutSectionEmpty(loadout, LoadoutTab.HOTBAR)) {
             System.out.println("Depositing hotbar into loadout");
             for (int i = 0; i < 9; i++) {
                 net.minecraft.item.ItemStack playerHotbar = this.client.player.getInventory().getStack(i);
@@ -832,7 +943,7 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         }
         
         // Check and update inventory section if empty
-        if (isLoadoutSectionEmpty(loadout, LoadoutTab.INVENTORY)) {
+        if (checkLoadoutSectionEmpty(loadout, LoadoutTab.INVENTORY)) {
             System.out.println("Depositing inventory into loadout");
             for (int i = 0; i < 27; i++) {
                 net.minecraft.item.ItemStack playerInventory = this.client.player.getInventory().getStack(i + 9);
@@ -859,9 +970,9 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     }
     
     /**
-     * Check if a section in a loadout is completely empty
+     * Public method to check if a loadout section is empty (for context menu use)
      */
-    private boolean isLoadoutSectionEmpty(Loadout loadout, LoadoutTab section) {
+    public boolean checkLoadoutSectionEmpty(Loadout loadout, LoadoutTab section) {
         switch (section) {
             case ARMOR:
                 for (int i = 0; i < 4; i++) {
@@ -893,18 +1004,63 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     }
     
     /**
+     * Public method to check if player has items in a section (for context menu use)
+     */
+    public boolean checkPlayerHasSectionItems(LoadoutTab section) {
+        if (this.client == null || this.client.player == null) {
+            return false;
+        }
+        
+        switch (section) {
+            case ARMOR:
+                for (int i = 0; i < 4; i++) {
+                    if (!this.client.player.getInventory().getArmorStack(i).isEmpty()) {
+                        return true;
+                    }
+                }
+                return false;
+                
+            case HOTBAR:
+                for (int i = 0; i < 9; i++) {
+                    if (!this.client.player.getInventory().getStack(i).isEmpty()) {
+                        return true;
+                    }
+                }
+                return false;
+                
+            case INVENTORY:
+                for (int i = 9; i < 36; i++) {
+                    if (!this.client.player.getInventory().getStack(i).isEmpty()) {
+                        return true;
+                    }
+                }
+                return false;
+                
+            default:
+                return false;
+        }
+    }
+    
+    /**
      * Check if a loadout is completely empty (all sections are empty)
      */
     private boolean isLoadoutEmpty(Loadout loadout) {
-        return isLoadoutSectionEmpty(loadout, LoadoutTab.ARMOR) &&
-               isLoadoutSectionEmpty(loadout, LoadoutTab.HOTBAR) &&
-               isLoadoutSectionEmpty(loadout, LoadoutTab.INVENTORY) &&
+        return checkLoadoutSectionEmpty(loadout, LoadoutTab.ARMOR) &&
+               checkLoadoutSectionEmpty(loadout, LoadoutTab.HOTBAR) &&
+               checkLoadoutSectionEmpty(loadout, LoadoutTab.INVENTORY) &&
                (loadout.getOffhand().length == 0 || loadout.getOffhand()[0].isEmpty());
     }
     
     private void saveSectionToLoadout() {
         if (this.client == null || this.client.player == null) {
             System.out.println("Client or player is null!");
+            return;
+        }
+        
+        // Check if the section has any items before creating the loadout
+        if (!checkPlayerHasSectionItems(activeTab)) {
+            System.out.println("Cannot create loadout from empty " + activeTab.getDisplayName() + " section");
+            System.out.println("CLIENT: Section check failed for " + activeTab.getDisplayName());
             return;
         }
         
@@ -915,6 +1071,9 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         // Create a Loadout object with only the section items
         Loadout sectionLoadout = new Loadout(name);
         
+        // Check if connected to server (multiplayer)
+        boolean isConnectedToServer = manager.isConnectedToServer();
+        
         switch (activeTab) {
             case ARMOR:
                 // Copy armor items to the loadout
@@ -924,9 +1083,11 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
                         sectionLoadout.setArmorSlot(i, armorItem.copy());
                     }
                 }
-                // Clear armor slots after depositing
-                for (int i = 0; i < 4; i++) {
-                    this.client.player.getInventory().armor.set(i, net.minecraft.item.ItemStack.EMPTY);
+                // Clear armor slots after depositing (only in single-player)
+                if (!isConnectedToServer) {
+                    for (int i = 0; i < 4; i++) {
+                        this.client.player.getInventory().armor.set(i, net.minecraft.item.ItemStack.EMPTY);
+                    }
                 }
                 break;
                 
@@ -938,9 +1099,11 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
                         sectionLoadout.setHotbarSlot(i, hotbarItem.copy());
                     }
                 }
-                // Clear hotbar slots after depositing
-                for (int i = 0; i < 9; i++) {
-                    this.client.player.getInventory().setStack(i, net.minecraft.item.ItemStack.EMPTY);
+                // Clear hotbar slots after depositing (only in single-player)
+                if (!isConnectedToServer) {
+                    for (int i = 0; i < 9; i++) {
+                        this.client.player.getInventory().setStack(i, net.minecraft.item.ItemStack.EMPTY);
+                    }
                 }
                 break;
                 
@@ -952,9 +1115,11 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
                         sectionLoadout.setMainInventorySlot(i, inventoryItem.copy());
                     }
                 }
-                // Clear inventory slots after depositing
-                for (int i = 0; i < 27; i++) {
-                    this.client.player.getInventory().setStack(i + 9, net.minecraft.item.ItemStack.EMPTY);
+                // Clear inventory slots after depositing (only in single-player)
+                if (!isConnectedToServer) {
+                    for (int i = 0; i < 27; i++) {
+                        this.client.player.getInventory().setStack(i + 9, net.minecraft.item.ItemStack.EMPTY);
+                    }
                 }
                 break;
                 
@@ -1104,20 +1269,82 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
 
         System.out.println("Applying " + section.getDisplayName() + " section from loadout: " + loadout.getName());
 
-        // Store current tab and selected loadout
-        LoadoutTab originalTab = activeTab;
-        Loadout originalSelected = selectedLoadout;
-        
-        // Temporarily set the section tab and loadout
-        activeTab = section;
-        selectedLoadout = loadout;
-        
-        // Apply the section
-        applySectionLoadout();
-        
-        // Restore original state
-        activeTab = originalTab;
-        selectedLoadout = originalSelected;
+        // Check if connected to server (multiplayer)
+        boolean isConnectedToServer = manager.isConnectedToServer();
+
+        if (isConnectedToServer) {
+            // In multiplayer: send to server only, let server handle and sync back
+            System.out.println("Connected to server - sending section apply request to server");
+            String sectionName = section.name().toLowerCase();
+            ApplySectionPayload payload = new ApplySectionPayload(loadout.getId(), sectionName);
+            ClientPlayNetworking.send(payload);
+        } else {
+            // In single-player: perform immediate local update
+            System.out.println("Single-player mode - performing local section apply");
+            swapSectionWithLoadoutProperly(loadout, section);
+        }
+    }
+    
+    /**
+     * Locally deposit a specific section from player inventory into a loadout (for immediate visual feedback)
+     */
+    private void depositSectionIntoLoadoutLocally(Loadout loadout, LoadoutTab section) {
+        if (loadout == null || this.client == null || this.client.player == null) {
+            return;
+        }
+
+        boolean deposited = false;
+
+        switch (section) {
+            case ARMOR:
+                for (int i = 0; i < 4; i++) {
+                    net.minecraft.item.ItemStack playerArmor = this.client.player.getInventory().getArmorStack(i);
+                    if (!playerArmor.isEmpty()) {
+                        loadout.setArmorSlot(i, playerArmor.copy());
+                        this.client.player.getInventory().armor.set(i, net.minecraft.item.ItemStack.EMPTY);
+                        deposited = true;
+                    }
+                }
+                break;
+
+            case HOTBAR:
+                for (int i = 0; i < 9; i++) {
+                    net.minecraft.item.ItemStack playerHotbar = this.client.player.getInventory().getStack(i);
+                    if (!playerHotbar.isEmpty()) {
+                        loadout.setHotbarSlot(i, playerHotbar.copy());
+                        this.client.player.getInventory().setStack(i, net.minecraft.item.ItemStack.EMPTY);
+                        deposited = true;
+                    }
+                }
+                break;
+
+            case INVENTORY:
+                for (int i = 0; i < 27; i++) {
+                    net.minecraft.item.ItemStack playerInventory = this.client.player.getInventory().getStack(i + 9);
+                    if (!playerInventory.isEmpty()) {
+                        loadout.setMainInventorySlot(i, playerInventory.copy());
+                        this.client.player.getInventory().setStack(i + 9, net.minecraft.item.ItemStack.EMPTY);
+                        deposited = true;
+                    }
+                }
+                break;
+
+            default:
+                System.out.println("ERROR: depositSectionIntoLoadoutLocally called with non-section tab: " + section);
+                return;
+        }
+
+        if (deposited) {
+            boolean success = manager.updateLoadout(loadout);
+            if (success) {
+                System.out.println("Successfully deposited " + section.getDisplayName() + " section into loadout locally");
+                refreshLoadouts();
+            } else {
+                System.out.println("Failed to update loadout after local deposit: " + manager.getLastOperationResult());
+            }
+        } else {
+            System.out.println("No items to deposit in " + section.getDisplayName() + " section");
+        }
     }
     
     private void setButtonsVisible(boolean visible) {
@@ -1169,6 +1396,45 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
             return false;
         }
         
+        return true;
+    }
+    
+    /**
+     * Applies a loadout directly to the player's inventory (puts real items in slots)
+     */
+    private boolean applyLoadoutToInventory(Loadout loadout) {
+        if (loadout == null || this.client == null || this.client.player == null) {
+            return false;
+        }
+        
+        System.out.println("Applying loadout directly to inventory: " + loadout.getName());
+        
+        // Apply loadout items to player inventory slots (making them "real" items)
+        for (int i = 0; i < Loadout.HOTBAR_SIZE; i++) {
+            ItemStack stack = loadout.getHotbar()[i];
+            if (stack == null) stack = ItemStack.EMPTY;
+            this.client.player.getInventory().setStack(i, stack.copy());
+        }
+        for (int i = 0; i < Loadout.MAIN_INVENTORY_SIZE; i++) {
+            ItemStack stack = loadout.getMainInventory()[i];
+            if (stack == null) stack = ItemStack.EMPTY;
+            this.client.player.getInventory().setStack(i + Loadout.HOTBAR_SIZE, stack.copy());
+        }
+        for (int i = 0; i < Loadout.ARMOR_SIZE; i++) {
+            ItemStack stack = loadout.getArmor()[i];
+            if (stack == null) stack = ItemStack.EMPTY;
+            this.client.player.getInventory().armor.set(i, stack.copy());
+        }
+        for (int i = 0; i < Loadout.OFFHAND_SIZE; i++) {
+            ItemStack stack = loadout.getOffhand()[i];
+            if (stack == null) stack = ItemStack.EMPTY;
+            this.client.player.getInventory().offHand.set(i, stack.copy());
+        }
+        
+        // Mark inventory as dirty to trigger synchronization
+        this.client.player.getInventory().markDirty();
+        
+        System.out.println("Successfully applied loadout to inventory");
         return true;
     }
     
@@ -1282,5 +1548,75 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         }
         
         updateButtonStates();
+    }
+    
+    /**
+     * Check if the player has items in a specific section
+     */
+    private boolean hasPlayerSectionItems(LoadoutTab section) {
+        if (this.client == null || this.client.player == null) {
+            return false;
+        }
+        
+        switch (section) {
+            case ARMOR:
+                for (int i = 0; i < 4; i++) {
+                    if (!this.client.player.getInventory().getArmorStack(i).isEmpty()) {
+                        return true;
+                    }
+                }
+                return false;
+                
+            case HOTBAR:
+                for (int i = 0; i < 9; i++) {
+                    if (!this.client.player.getInventory().getStack(i).isEmpty()) {
+                        return true;
+                    }
+                }
+                return false;
+                
+            case INVENTORY:
+                for (int i = 9; i < 36; i++) {
+                    if (!this.client.player.getInventory().getStack(i).isEmpty()) {
+                        return true;
+                    }
+                }
+                return false;
+                
+            default:
+                return false;
+        }
+    }
+    
+    /**
+     * Deposit a specific section from player inventory into an existing loadout
+     */
+    public void depositSectionIntoLoadout(Loadout loadout, LoadoutTab section) {
+        if (loadout == null || this.client == null || this.client.player == null) {
+            System.out.println("Loadout is null or client/player is null!");
+            return;
+        }
+
+        if (!checkLoadoutSectionEmpty(loadout, section)) {
+            System.out.println("Cannot deposit into " + section.getDisplayName() + " section - loadout section is not empty");
+            return;
+        }
+
+        System.out.println("Depositing " + section.getDisplayName() + " section into loadout: " + loadout.getName());
+
+        // Check if connected to server (multiplayer)
+        boolean isConnectedToServer = manager.isConnectedToServer();
+
+        if (isConnectedToServer) {
+            // In multiplayer: send to server only, let server handle and sync back
+            System.out.println("Connected to server - sending section deposit request to server");
+            String sectionName = section.name().toLowerCase();
+            DepositSectionPayload payload = new DepositSectionPayload(loadout.getId(), sectionName);
+            ClientPlayNetworking.send(payload);
+        } else {
+            // In single-player: perform immediate local update
+            System.out.println("Single-player mode - performing local section deposit");
+            depositSectionIntoLoadoutLocally(loadout, section);
+        }
     }
 }
