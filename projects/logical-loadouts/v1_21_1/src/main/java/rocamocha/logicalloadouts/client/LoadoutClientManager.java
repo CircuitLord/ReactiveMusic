@@ -326,6 +326,34 @@ public class LoadoutClientManager {
     }
 
     /**
+     * Update a loadout object (hybrid: local or server)
+     */
+    public boolean updateLoadout(Loadout loadout) {
+        try {
+            // Check if this is a server loadout
+            if (isConnectedToCompatibleServer() && (serverLoadouts.containsKey(loadout.getId()) || serverSharedLoadouts.containsKey(loadout.getId()))) {
+                // Send update request to server
+                ClientPlayNetworking.send(new UpdateLoadoutPayload(loadout.toNbt()));
+                lastOperationSuccess = true;
+                lastOperationResult = "Sent update request to server for loadout: " + loadout.getName();
+                return true;
+            } else {
+                // Local loadout - save directly
+                localStorage.saveLocalLoadoutWithoutCopy(loadout);
+                lastOperationSuccess = true;
+                lastOperationResult = "Updated local loadout: " + loadout.getName();
+                notifyListeners();
+                return true;
+            }
+        } catch (Exception e) {
+            lastOperationSuccess = false;
+            lastOperationResult = "Failed to update loadout: " + e.getMessage();
+            LogicalLoadouts.LOGGER.error("Failed to update loadout", e);
+            return false;
+        }
+    }
+
+    /**
      * Save current inventory to a global slot (1-3)
      */
     public boolean saveToGlobalSlot(int slot, String name) {
@@ -416,6 +444,67 @@ public class LoadoutClientManager {
             lastOperationSuccess = false;
             lastOperationResult = "Failed to send create request: " + e.getMessage();
             LogicalLoadouts.LOGGER.error("Failed to create server loadout", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Create a new loadout from provided data (hybrid: local if offline, server if online)
+     */
+    public boolean createLoadoutFromData(Loadout loadout) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        boolean hasIntegratedServer = client.getServer() != null;
+        boolean compatibleServer = isConnectedToCompatibleServer();
+        
+        System.out.println("CreateLoadoutFromData: isConnectedToServer = " + isConnectedToServer);
+        System.out.println("CreateLoadoutFromData: hasIntegratedServer = " + hasIntegratedServer);
+        System.out.println("CreateLoadoutFromData: isConnectedToCompatibleServer = " + compatibleServer);
+        
+        if (compatibleServer) {
+            System.out.println("Taking server path...");
+            return createServerLoadoutFromData(loadout);
+        } else {
+            System.out.println("Taking local path...");
+            return saveLocalLoadoutFromData(loadout);
+        }
+    }
+    
+    /**
+     * Create a server loadout from provided data
+     */
+    private boolean createServerLoadoutFromData(Loadout loadout) {
+        try {
+            // Send create loadout from data request to server using modern CustomPayload system
+            System.out.println("CLIENT: Sending CreateLoadoutFromDataPayload to server for: " + loadout.getName());
+            ClientPlayNetworking.send(new CreateLoadoutFromDataPayload(loadout));
+            
+            lastOperationSuccess = true;
+            lastOperationResult = "Sent create request to server for loadout: " + loadout.getName();
+            return true;
+        } catch (Exception e) {
+            lastOperationSuccess = false;
+            lastOperationResult = "Failed to send create request: " + e.getMessage();
+            LogicalLoadouts.LOGGER.error("Failed to create server loadout from data", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Save provided loadout data to local storage
+     */
+    public boolean saveLocalLoadoutFromData(Loadout loadout) {
+        try {
+            localStorage.saveLocalLoadout(loadout);
+            
+            lastOperationSuccess = true;
+            lastOperationResult = "Saved local loadout: " + loadout.getName();
+            
+            notifyListeners();
+            return true;
+        } catch (Exception e) {
+            lastOperationSuccess = false;
+            lastOperationResult = "Failed to save local loadout: " + e.getMessage();
+            LogicalLoadouts.LOGGER.error("Failed to save local loadout from data", e);
             return false;
         }
     }

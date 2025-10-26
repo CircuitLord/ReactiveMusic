@@ -59,6 +59,58 @@ public class LoadoutServerPackets {
     }
     
     /**
+     * Handle client request to create a new loadout from provided data
+     */
+    public static void handleCreateLoadoutFromData(CreateLoadoutFromDataPayload payload, ServerPlayNetworking.Context context) {
+        LogicalLoadouts.LOGGER.info("SERVER: Received CreateLoadoutFromDataPayload from client");
+        System.out.println("SERVER: handleCreateLoadoutFromData called for loadout: " + payload.loadout().getName());
+        
+        ServerPlayerEntity player = context.player();
+        MinecraftServer server = context.server();
+        Loadout loadout = payload.loadout();
+        
+        // Debug: Check what items are in the received loadout
+        System.out.println("SERVER: Received loadout '" + loadout.getName() + "' with:");
+        System.out.println("  Hotbar: " + countNonEmptyItems(loadout.getHotbar()) + " items");
+        System.out.println("  MainInventory: " + countNonEmptyItems(loadout.getMainInventory()) + " items");
+        System.out.println("  Armor: " + countNonEmptyItems(loadout.getArmor()) + " items");
+        System.out.println("  Offhand: " + (loadout.getOffhand().length > 0 && !loadout.getOffhand()[0].isEmpty() ? 1 : 0) + " items");
+        
+        server.execute(() -> {
+            try {
+                LoadoutManager manager = getLoadoutManager(server);
+                // Ensure player data is loaded for single-player mode
+                ensurePlayerDataLoaded(manager, player.getUuid());
+                
+                // Use the provided loadout data instead of capturing from player
+                LoadoutManager.LoadoutOperationResult result = manager.createLoadoutFromData(player, loadout);
+                
+                // NOTE: Section loadouts should NOT clear the player's inventory
+                // Only personal loadouts (full inventory deposits) clear the inventory
+                
+                sendOperationResult(player, "create", result);
+                
+                if (result.isSuccess()) {
+                    // Send updated loadout list to client
+                    sendLoadoutsSync(player, manager);
+                }
+            } catch (Exception e) {
+                LogicalLoadouts.LOGGER.error("Error handling create loadout from data packet", e);
+                sendOperationResult(player, "create", LoadoutManager.LoadoutOperationResult.error("Internal server error"));
+            }
+        });
+    }
+    
+    // Helper method for debug output
+    private static int countNonEmptyItems(net.minecraft.item.ItemStack[] items) {
+        int count = 0;
+        for (net.minecraft.item.ItemStack item : items) {
+            if (item != null && !item.isEmpty()) count++;
+        }
+        return count;
+    }
+    
+    /**
      * Handle client request to delete a loadout
      */
     public static void handleDeleteLoadout(DeleteLoadoutPayload payload, ServerPlayNetworking.Context context) {

@@ -20,6 +20,7 @@ public class LoadoutNetworking {
         
         // Register payload types for client -> server packets
         PayloadTypeRegistry.playC2S().register(CreateLoadoutPayload.ID, CreateLoadoutPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(CreateLoadoutFromDataPayload.ID, CreateLoadoutFromDataPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(DeleteLoadoutPayload.ID, DeleteLoadoutPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(UpdateLoadoutPayload.ID, UpdateLoadoutPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ApplyLoadoutPayload.ID, ApplyLoadoutPayload.CODEC);
@@ -44,6 +45,7 @@ public class LoadoutNetworking {
         
         // Register all server packet handlers using modern CustomPayload system
         ServerPlayNetworking.registerGlobalReceiver(CreateLoadoutPayload.ID, LoadoutServerPackets::handleCreateLoadout);
+        ServerPlayNetworking.registerGlobalReceiver(CreateLoadoutFromDataPayload.ID, LoadoutServerPackets::handleCreateLoadoutFromData);
         ServerPlayNetworking.registerGlobalReceiver(DeleteLoadoutPayload.ID, LoadoutServerPackets::handleDeleteLoadout);
         ServerPlayNetworking.registerGlobalReceiver(UpdateLoadoutPayload.ID, LoadoutServerPackets::handleUpdateLoadout);
         ServerPlayNetworking.registerGlobalReceiver(ApplyLoadoutPayload.ID, LoadoutServerPackets::handleApplyLoadout);

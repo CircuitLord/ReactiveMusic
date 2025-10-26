@@ -210,6 +210,64 @@ public class LoadoutManager {
     }
     
     /**
+     * Create a new loadout for a player from provided loadout data
+     */
+    public LoadoutOperationResult createLoadoutFromData(net.minecraft.entity.player.PlayerEntity player, Loadout loadout) {
+        UUID playerUuid = player.getUuid();
+        Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
+        if (loadouts == null) {
+            return LoadoutOperationResult.error("Player data not loaded");
+        }
+        
+        // Check limits
+        if (loadouts.size() >= maxLoadoutsPerPlayer) {
+            return LoadoutOperationResult.error("Maximum number of loadouts reached (" + maxLoadoutsPerPlayer + ")");
+        }
+        
+        // Check for duplicate names
+        for (Loadout existingLoadout : loadouts.values()) {
+            if (existingLoadout.getName().equalsIgnoreCase(loadout.getName())) {
+                return LoadoutOperationResult.error("A loadout with that name already exists");
+            }
+        }
+        
+        try {
+            // Validate the provided loadout
+            if (!loadout.isValid()) {
+                return LoadoutOperationResult.error("Invalid loadout data");
+            }
+            
+            // Additional server-side validation
+            if (!validateLoadoutForServer(loadout)) {
+                return LoadoutOperationResult.error("Loadout contains forbidden items");
+            }
+            
+            // Create a new loadout with the provided data but generate a new ID
+            Loadout newLoadout = new Loadout(loadout.getName());
+            // Copy all the inventory data using setter methods
+            for (int i = 0; i < Loadout.HOTBAR_SIZE; i++) {
+                newLoadout.setHotbarSlot(i, loadout.getHotbar()[i]);
+            }
+            for (int i = 0; i < Loadout.MAIN_INVENTORY_SIZE; i++) {
+                newLoadout.setMainInventorySlot(i, loadout.getMainInventory()[i]);
+            }
+            for (int i = 0; i < Loadout.ARMOR_SIZE; i++) {
+                newLoadout.setArmorSlot(i, loadout.getArmor()[i]);
+            }
+            for (int i = 0; i < Loadout.OFFHAND_SIZE; i++) {
+                newLoadout.setOffhandSlot(i, loadout.getOffhand()[i]);
+            }
+            
+            loadouts.put(newLoadout.getId(), newLoadout);
+            
+            LogicalLoadouts.LOGGER.debug("Created loadout '{}' for player {} from provided data", loadout.getName(), playerUuid);
+            return LoadoutOperationResult.success(newLoadout);
+        } catch (IllegalArgumentException e) {
+            return LoadoutOperationResult.error(e.getMessage());
+        }
+    }
+    
+    /**
      * Create a new loadout for a player (deprecated - use createLoadout(PlayerEntity, String) instead)
      */
     // public LoadoutOperationResult createLoadout(UUID playerUuid, String name) {
