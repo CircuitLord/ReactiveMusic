@@ -249,9 +249,6 @@ public class LoadoutManager {
         
         return null;
     }
-    /**
-     * Create a new loadout for a player from provided loadout data
-     */
     public LoadoutOperationResult createLoadoutFromData(net.minecraft.entity.player.PlayerEntity player, Loadout loadout) {
         UUID playerUuid = player.getUuid();
         Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
@@ -302,6 +299,61 @@ public class LoadoutManager {
             return LoadoutOperationResult.success(newLoadout);
         } catch (IllegalArgumentException e) {
             return LoadoutOperationResult.error(e.getMessage());
+        }
+    }
+    public LoadoutOperationResult createServerLoadout(Loadout loadout, String name) {
+        // Validate the provided loadout
+        if (!loadout.isValid()) {
+            return LoadoutOperationResult.error("Invalid loadout data");
+        }
+        
+        // Check if the loadout would be empty
+        if (isLoadoutEmpty(loadout)) {
+            return LoadoutOperationResult.error("Cannot create empty loadout - no items found");
+        }
+        
+        // Additional server-side validation
+        if (!validateLoadoutForServer(loadout)) {
+            return LoadoutOperationResult.error("Loadout contains forbidden items");
+        }
+        
+        // Check for duplicate names in server loadouts
+        for (Loadout existingLoadout : serverSharedLoadouts.values()) {
+            if (existingLoadout.getName().equalsIgnoreCase(name)) {
+                return LoadoutOperationResult.error("A server loadout with that name already exists");
+            }
+        }
+        
+        try {
+            // Create a new loadout with the provided data but generate a new ID and use the specified name
+            Loadout newLoadout = new Loadout(name);
+            // Copy all the inventory data using setter methods
+            for (int i = 0; i < Loadout.HOTBAR_SIZE; i++) {
+                newLoadout.setHotbarSlot(i, loadout.getHotbar()[i]);
+            }
+            for (int i = 0; i < Loadout.MAIN_INVENTORY_SIZE; i++) {
+                newLoadout.setMainInventorySlot(i, loadout.getMainInventory()[i]);
+            }
+            for (int i = 0; i < Loadout.ARMOR_SIZE; i++) {
+                newLoadout.setArmorSlot(i, loadout.getArmor()[i]);
+            }
+            for (int i = 0; i < Loadout.OFFHAND_SIZE; i++) {
+                newLoadout.setOffhandSlot(i, loadout.getOffhand()[i]);
+            }
+            
+            // Save to disk with sanitized filename
+            String sanitizedFilename = newLoadout.getName().replaceAll("[^a-zA-Z0-9_-]", "_");
+            Path loadoutFile = serverLoadoutsPath.resolve(sanitizedFilename + LOADOUTS_FILE_EXTENSION);
+            NbtIo.writeCompressed(newLoadout.toNbt(), loadoutFile);
+            
+            // Add to in-memory cache
+            serverSharedLoadouts.put(newLoadout.getId(), newLoadout);
+            
+            LogicalLoadouts.LOGGER.info("Created server loadout '{}' with ID {}", name, newLoadout.getId());
+            return LoadoutOperationResult.success(newLoadout);
+        } catch (Exception e) {
+            LogicalLoadouts.LOGGER.error("Failed to create server loadout '{}'", name, e);
+            return LoadoutOperationResult.error("Failed to save server loadout: " + e.getMessage());
         }
     }
     

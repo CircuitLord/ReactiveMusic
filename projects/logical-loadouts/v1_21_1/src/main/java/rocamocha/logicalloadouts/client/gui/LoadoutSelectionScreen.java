@@ -5,6 +5,7 @@ import rocamocha.logicalloadouts.network.packets.ApplySectionPayload;
 import rocamocha.logicalloadouts.network.packets.ApplyLocalLoadoutPayload;
 import rocamocha.logicalloadouts.network.packets.DepositSectionPayload;
 import rocamocha.logicalloadouts.network.packets.ReloadServerLoadoutsPayload;
+import rocamocha.logicalloadouts.network.packets.UploadLoadoutPayload;
 
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -78,6 +79,7 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     private Loadout selectedLoadout = null;
     private LoadoutTab activeTab = LoadoutTab.PERSONAL;
     private boolean showCreateDialog = false;
+    private String validationError = null;
     
     public LoadoutSelectionScreen() {
         super(Text.literal("Loadout Management"));
@@ -394,7 +396,7 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     
     private void renderCreateDialog(DrawContext context, int mouseX, int mouseY) {
         int dialogWidth = 240;
-        int dialogHeight = 100;
+        int dialogHeight = 140; // Increased height to accommodate button and text
         int dialogX = this.width / 2 - dialogWidth / 2;
         int dialogY = this.height / 2 - dialogHeight / 2; // Center the dialog
         
@@ -413,11 +415,34 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         nameField.setVisible(true);
         nameField.render(context, mouseX, mouseY, 0);
         
-        // Instructions
+        // Upload button (centered, only if connected to server)
+        if (manager.isConnectedToServer()) {
+            int buttonWidth = 80;
+            int buttonHeight = 20;
+            int buttonX = dialogX + (dialogWidth - buttonWidth) / 2; // Center the button
+            int buttonY = dialogY + 70; // Position button below name field with space
+            
+            // Draw Upload button
+            boolean uploadHovered = mouseX >= buttonX && mouseX <= buttonX + buttonWidth && 
+                                   mouseY >= buttonY && mouseY <= buttonY + buttonHeight;
+            boolean isValid = validationError == null;
+            int uploadButtonColor = !isValid ? 0xFF444444 : (uploadHovered ? 0xFF888888 : 0xFF666666);
+            context.fill(buttonX, buttonY, buttonX + buttonWidth, buttonY + buttonHeight, uploadButtonColor);
+            context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Upload").formatted(Formatting.WHITE), 
+                                             buttonX + buttonWidth / 2, buttonY + 6, 0xFFFFFF);
+        }
+        
+        // Validation error text (displayed above instructions if there's an error)
+        if (validationError != null) {
+            context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(validationError).formatted(Formatting.RED), 
+                                             this.width / 2, dialogY + 95, 0xFF5555);
+        }
+        
+        // Instructions (moved down to avoid overlap)
         context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Press Enter to export").formatted(Formatting.ITALIC), 
-                                         this.width / 2, dialogY + 65, 0xCCCCCC);
+                                         this.width / 2, dialogY + 110, 0xCCCCCC);
         context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Press Escape to cancel").formatted(Formatting.ITALIC), 
-                                         this.width / 2, dialogY + 78, 0xCCCCCC);
+                                         this.width / 2, dialogY + 123, 0xCCCCCC);
     }
     
     private void renderLoadoutInfo(DrawContext context, Loadout loadout) {
@@ -519,6 +544,39 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
                 currentTabX += serverTabWidth + tabSpacing;
             }
             
+            // Check if clicking in the create dialog (when visible)
+            if (showCreateDialog) {
+                int dialogX = this.width / 2 - 120; // 240/2 = 120
+                int dialogY = this.height / 2 - 70; // 140/2 = 70
+                int dialogWidth = 240;
+                int dialogHeight = 140;
+                
+                // Check if click is within dialog bounds
+                if (mouseX >= dialogX && mouseX <= dialogX + dialogWidth &&
+                    mouseY >= dialogY && mouseY <= dialogY + dialogHeight) {
+                    
+                    // Upload button (centered, only if connected to server)
+                    if (manager.isConnectedToServer()) {
+                        int buttonWidth = 80;
+                        int buttonHeight = 20;
+                        int buttonX = dialogX + (dialogWidth - buttonWidth) / 2; // Center the button
+                        int buttonY = dialogY + 70; // Position button below name field with space
+                        
+                        if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+                            mouseY >= buttonY && mouseY <= buttonY + buttonHeight) {
+                            // Only allow upload if name is valid
+                            if (validationError == null) {
+                                uploadLoadout();
+                            }
+                            return true;
+                        }
+                    }
+                    
+                    // Consume the click if it's in the dialog but not on a button
+                    return true;
+                }
+            }
+            
             // Check if clicking in the loadout list area - only allow if on active tab
             int listStartY = 50;
             int listHeight = this.height - 110;
@@ -612,13 +670,19 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (showCreateDialog) {
             if (keyCode == 257) { // Enter key
-                exportLoadout();
+                // Only allow upload if name is valid
+                if (validationError == null) {
+                    uploadLoadout();
+                }
                 return true;
             } else if (keyCode == 256) { // Escape key
                 toggleCreateDialog();
                 return true;
             } else if (nameField.isFocused()) {
-                return nameField.keyPressed(keyCode, scanCode, modifiers);
+                boolean result = nameField.keyPressed(keyCode, scanCode, modifiers);
+                // Re-validate after any key press that might modify text (backspace, delete, etc.)
+                validateUploadName();
+                return result;
             }
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
@@ -627,7 +691,9 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     @Override
     public boolean charTyped(char chr, int modifiers) {
         if (showCreateDialog && nameField.isFocused()) {
-            return nameField.charTyped(chr, modifiers);
+            boolean result = nameField.charTyped(chr, modifiers);
+            validateUploadName(); // Validate after each character
+            return result;
         }
         return super.charTyped(chr, modifiers);
     }
@@ -1204,8 +1270,10 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         if (showCreateDialog) {
             nameField.setFocused(true);
             nameField.setText("");
+            validationError = null; // Reset validation when opening dialog
         } else {
             nameField.setFocused(false);
+            validationError = null; // Clear validation when closing
         }
     }
     
@@ -1230,6 +1298,77 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         } else {
             System.out.println("Failed to export loadout: " + manager.getLastOperationResult());
         }
+    }
+    
+    private void validateUploadName() {
+        if (nameField == null || nameField.getText().isEmpty()) {
+            validationError = "Loadout name cannot be empty";
+            return;
+        }
+
+        String name = nameField.getText().trim();
+        if (name.isEmpty()) {
+            validationError = "Loadout name cannot be empty";
+            return;
+        }
+
+        // Check for invalid characters
+        if (!name.matches("[a-zA-Z0-9_\\- ]+")) {
+            validationError = "Loadout name can only contain letters, numbers, spaces, underscores, and hyphens";
+            return;
+        }
+
+        // Check length
+        if (name.length() > 50) {
+            validationError = "Loadout name cannot be longer than 50 characters";
+            return;
+        }
+
+        // Check for duplicate names with server loadouts
+        List<Loadout> serverLoadouts = LoadoutClientManager.getInstance().getLoadouts(LoadoutClientManager.LoadoutType.SERVER);
+        for (Loadout existingServerLoadout : serverLoadouts) {
+            if (existingServerLoadout.getName().equalsIgnoreCase(name)) {
+                validationError = "A server loadout with this name already exists";
+                return;
+            }
+        }
+
+        validationError = null; // Valid
+    }
+    
+    private void uploadLoadout() {
+        if (selectedLoadout == null) {
+            System.out.println("No loadout selected for upload!");
+            return;
+        }
+        
+        if (!manager.isConnectedToServer()) {
+            System.out.println("Cannot upload loadout - not connected to server!");
+            return;
+        }
+        
+        String loadoutName = nameField.getText().trim();
+        if (loadoutName.isEmpty()) {
+            loadoutName = selectedLoadout.getName();
+        }
+        
+        // Check for duplicate names in existing server loadouts
+        for (Loadout existingServerLoadout : serverLoadouts) {
+            if (existingServerLoadout.getName().equalsIgnoreCase(loadoutName)) {
+                System.out.println("Cannot upload loadout - a server loadout with name '" + loadoutName + "' already exists!");
+                // Could show a message to the user here, but for now just log and return
+                return;
+            }
+        }
+        
+        System.out.println("Uploading loadout: " + selectedLoadout.getName() + " as: " + loadoutName);
+        
+        // Send upload request to server
+        UploadLoadoutPayload payload = new UploadLoadoutPayload(selectedLoadout, loadoutName);
+        ClientPlayNetworking.send(payload);
+        
+        // Close the dialog after sending the upload request
+        toggleCreateDialog();
     }
     
     private void refreshLoadouts() {

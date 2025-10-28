@@ -846,19 +846,66 @@ public class LoadoutServerPackets {
                 manager.reloadServerSharedLoadouts();
                 
                 // Send updated loadout list to all connected clients
-                for (ServerPlayerEntity connectedPlayer : server.getPlayerManager().getPlayerList()) {
-                    sendLoadoutsSync(connectedPlayer, manager);
-                }
+                sendLoadoutsSyncToAllPlayers(server, manager);
                 
-                // Send success message to the requesting player
                 sendOperationResult(player, "reload_server_loadouts", 
                     LoadoutManager.LoadoutOperationResult.success(null));
-                
                 LogicalLoadouts.LOGGER.info("Player {} reloaded server loadouts", player.getName().getString());
             } catch (Exception e) {
                 LogicalLoadouts.LOGGER.error("Error handling reload server loadouts packet", e);
                 sendOperationResult(player, "reload_server_loadouts", 
                     LoadoutManager.LoadoutOperationResult.error("Failed to reload server loadouts"));
+            }
+        });
+    }
+    
+    /**
+     * Handle client request to upload a loadout to server
+     */
+    public static void handleUploadLoadout(UploadLoadoutPayload payload, ServerPlayNetworking.Context context) {
+        ServerPlayerEntity player = context.player();
+        MinecraftServer server = context.server();
+        Loadout loadout = payload.loadout();
+        String name = payload.name();
+        
+        server.execute(() -> {
+            try {
+                LoadoutManager manager = getLoadoutManager(server);
+                
+                // Check if player has permission to upload server loadouts (ops only)
+                if (!manager.hasPermission(player, "logical-loadouts.admin")) {
+                    sendOperationResult(player, "upload_loadout", 
+                        LoadoutManager.LoadoutOperationResult.error("You don't have permission to upload server loadouts"));
+                    return;
+                }
+                
+                // Create a new loadout with the specified name for server storage
+                Loadout serverLoadout = new Loadout(name);
+                
+                // Copy all data from the uploaded loadout
+                for (int i = 0; i < 9; i++) serverLoadout.setHotbarSlot(i, loadout.getHotbar()[i].copy());
+                for (int i = 0; i < 27; i++) serverLoadout.setMainInventorySlot(i, loadout.getMainInventory()[i].copy());
+                for (int i = 0; i < 4; i++) serverLoadout.setArmorSlot(i, loadout.getArmor()[i].copy());
+                for (int i = 0; i < 1; i++) serverLoadout.setOffhandSlot(i, loadout.getOffhand()[i].copy());
+                
+                // Save as server loadout
+                LoadoutManager.LoadoutOperationResult result = manager.createServerLoadout(serverLoadout, name);
+                
+                if (result.isSuccess()) {
+                    // Reload server loadouts to make them available immediately
+                    manager.reloadServerSharedLoadouts();
+                    
+                    // Send updated loadout list to all connected clients
+                    sendLoadoutsSyncToAllPlayers(server, manager);
+                    
+                    sendOperationResult(player, "upload_loadout", result);
+                    LogicalLoadouts.LOGGER.info("Player {} uploaded server loadout '{}'", player.getName().getString(), name);
+                } else {
+                    sendOperationResult(player, "upload_loadout", result);
+                }
+            } catch (Exception e) {
+                LogicalLoadouts.LOGGER.error("Error handling upload loadout packet", e);
+                sendOperationResult(player, "upload_loadout", LoadoutManager.LoadoutOperationResult.error("Failed to upload loadout"));
             }
         });
     }
