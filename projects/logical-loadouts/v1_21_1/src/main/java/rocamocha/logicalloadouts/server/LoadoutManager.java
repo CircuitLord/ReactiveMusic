@@ -110,6 +110,15 @@ public class LoadoutManager {
     }
     
     /**
+     * Reload server-shared loadouts from disk
+     */
+    public void reloadServerSharedLoadouts() {
+        LogicalLoadouts.LOGGER.info("Reloading server-shared loadouts...");
+        loadServerSharedLoadouts();
+        LogicalLoadouts.LOGGER.info("Reloaded {} server-shared loadouts", serverSharedLoadouts.size());
+    }
+    
+    /**
      * Load a player's loadouts from disk when they join
      */
     public void loadPlayerData(UUID playerUuid) {

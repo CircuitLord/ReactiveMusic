@@ -4,6 +4,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import rocamocha.logicalloadouts.network.packets.ApplySectionPayload;
 import rocamocha.logicalloadouts.network.packets.ApplyLocalLoadoutPayload;
 import rocamocha.logicalloadouts.network.packets.DepositSectionPayload;
+import rocamocha.logicalloadouts.network.packets.ReloadServerLoadoutsPayload;
 
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -623,6 +624,14 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
     
+    @Override
+    public boolean charTyped(char chr, int modifiers) {
+        if (showCreateDialog && nameField.isFocused()) {
+            return nameField.charTyped(chr, modifiers);
+        }
+        return super.charTyped(chr, modifiers);
+    }
+    
     private void applySelectedLoadout() {
         if (selectedLoadout == null) {
             System.out.println("No loadout selected for apply!");
@@ -1224,7 +1233,16 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     }
     
     private void refreshLoadouts() {
-        // Refresh the loadout list
+        // If connected to server, request server to reload server loadouts
+        if (manager.isConnectedToServer()) {
+            System.out.println("Connected to server - requesting server to reload loadouts");
+            ReloadServerLoadoutsPayload payload = new ReloadServerLoadoutsPayload();
+            ClientPlayNetworking.send(payload);
+        } else {
+            System.out.println("Single-player mode - refreshing local loadouts");
+        }
+        
+        // Refresh the loadout list (will be updated when server responds or immediately in single-player)
         onLoadoutsUpdated();
     }
     

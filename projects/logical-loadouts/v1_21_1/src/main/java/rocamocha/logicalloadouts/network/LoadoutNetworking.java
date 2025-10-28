@@ -28,6 +28,7 @@ public class LoadoutNetworking {
         PayloadTypeRegistry.playC2S().register(RequestLoadoutsPayload.ID, RequestLoadoutsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ApplySectionPayload.ID, ApplySectionPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(DepositSectionPayload.ID, DepositSectionPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ReloadServerLoadoutsPayload.ID, ReloadServerLoadoutsPayload.CODEC);
         
         // Register payload types for server -> client packets
         PayloadTypeRegistry.playS2C().register(OperationResultPayload.ID, OperationResultPayload.CODEC);
@@ -54,6 +55,7 @@ public class LoadoutNetworking {
         ServerPlayNetworking.registerGlobalReceiver(RequestLoadoutsPayload.ID, LoadoutServerPackets::handleRequestLoadouts);
         ServerPlayNetworking.registerGlobalReceiver(ApplySectionPayload.ID, LoadoutServerPackets::handleApplySection);
         ServerPlayNetworking.registerGlobalReceiver(DepositSectionPayload.ID, LoadoutServerPackets::handleDepositSection);
+        ServerPlayNetworking.registerGlobalReceiver(ReloadServerLoadoutsPayload.ID, LoadoutServerPackets::handleReloadServerLoadouts);
         
         LogicalLoadouts.LOGGER.info("Registered all server-side packet handlers");
     }

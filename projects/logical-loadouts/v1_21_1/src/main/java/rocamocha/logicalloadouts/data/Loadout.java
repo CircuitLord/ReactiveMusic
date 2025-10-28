@@ -374,6 +374,32 @@ public class Loadout {
         return copy;
     }
     
+    /**
+     * Create a copy of this loadout with a new name
+     */
+    public Loadout copyWithName(String newName) {
+        Loadout copy = new Loadout(UUID.randomUUID(), newName);
+        
+        // Deep copy all inventory slots
+        for (int i = 0; i < HOTBAR_SIZE; i++) {
+            copy.hotbar[i] = this.hotbar[i].copy();
+        }
+        for (int i = 0; i < MAIN_INVENTORY_SIZE; i++) {
+            copy.mainInventory[i] = this.mainInventory[i].copy();
+        }
+        for (int i = 0; i < ARMOR_SIZE; i++) {
+            copy.armor[i] = this.armor[i].copy();
+        }
+        for (int i = 0; i < OFFHAND_SIZE; i++) {
+            copy.offhand[i] = this.offhand[i].copy();
+        }
+        
+        // Copy metadata
+        copy.metadata.putAll(this.metadata);
+        
+        return copy;
+    }
+    
     @Override
     public String toString() {
         return String.format("Loadout{id=%s, name='%s', lastModified=%d}", 

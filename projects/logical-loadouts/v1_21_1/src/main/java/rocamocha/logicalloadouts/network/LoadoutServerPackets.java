@@ -575,6 +575,15 @@ public class LoadoutServerPackets {
     }
     
     /**
+     * Send updated loadout list to all connected players (public method for admin commands)
+     */
+    public static void sendLoadoutsSyncToAllPlayers(MinecraftServer server, LoadoutManager manager) {
+        for (ServerPlayerEntity connectedPlayer : server.getPlayerManager().getPlayerList()) {
+            sendLoadoutsSync(connectedPlayer, manager);
+        }
+    }
+    
+    /**
      * Get the server's loadout manager instance
      */
     private static LoadoutManager getLoadoutManager(MinecraftServer server) {
@@ -813,5 +822,44 @@ public class LoadoutServerPackets {
         }
         
         return true;
+    }
+    
+    /**
+     * Handle client request to reload server loadouts
+     */
+    public static void handleReloadServerLoadouts(ReloadServerLoadoutsPayload payload, ServerPlayNetworking.Context context) {
+        ServerPlayerEntity player = context.player();
+        MinecraftServer server = context.server();
+        
+        server.execute(() -> {
+            try {
+                LoadoutManager manager = getLoadoutManager(server);
+                
+                // Check if player has permission to reload server loadouts (ops only)
+                if (!manager.hasPermission(player, "logical-loadouts.admin")) {
+                    sendOperationResult(player, "reload_server_loadouts", 
+                        LoadoutManager.LoadoutOperationResult.error("You don't have permission to reload server loadouts"));
+                    return;
+                }
+                
+                // Reload server loadouts
+                manager.reloadServerSharedLoadouts();
+                
+                // Send updated loadout list to all connected clients
+                for (ServerPlayerEntity connectedPlayer : server.getPlayerManager().getPlayerList()) {
+                    sendLoadoutsSync(connectedPlayer, manager);
+                }
+                
+                // Send success message to the requesting player
+                sendOperationResult(player, "reload_server_loadouts", 
+                    LoadoutManager.LoadoutOperationResult.success(null));
+                
+                LogicalLoadouts.LOGGER.info("Player {} reloaded server loadouts", player.getName().getString());
+            } catch (Exception e) {
+                LogicalLoadouts.LOGGER.error("Error handling reload server loadouts packet", e);
+                sendOperationResult(player, "reload_server_loadouts", 
+                    LoadoutManager.LoadoutOperationResult.error("Failed to reload server loadouts"));
+            }
+        });
     }
 }

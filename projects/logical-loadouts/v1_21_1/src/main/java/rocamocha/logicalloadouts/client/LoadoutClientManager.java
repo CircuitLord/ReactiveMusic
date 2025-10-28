@@ -512,6 +512,13 @@ public class LoadoutClientManager {
                 return false;
             }
             
+            // Create a copy of the loadout with the new name (remove .nbt extension if present)
+            String loadoutName = filename;
+            if (loadoutName.toLowerCase().endsWith(".nbt")) {
+                loadoutName = loadoutName.substring(0, loadoutName.length() - 4);
+            }
+            Loadout exportLoadout = loadout.copyWithName(loadoutName);
+            
             // Get the exported directory path
             MinecraftClient client = MinecraftClient.getInstance();
             Path exportedPath;
@@ -536,12 +543,12 @@ public class LoadoutClientManager {
             
             // Save the loadout
             Path exportFile = exportedPath.resolve(filename);
-            net.minecraft.nbt.NbtIo.writeCompressed(loadout.toNbt(), exportFile);
+            net.minecraft.nbt.NbtIo.writeCompressed(exportLoadout.toNbt(), exportFile);
             
             lastOperationSuccess = true;
-            lastOperationResult = "Exported loadout '" + loadout.getName() + "' to: " + exportFile.toString();
+            lastOperationResult = "Exported loadout '" + exportLoadout.getName() + "' to: " + exportFile.toString();
             
-            LogicalLoadouts.LOGGER.info("Exported loadout '{}' to {}", loadout.getName(), exportFile);
+            LogicalLoadouts.LOGGER.info("Exported loadout '{}' to {}", exportLoadout.getName(), exportFile);
             return true;
             
         } catch (Exception e) {

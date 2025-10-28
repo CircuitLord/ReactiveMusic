@@ -3,11 +3,18 @@ package rocamocha.logicalloadouts;
 import rocamocha.logicalloadouts.network.LoadoutNetworking;
 import rocamocha.logicalloadouts.server.LoadoutManager;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,6 +37,9 @@ public class LogicalLoadouts implements ModInitializer {
         System.out.println("About to register server packets...");
         LoadoutNetworking.registerServerPackets();
         System.out.println("Networking registration completed");
+        
+        // Register commands
+        registerCommands();
         
         // Register server lifecycle events
         ServerLifecycleEvents.SERVER_STARTING.register(this::onServerStarting);
@@ -90,5 +100,122 @@ public class LogicalLoadouts implements ModInitializer {
             throw new IllegalStateException("LoadoutManager not initialized for server");
         }
         return manager;
+    }
+    
+    /**
+     * Register server commands
+     */
+    private void registerCommands() {
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            // Create suggestion provider for loadout names
+            SuggestionProvider<ServerCommandSource> loadoutSuggestions = (context, builder) -> {
+                ServerCommandSource source = context.getSource();
+                MinecraftServer server = source.getServer();
+                
+                try {
+                    LoadoutManager manager = getServerLoadoutManager(server);
+                    List<rocamocha.logicalloadouts.data.Loadout> serverLoadouts = manager.getServerSharedLoadouts();
+                    
+                    // Add all loadout names as suggestions
+                    for (rocamocha.logicalloadouts.data.Loadout loadout : serverLoadouts) {
+                        builder.suggest(loadout.getName());
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Error providing loadout suggestions", e);
+                }
+                
+                return builder.buildFuture();
+            };
+            
+            // Register /loadout command
+            dispatcher.register(
+                net.minecraft.server.command.CommandManager.literal("loadout")
+                    .then(net.minecraft.server.command.CommandManager.argument("name", StringArgumentType.greedyString())
+                        .suggests(loadoutSuggestions)
+                        .executes(context -> {
+                            ServerCommandSource source = context.getSource();
+                            ServerPlayerEntity player = source.getPlayer();
+                            
+                            if (player == null) {
+                                source.sendError(Text.literal("This command can only be used by players"));
+                                return 0;
+                            }
+                            
+                            String loadoutName = StringArgumentType.getString(context, "name");
+                            MinecraftServer server = source.getServer();
+                            
+                            try {
+                                LoadoutManager manager = getServerLoadoutManager(server);
+                                List<rocamocha.logicalloadouts.data.Loadout> serverLoadouts = manager.getServerSharedLoadouts();
+                                
+                                // Find loadout by name (case-insensitive)
+                                rocamocha.logicalloadouts.data.Loadout targetLoadout = null;
+                                for (rocamocha.logicalloadouts.data.Loadout loadout : serverLoadouts) {
+                                    if (loadout.getName().equalsIgnoreCase(loadoutName)) {
+                                        targetLoadout = loadout;
+                                        break;
+                                    }
+                                }
+                                
+                                final rocamocha.logicalloadouts.data.Loadout finalLoadout = targetLoadout;
+                                
+                                if (finalLoadout == null) {
+                                    source.sendError(Text.literal("Server loadout '" + loadoutName + "' not found"));
+                                    return 0;
+                                }
+                                
+                                // Apply the loadout
+                                finalLoadout.applyToPlayer(player);
+                                
+                                // Send success message
+                                source.sendFeedback(() -> Text.literal("Applied server loadout '" + finalLoadout.getName() + "'"), false);
+                                
+                                LOGGER.info("Player {} applied server loadout '{}' via command", player.getName().getString(), finalLoadout.getName());
+                                
+                            } catch (Exception e) {
+                                LOGGER.error("Error executing loadout command", e);
+                                source.sendError(Text.literal("An error occurred while applying the loadout"));
+                                return 0;
+                            }
+                            
+                            return 1;
+                        })
+                    )
+            );
+            
+            // Register /loadouts command for server administration
+            dispatcher.register(
+                net.minecraft.server.command.CommandManager.literal("loadouts")
+                    .requires(source -> source.hasPermissionLevel(2)) // Requires OP level 2
+                    .then(net.minecraft.server.command.CommandManager.literal("reload")
+                        .executes(context -> {
+                            ServerCommandSource source = context.getSource();
+                            MinecraftServer server = source.getServer();
+                            
+                            try {
+                                LoadoutManager manager = getServerLoadoutManager(server);
+                                
+                                // Reload server loadouts
+                                manager.reloadServerSharedLoadouts();
+                                
+                                // Send updated loadout list to all connected clients
+                                rocamocha.logicalloadouts.network.LoadoutServerPackets.sendLoadoutsSyncToAllPlayers(server, manager);
+                                
+                                // Send success message
+                                source.sendFeedback(() -> Text.literal("Successfully reloaded server loadouts and updated all clients"), false);
+                                
+                                LOGGER.info("Server loadouts reloaded via admin command");
+                                
+                            } catch (Exception e) {
+                                LOGGER.error("Error reloading server loadouts", e);
+                                source.sendError(Text.literal("An error occurred while reloading server loadouts"));
+                                return 0;
+                            }
+                            
+                            return 1;
+                        })
+                    )
+            );
+        });
     }
 }
