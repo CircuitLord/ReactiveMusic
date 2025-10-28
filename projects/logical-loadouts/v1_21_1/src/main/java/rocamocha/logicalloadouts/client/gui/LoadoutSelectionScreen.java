@@ -415,8 +415,8 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         nameField.setVisible(true);
         nameField.render(context, mouseX, mouseY, 0);
         
-        // Upload button (centered, only if connected to server)
-        if (manager.isConnectedToServer()) {
+        // Upload button (centered, only if connected to multiplayer server)
+        if (manager.isConnectedToServer() && this.client.getCurrentServerEntry() != null) {
             int buttonWidth = 80;
             int buttonHeight = 20;
             int buttonX = dialogX + (dialogWidth - buttonWidth) / 2; // Center the button
@@ -555,8 +555,8 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
                 if (mouseX >= dialogX && mouseX <= dialogX + dialogWidth &&
                     mouseY >= dialogY && mouseY <= dialogY + dialogHeight) {
                     
-                    // Upload button (centered, only if connected to server)
-                    if (manager.isConnectedToServer()) {
+                    // Upload button (centered, only if connected to multiplayer server)
+                    if (manager.isConnectedToServer() && this.client.getCurrentServerEntry() != null) {
                         int buttonWidth = 80;
                         int buttonHeight = 20;
                         int buttonX = dialogX + (dialogWidth - buttonWidth) / 2; // Center the button
@@ -608,6 +608,12 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
             
             // Refresh loadouts to apply filtering for the new tab
             onLoadoutsUpdated();
+
+            // Set focus to the active list widget so scrollbar works
+            LoadoutListWidget activeList = getActiveLoadoutList();
+            if (activeList != null) {
+                this.setFocused(activeList);
+            }
         }
     }
     
@@ -670,18 +676,15 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (showCreateDialog) {
             if (keyCode == 257) { // Enter key
-                // Only allow upload if name is valid
-                if (validationError == null) {
-                    uploadLoadout();
-                }
+                // Export the loadout (always export, regardless of server connection)
+                exportLoadout();
                 return true;
             } else if (keyCode == 256) { // Escape key
                 toggleCreateDialog();
                 return true;
             } else if (nameField.isFocused()) {
                 boolean result = nameField.keyPressed(keyCode, scanCode, modifiers);
-                // Re-validate after any key press that might modify text (backspace, delete, etc.)
-                validateUploadName();
+                // No validation needed for export - just re-validate if needed for potential future upload
                 return result;
             }
         }
@@ -1514,9 +1517,21 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
     }
     
     @Override
-    public void close() {
-        manager.removeListener(this);
-        super.close();
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        LoadoutListWidget activeList = getActiveLoadoutList();
+        if (activeList != null) {
+            return activeList.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+    
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        LoadoutListWidget activeList = getActiveLoadoutList();
+        if (activeList != null) {
+            return activeList.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+        }
+        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
     
     /**

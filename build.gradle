@@ -166,7 +166,7 @@ if (targetProject != null) {
                 client {
                     // All projects using same adapter share: run/client/v1_21_1/, run/client/v1_21_5/, etc.
                     runDir = "../../../run/client/${activeAdapter}"
-                    property 'fabric.username', 'Developer'
+                    programArgs '--username', 'Developer'
                 }
                 server {
                     // All projects using same adapter share: run/server/v1_21_1/, run/server/v1_21_5/, etc.

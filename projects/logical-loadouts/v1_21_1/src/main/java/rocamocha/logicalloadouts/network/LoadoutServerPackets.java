@@ -9,7 +9,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
 
 import java.util.List;
 import java.util.UUID;
@@ -543,10 +542,7 @@ public class LoadoutServerPackets {
         String message = result.getMessage() != null ? result.getMessage() : "";
         ServerPlayNetworking.send(player, new OperationResultPayload(operation, result.isSuccess(), message));
         
-        // Also send chat message for important operations
-        if (!result.isSuccess()) {
-            player.sendMessage(Text.literal("§cLoadout " + operation + " failed: " + result.getMessage()), false);
-        }
+        // Client-side code handles displaying error messages to avoid duplication
     }
     
     /**
@@ -837,8 +833,7 @@ public class LoadoutServerPackets {
                 
                 // Check if player has permission to reload server loadouts (ops only)
                 if (!manager.hasPermission(player, "logical-loadouts.admin")) {
-                    sendOperationResult(player, "reload_server_loadouts", 
-                        LoadoutManager.LoadoutOperationResult.error("You don't have permission to reload server loadouts"));
+                    // quietly ignore without sending error to avoid spam
                     return;
                 }
                 

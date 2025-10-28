@@ -6,6 +6,9 @@ import rocamocha.logicalloadouts.data.Loadout;
 import rocamocha.logicalloadouts.network.packets.*;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.Text;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.util.Formatting;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -549,6 +552,21 @@ public class LoadoutClientManager {
             lastOperationResult = "Exported loadout '" + exportLoadout.getName() + "' to: " + exportFile.toString();
             
             LogicalLoadouts.LOGGER.info("Exported loadout '{}' to {}", exportLoadout.getName(), exportFile);
+            
+            // Send chat message with clickable file link in single-player mode
+            if (client.player != null) {
+                Text message = Text.literal("Exported loadout '").append(
+                    Text.literal(exportLoadout.getName()).formatted(Formatting.GREEN)
+                ).append(Text.literal("' to: ")).append(
+                    Text.literal(exportedPath.toString()).styled(style -> 
+                        style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_FILE, exportedPath.toString()))
+                            .withColor(Formatting.BLUE)
+                            .withUnderline(true)
+                    )
+                );
+                client.player.sendMessage(message, false);
+            }
+            
             return true;
             
         } catch (Exception e) {
