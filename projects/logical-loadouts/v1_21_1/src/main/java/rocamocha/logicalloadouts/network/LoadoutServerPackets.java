@@ -185,7 +185,9 @@ public class LoadoutServerPackets {
         server.execute(() -> {
             try {
                 LoadoutManager manager = getLoadoutManager(server);
-                LoadoutManager.LoadoutOperationResult result = manager.deleteLoadout(player.getUuid(), loadoutId);
+                // Ensure player data is loaded for single-player mode
+                ensurePlayerDataLoaded(manager, player.getUuid());
+                LoadoutManager.LoadoutOperationResult result = manager.deleteLoadout(player, loadoutId);
                 
                 sendOperationResult(player, "delete", result);
                 
@@ -248,7 +250,7 @@ public class LoadoutServerPackets {
                     applyLoadoutToPlayer(player, loadout);
                     
                     // Delete the loadout after applying (bank behavior)
-                    LoadoutManager.LoadoutOperationResult deleteResult = manager.deleteLoadout(player.getUuid(), loadoutId);
+                    LoadoutManager.LoadoutOperationResult deleteResult = manager.deleteLoadout(player, loadoutId);
                     if (!deleteResult.isSuccess()) {
                         LogicalLoadouts.LOGGER.warn("Failed to delete loadout after applying: {}", deleteResult.getMessage());
                     }
@@ -306,7 +308,7 @@ public class LoadoutServerPackets {
                         
                         // Check if the updated loadout is now empty and delete it if so
                         if (isLoadoutEmpty(currentInventory)) {
-                            LoadoutManager.LoadoutOperationResult deleteResult = manager.deleteLoadout(player.getUuid(), loadout.getId());
+                            LoadoutManager.LoadoutOperationResult deleteResult = manager.deleteLoadout(player, loadout.getId());
                             if (deleteResult.isSuccess()) {
                                 System.out.println("DEBUG: Deleted empty loadout after swap: " + loadout.getName());
                             } else {
@@ -418,7 +420,7 @@ public class LoadoutServerPackets {
                     if (updateResult.isSuccess()) {
                         // Check if the updated loadout is now empty and delete it if so
                         if (isLoadoutEmpty(updatedLoadout)) {
-                            LoadoutManager.LoadoutOperationResult deleteResult = manager.deleteLoadout(player.getUuid(), loadout.getId());
+                            LoadoutManager.LoadoutOperationResult deleteResult = manager.deleteLoadout(player, loadout.getId());
                             if (deleteResult.isSuccess()) {
                                 LogicalLoadouts.LOGGER.debug("Deleted empty loadout after section apply: {}", loadout.getName());
                             } else {

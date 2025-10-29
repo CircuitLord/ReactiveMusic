@@ -166,8 +166,8 @@ public class LoadoutManager {
      */
     public void savePlayerData(UUID playerUuid) {
         Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
-        if (loadouts == null || loadouts.isEmpty()) {
-            return;
+        if (loadouts == null) {
+            loadouts = new HashMap<>(); // Ensure we have an empty map to save
         }
         
         try {
@@ -385,19 +385,48 @@ public class LoadoutManager {
     /**
      * Delete a loadout
      */
-    public LoadoutOperationResult deleteLoadout(UUID playerUuid, UUID loadoutId) {
-        Map<UUID, Loadout> loadouts = playerLoadouts.get(playerUuid);
-        if (loadouts == null) {
-            return LoadoutOperationResult.error("Player data not loaded");
+    public LoadoutOperationResult deleteLoadout(ServerPlayerEntity player, UUID loadoutId) {
+        UUID playerUuid = player.getUuid();
+        
+        // First try to delete from personal loadouts
+        Map<UUID, Loadout> personalLoadouts = playerLoadouts.get(playerUuid);
+        if (personalLoadouts != null) {
+            Loadout removed = personalLoadouts.remove(loadoutId);
+            if (removed != null) {
+                // Immediately persist the change to disk to prevent reappearance on reload
+                savePlayerData(playerUuid);
+                LogicalLoadouts.LOGGER.debug("Deleted personal loadout '{}' for player {}", removed.getName(), playerUuid);
+                return LoadoutOperationResult.success(removed);
+            }
         }
         
-        Loadout removed = loadouts.remove(loadoutId);
-        if (removed == null) {
-            return LoadoutOperationResult.error("Loadout not found");
+        // If not found in personal loadouts, check server-shared loadouts
+        Loadout serverLoadout = serverSharedLoadouts.get(loadoutId);
+        if (serverLoadout != null) {
+            // Check if player has permission to delete server loadouts
+            if (!hasPermission(player, "logical-loadouts.admin")) {
+                return LoadoutOperationResult.error("You don't have permission to delete server loadouts");
+            }
+            
+            // Remove from in-memory cache
+            serverSharedLoadouts.remove(loadoutId);
+            
+            // Delete the file from disk
+            try {
+                String sanitizedFilename = serverLoadout.getName().replaceAll("[^a-zA-Z0-9_-]", "_");
+                Path loadoutFile = serverLoadoutsPath.resolve(sanitizedFilename + LOADOUTS_FILE_EXTENSION);
+                Files.deleteIfExists(loadoutFile);
+                LogicalLoadouts.LOGGER.info("Deleted server loadout '{}' file: {}", serverLoadout.getName(), loadoutFile);
+            } catch (Exception e) {
+                LogicalLoadouts.LOGGER.error("Failed to delete server loadout file for '{}'", serverLoadout.getName(), e);
+                // Continue anyway, as the in-memory removal is done
+            }
+            
+            LogicalLoadouts.LOGGER.info("Deleted server loadout '{}' by player {}", serverLoadout.getName(), player.getName().getString());
+            return LoadoutOperationResult.success(serverLoadout);
         }
         
-        LogicalLoadouts.LOGGER.debug("Deleted loadout '{}' for player {}", removed.getName(), playerUuid);
-        return LoadoutOperationResult.success(removed);
+        return LoadoutOperationResult.error("Loadout not found");
     }
     
     /**
