@@ -1,7 +1,7 @@
 {
     "schemaVersion": 1,
     "id": "logical-loadouts",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "name": "Logical Loadouts",
     "description": "Equipment loadout management system for Minecraft",
     "authors": ["rocamocha"],
