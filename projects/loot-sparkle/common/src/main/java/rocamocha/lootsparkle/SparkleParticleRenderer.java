@@ -47,9 +47,9 @@ public class SparkleParticleRenderer {
 
     // Directional particle settings
     private static final int DIRECTIONAL_PARTICLES_PER_UNIT = 10; // More particles per distance unit
-    private static final double DIRECTIONAL_PARTICLE_SPACING = 0.5; // Distance between particles
-    private static final double DIRECTIONAL_DRIFT_AMPLITUDE_BASE = 0.6; // Base drift amplitude (doubled)
-    private static final double DIRECTIONAL_DRIFT_AMPLITUDE_MAX = 3.4; // Maximum drift amplitude (doubled)
+    private static final double DIRECTIONAL_PARTICLE_SPACING = 0.3; // Distance between particles
+    private static final double DIRECTIONAL_DRIFT_AMPLITUDE_BASE = 0.4; // Base drift amplitude (doubled)
+    private static final double DIRECTIONAL_DRIFT_AMPLITUDE_MAX = 3; // Maximum drift amplitude (doubled)
     private static final double DIRECTIONAL_DRIFT_DISTANCE_SCALE = 0.4; // How much distance affects drift
     private static final double DIRECTIONAL_DRIFT_SPEED = 0.15; // Animation speed for drift
 
