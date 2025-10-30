@@ -1399,7 +1399,7 @@ public class LoadoutSelectionScreen extends Screen implements LoadoutClientManag
         // In hybrid mode, allow local operations even when not connected to server
         applyButton.active = hasSelection; // Can apply both local and server loadouts
         saveButton.active = activeTab == LoadoutTab.PERSONAL || activeTab.isSectionTab(); // Can save to personal loadouts and create section loadouts
-        deleteButton.active = hasSelection && activeTab == LoadoutTab.PERSONAL && !activeTab.isSectionTab(); // Can only delete personal loadouts, not in section tabs
+        deleteButton.active = hasSelection && ((activeTab == LoadoutTab.PERSONAL && !activeTab.isSectionTab()) || (activeTab == LoadoutTab.SERVER && manager.isConnectedToServer())); // Can delete personal loadouts and server loadouts when connected
         createButton.active = hasSelection && activeTab == LoadoutTab.PERSONAL && !activeTab.isSectionTab(); // Can only export personal loadouts, not in section tabs
         refreshButton.active = true; // Can always refresh the list
     }

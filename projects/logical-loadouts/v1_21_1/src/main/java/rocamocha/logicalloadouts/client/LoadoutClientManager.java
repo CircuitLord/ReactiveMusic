@@ -724,11 +724,10 @@ public class LoadoutClientManager {
             return deleteServerLoadout(loadoutId);
         }
         
-        // Check server-shared loadouts if connected (these are read-only, can't delete)
+        // Check server-shared loadouts if connected (send to server for permission validation)
         if (isConnectedToServer && serverSharedLoadouts.containsKey(loadoutId)) {
-            lastOperationSuccess = false;
-            lastOperationResult = "Cannot delete server-shared loadouts";
-            return false;
+            System.out.println("Attempting to delete server-shared loadout from server...");
+            return deleteServerLoadout(loadoutId);
         }
         
         System.out.println("Loadout not found in local or server storage");
