@@ -1,23 +1,23 @@
 {
     "schemaVersion": 1,
-    "id": "logical-loadouts",
-    "version": "0.1.2",
-    "name": "Logical Loadouts",
-    "description": "Equipment loadout management system for Minecraft",
+    "id": "loot-sparkle",
+    "version": "0.1.0",
+    "name": "Loot Sparkle",
+    "description": "RPG style random loot sparkles for Minecraft",
     "authors": ["rocamocha"],
     "contact": {},
     "license": "MIT",
     "environment": "*",
     "entrypoints": {
         "main": [
-            "rocamocha.logicalloadouts.LogicalLoadouts"
+            "rocamocha.lootsparkle.LootSparkle"
         ],
         "client": [
-            "rocamocha.logicalloadouts.LogicalLoadoutsClient"
+            "rocamocha.lootsparkle.LootSparkleClient"
         ]
     },
     "mixins": [
-        "logicalloadouts.mixins.json"
+        "lootsparkle.mixins.json"
     ],
     "depends": {
         "fabricloader": ">=0.16.0",

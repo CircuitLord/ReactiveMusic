@@ -1,0 +1,12 @@
+{
+    "required": true,
+    "package": "rocamocha.lootsparkle.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "refmap": "lootsparkle.refmap.json",
+    "mixins": [],
+    "client": [
+        "PlayerMovementMixin"
+    ],
+    "server": [],
+    "minVersion": "0.8"
+}
