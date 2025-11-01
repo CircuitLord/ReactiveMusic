@@ -14,6 +14,7 @@ import java.util.UUID;
  * - An inventory generated from loot tables
  * - A lifetime
  * - Particle effects
+ * - A tier that determines loot quality
  */
 public class Sparkle {
     private final UUID sparkleId;
@@ -22,8 +23,9 @@ public class Sparkle {
     private final SimpleInventory inventory;
     private final long creationTime;
     private final long lifetime; // milliseconds
+    private final SparkleTier tier;
 
-    public Sparkle(UUID playerId, BlockPos position) {
+    public Sparkle(UUID playerId, BlockPos position, World world) {
         this.sparkleId = UUID.randomUUID();
         this.playerId = playerId;
         this.position = position;
@@ -31,8 +33,11 @@ public class Sparkle {
         this.creationTime = System.currentTimeMillis();
         this.lifetime = LootSparkleConfig.getSparkleLifetimeMs();
 
-        // Generate loot for this sparkle
-        LootTableIntegration.generateLootForSparkle(this.inventory);
+        // Determine sparkle tier based on world context
+        this.tier = SparkleTier.selectRandomTier(world, position);
+
+        // Generate loot for this sparkle based on tier
+        LootTableIntegration.generateLootForSparkle(this.inventory, this.tier, world, position);
     }
 
     public UUID getSparkleId() {
@@ -47,8 +52,16 @@ public class Sparkle {
         return position;
     }
 
+    public SparkleTier getTier() {
+        return tier;
+    }
+
     public SimpleInventory getInventory() {
         return inventory;
+    }
+
+    public long getCreationTime() {
+        return creationTime;
     }
 
     /**

@@ -20,7 +20,7 @@ public class ClientSparkleManager {
         ClientPlayNetworking.registerGlobalReceiver(SparkleNetworking.SYNC_SPARKLE,
             (packet, context) -> {
                 context.client().execute(() -> {
-                    syncSparkle(packet.sparkleId(), packet.playerId(), packet.position());
+                    syncSparkle(packet.sparkleId(), packet.playerId(), packet.position(), packet.tierLevel());
                 });
             });
 
@@ -30,15 +30,22 @@ public class ClientSparkleManager {
                     removeSparkle(packet.sparkleId(), packet.playerId());
                 });
             });
+
+        ClientPlayNetworking.registerGlobalReceiver(SparkleNetworking.INTERACTION_FAILED,
+            (packet, context) -> {
+                context.client().execute(() -> {
+                    handleInteractionFailed(packet.reason());
+                });
+            });
     }
 
     /**
      * Called when server sends a sparkle sync packet
      */
-    private static void syncSparkle(UUID sparkleId, UUID playerId, BlockPos position) {
+    private static void syncSparkle(UUID sparkleId, UUID playerId, BlockPos position, int tierLevel) {
         Map<UUID, ClientSparkle> sparkles = playerSparkles.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>());
-        sparkles.put(sparkleId, new ClientSparkle(sparkleId, playerId, position));
-        LootSparkle.LOGGER.debug("Synced sparkle {} for player {} at {}", sparkleId, playerId, position);
+        sparkles.put(sparkleId, new ClientSparkle(sparkleId, playerId, position, tierLevel));
+        LootSparkle.LOGGER.debug("Synced sparkle {} for player {} at {} with tier {}", sparkleId, playerId, position, tierLevel);
     }
 
     /**
@@ -50,6 +57,14 @@ public class ClientSparkleManager {
             sparkles.remove(sparkleId);
             LootSparkle.LOGGER.debug("Removed sparkle {} for player {}", sparkleId, playerId);
         }
+    }
+
+    /**
+     * Called when server sends an interaction failed packet
+     */
+    private static void handleInteractionFailed(String reason) {
+        LootSparkle.LOGGER.info("Sparkle interaction failed: {}", reason);
+        // TODO: Could show a client-side message to the player
     }
 
     /**
@@ -67,15 +82,18 @@ public class ClientSparkleManager {
         private final UUID sparkleId;
         private final UUID playerId;
         private final BlockPos position;
+        private final int tierLevel;
 
-        public ClientSparkle(UUID sparkleId, UUID playerId, BlockPos position) {
+        public ClientSparkle(UUID sparkleId, UUID playerId, BlockPos position, int tierLevel) {
             this.sparkleId = sparkleId;
             this.playerId = playerId;
             this.position = position;
+            this.tierLevel = tierLevel;
         }
 
         public UUID getSparkleId() { return sparkleId; }
         public UUID getPlayerId() { return playerId; }
         public BlockPos getPosition() { return position; }
+        public int getTierLevel() { return tierLevel; }
     }
 }

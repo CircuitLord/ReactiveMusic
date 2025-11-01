@@ -7,12 +7,14 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.particle.DustParticleEffect;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Vector3f;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -43,10 +45,8 @@ public class SparkleParticleRenderer {
     private static final double COMPASS_FAIRY_DISTANCE = 4; // Distance in front of player (increased)
     private static final double COMPASS_FAIRY_HEIGHT = 1.7; // Height above player (increased)
     private static final double COMPASS_FAIRY_FIGURE_EIGHT_SIZE = 0.43; // Size of figure-eight pattern
-    private static final double LOOKING_THRESHOLD = 0.7; // Cosine of angle threshold (about 45 degrees)
 
     // Directional particle settings
-    private static final int DIRECTIONAL_PARTICLES_PER_UNIT = 10; // More particles per distance unit
     private static final double DIRECTIONAL_PARTICLE_SPACING = 0.3; // Distance between particles
     private static final double DIRECTIONAL_DRIFT_AMPLITUDE_BASE = 0.4; // Base drift amplitude (doubled)
     private static final double DIRECTIONAL_DRIFT_AMPLITUDE_MAX = 3; // Maximum drift amplitude (doubled)
@@ -59,6 +59,7 @@ public class SparkleParticleRenderer {
     private static final double[] PLAYER_SURROUND_RADII = {2.5, 3.6, 4.4}; // Radii for each layer
     private static final double PLAYER_SURROUND_HEIGHT_VARIATION = 2.0; // Height variation
     private static final double[] PLAYER_SURROUND_SPEEDS = {0.3, 0.2, 0.5}; // Rotation speeds for each layer
+    private static final double PLAYER_SURROUND_SPARKLE_PROXIMITY = 12.0; // Distance to show colored particles
 
     private static int tickCounter = 0;
     private static int compassTickCounter = 0;
@@ -110,6 +111,9 @@ public class SparkleParticleRenderer {
         BlockPos pos = sparkle.getPosition();
         Vec3d center = new Vec3d(pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5);
 
+        // Get color based on tier
+        Vector3f particleColor = getTierColor(sparkle.getTierLevel());
+
         // Spawn multiple particles around the sparkle position
         for (int i = 0; i < PARTICLES_PER_SPARKLE; i++) {
             double offsetX = (world.random.nextDouble() - 0.5) * 0.5;
@@ -118,10 +122,10 @@ public class SparkleParticleRenderer {
 
             Vec3d particlePos = center.add(offsetX, offsetY, offsetZ);
 
-            // Spawn pink dust particles (bright pink color: RGB 1.0, 0.0, 1.0)
-            DustParticleEffect pinkDust = new DustParticleEffect(new Vector3f(1.0f, 0.0f, 1.0f), 1.0f);
+            // Spawn colored dust particles based on tier
+            DustParticleEffect dustEffect = new DustParticleEffect(particleColor, 1.0f);
             particleManager.addParticle(
-                pinkDust,
+                dustEffect,
                 particlePos.x, particlePos.y, particlePos.z,
                 0.0, 0.01, 0.0 // Slight upward motion
             );
@@ -247,7 +251,7 @@ public class SparkleParticleRenderer {
         // Spawn directional particles if compass is held in hand
         if (isPlayerHoldingCompassInHand(client)) {
             spawnDirectionalParticles(world, particleManager, nearestSparkle, fairyPos, particleColor);
-            spawnPlayerSurroundParticles(world, particleManager, playerPos);
+            spawnPlayerSurroundParticles(world, particleManager, playerPos, client);
         }
     }
 
@@ -259,8 +263,17 @@ public class SparkleParticleRenderer {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
 
+        // Always use pathfinding to prevent particles from clipping through walls
+        spawnPathfindingParticles(world, particleManager, sparkle, fairyPos, color);
+    }
+
+    /**
+     * Spawns particles along a direct line from sparkle to fairy (for outdoor sparkles)
+     */
+    private static void spawnDirectParticles(ClientWorld world, ParticleManager particleManager,
+                                           ClientSparkleManager.ClientSparkle sparkle, Vec3d fairyPos, Vector3f color) {
         Vec3d sparklePos = Vec3d.ofCenter(sparkle.getPosition());
-        Vec3d playerPos = client.player.getPos();
+        Vec3d playerPos = MinecraftClient.getInstance().player.getPos();
 
         // Calculate direction vector from sparkle to fairy
         Vec3d direction = fairyPos.subtract(sparklePos);
@@ -321,6 +334,10 @@ public class SparkleParticleRenderer {
             // Add slight color variation based on particle position
             float colorVariation = 0.1f + (float)(Math.sin(particlePhase * 2) * 0.05f);
             particleColor.add(colorVariation, colorVariation * 0.5f, colorVariation * 0.8f);
+            // Clamp color components to valid range [0.0, 1.0]
+            particleColor.set(Math.max(0.0f, Math.min(1.0f, particleColor.x)),
+                             Math.max(0.0f, Math.min(1.0f, particleColor.y)),
+                             Math.max(0.0f, Math.min(1.0f, particleColor.z)));
 
             DustParticleEffect directionalParticle = new DustParticleEffect(particleColor, 0.6f);
 
@@ -333,9 +350,188 @@ public class SparkleParticleRenderer {
     }
 
     /**
+     * Spawns particles along a pathfinding-generated path from sparkle to fairy (for indoor sparkles)
+     */
+    private static void spawnPathfindingParticles(ClientWorld world, ParticleManager particleManager,
+                                                ClientSparkleManager.ClientSparkle sparkle, Vec3d fairyPos, Vector3f color) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+
+        BlockPos sparkleBlockPos = sparkle.getPosition();
+        BlockPos fairyBlockPos = new BlockPos((int)fairyPos.x, (int)fairyPos.y, (int)fairyPos.z);
+
+        // Use the same pathfinding logic as sparkle spawning
+        List<BlockPos> path = findPath(world, sparkleBlockPos, fairyBlockPos, 36);
+
+        if (path.isEmpty()) {
+            // Fallback to direct particles if no path found
+            spawnDirectParticles(world, particleManager, sparkle, fairyPos, color);
+            return;
+        }
+
+        // Spawn particles along the path
+        for (int i = 0; i < path.size(); i++) {
+            BlockPos pathPos = path.get(i);
+
+            // Find valid positions for particle spawning (original + up to 2 blocks away non-solid neighbors)
+            List<BlockPos> validPositions = findValidParticlePositions(world, pathPos);
+
+            // Randomly choose one of the valid positions
+            BlockPos chosenPos = validPositions.get(world.random.nextInt(validPositions.size()));
+            Vec3d particlePos = new Vec3d(chosenPos.getX() + 0.5, chosenPos.getY() + 0.5, chosenPos.getZ() + 0.5);
+
+            // Add some magical drift animation
+            double particlePhase = fairyAnimationTime * DIRECTIONAL_DRIFT_SPEED + (i * 0.3);
+            double driftX = Math.sin(particlePhase) * 0.3;
+            double driftY = Math.sin(particlePhase * 1.3) * 0.2;
+            double driftZ = Math.cos(particlePhase * 0.8) * 0.3;
+
+            particlePos = particlePos.add(driftX, driftY, driftZ);
+
+            // Add randomness
+            double randomOffsetX = (world.random.nextDouble() - 0.5) * 0.1;
+            double randomOffsetY = (world.random.nextDouble() - 0.5) * 0.1;
+            double randomOffsetZ = (world.random.nextDouble() - 0.5) * 0.1;
+            particlePos = particlePos.add(randomOffsetX, randomOffsetY, randomOffsetZ);
+
+            // Create particle with color variation
+            Vector3f particleColor = new Vector3f(color);
+            float colorVariation = 0.1f + (float)(Math.sin(particlePhase * 2) * 0.05f);
+            particleColor.add(colorVariation, colorVariation * 0.5f, colorVariation * 0.8f);
+            particleColor.set(Math.max(0.0f, Math.min(1.0f, particleColor.x)),
+                             Math.max(0.0f, Math.min(1.0f, particleColor.y)),
+                             Math.max(0.0f, Math.min(1.0f, particleColor.z)));
+
+            DustParticleEffect pathParticle = new DustParticleEffect(particleColor, 0.6f);
+
+            particleManager.addParticle(
+                pathParticle,
+                particlePos.x, particlePos.y, particlePos.z,
+                0.0, 0.002, 0.0
+            );
+        }
+    }
+
+    /**
+     * Simplified pathfinding for particle placement (client-side version of server pathfinding)
+     */
+    private static List<BlockPos> findPath(ClientWorld world, BlockPos start, BlockPos end, int maxRadius) {
+        List<BlockPos> path = new java.util.ArrayList<>();
+        if (start.getSquaredDistance(end) > maxRadius * maxRadius) {
+            return path; // Too far
+        }
+
+        // Simple BFS for pathfinding
+        Set<BlockPos> visited = new java.util.HashSet<>();
+        Map<BlockPos, BlockPos> cameFrom = new java.util.HashMap<>();
+        Queue<BlockPos> queue = new java.util.LinkedList<>();
+
+        queue.add(start);
+        visited.add(start);
+        cameFrom.put(start, null);
+
+        int[][] directions = {
+            {0, 0, 1}, {0, 0, -1}, {1, 0, 0}, {-1, 0, 0},  // Horizontal movement
+            {0, 1, 0}, {0, -1, 0}  // Vertical movement for caves
+        };
+
+        boolean found = false;
+        while (!queue.isEmpty() && !found) {
+            BlockPos current = queue.poll();
+            if (current.equals(end)) {
+                found = true;
+                break;
+            }
+
+            for (int[] dir : directions) {
+                BlockPos next = current.add(dir[0], dir[1], dir[2]);
+                if (!visited.contains(next) && next.getSquaredDistance(start) <= maxRadius * maxRadius) {
+                    if (isPassableAndGrounded(world, next)) {
+                        visited.add(next);
+                        queue.add(next);
+                        cameFrom.put(next, current);
+                    }
+                }
+            }
+        }
+
+        // Reconstruct path if found
+        if (found) {
+            BlockPos current = end;
+            while (current != null) {
+                path.add(0, current);
+                current = cameFrom.get(current);
+            }
+        }
+
+        return path;
+    }
+
+    /**
+     * Client-side version of the grounded pathfinding check
+     */
+    private static boolean isPassableAndGrounded(ClientWorld world, BlockPos pos) {
+        // First check if the block itself is passable
+        if (!world.getBlockState(pos).isAir() && world.getBlockState(pos).isSolidBlock(world, pos)) {
+            return false; // Solid blocks are not passable
+        }
+
+        // Check for solid ground within 4 blocks below
+        for (int yOffset = 1; yOffset <= 4; yOffset++) {
+            BlockPos checkPos = pos.down(yOffset);
+            if (world.getBlockState(checkPos).isSolidBlock(world, checkPos)) {
+                return true; // Found solid ground within 4 blocks
+            }
+        }
+
+        return false; // No solid ground found within 4 blocks below
+    }
+
+    /**
+     * Finds valid positions for particle spawning around a path position
+     * Includes the original position and up to 2 blocks away non-solid neighbors
+     */
+    private static List<BlockPos> findValidParticlePositions(ClientWorld world, BlockPos centerPos) {
+        List<BlockPos> validPositions = new java.util.ArrayList<>();
+
+        // Always include the original position if it's valid
+        if (isPassableAndGrounded(world, centerPos)) {
+            validPositions.add(centerPos);
+        }
+
+        // Check all positions within 2 blocks in each direction (but not including the center)
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dy = -2; dy <= 2; dy++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    // Skip the center position (already added above)
+                    if (dx == 0 && dy == 0 && dz == 0) continue;
+
+                    // Check if within 2 blocks distance (Manhattan distance)
+                    if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) <= 2) {
+                        BlockPos checkPos = centerPos.add(dx, dy, dz);
+                        if (isPassableAndGrounded(world, checkPos)) {
+                            validPositions.add(checkPos);
+                        }
+                    }
+                }
+            }
+        }
+
+        // If no valid positions found (shouldn't happen), return the center
+        if (validPositions.isEmpty()) {
+            validPositions.add(centerPos);
+        }
+
+        return validPositions;
+    }
+
+    /**
      * Spawns whimsical particles that circle around the player in multiple layers
      */
-    private static void spawnPlayerSurroundParticles(ClientWorld world, ParticleManager particleManager, Vec3d playerPos) {
+    private static void spawnPlayerSurroundParticles(ClientWorld world, ParticleManager particleManager, Vec3d playerPos, MinecraftClient client) {
+        // Check if there's a sparkle within proximity distance
+        boolean hasNearbySparkle = hasSparkleWithinDistance(client, playerPos, PLAYER_SURROUND_SPARKLE_PROXIMITY);
+
         // Create multiple layers of particles circling around the player
         for (int layer = 0; layer < PLAYER_SURROUND_LAYERS; layer++) {
             double radius = PLAYER_SURROUND_RADII[layer];
@@ -363,35 +559,40 @@ public class SparkleParticleRenderer {
                 double x = playerPos.x + Math.cos(finalAngle) * finalRadius;
                 double z = playerPos.z + Math.sin(finalAngle) * finalRadius;
 
-                // Generate random color for each particle (changes over time)
-                long timeBasedSeed = (long)(fairyAnimationTime * 1000) + layer * 1000 + i * 100;
-                java.util.Random colorRandom = new java.util.Random(timeBasedSeed);
-                float red = colorRandom.nextFloat();
-                float green = colorRandom.nextFloat();
-                float blue = colorRandom.nextFloat();
+                Vector3f particleColor;
+                if (hasNearbySparkle) {
+                    // Generate random color for each particle (changes over time)
+                    long timeBasedSeed = (long)(fairyAnimationTime * 1000) + layer * 1000 + i * 100;
+                    java.util.Random colorRandom = new java.util.Random(timeBasedSeed);
+                    float red = colorRandom.nextFloat();
+                    float green = colorRandom.nextFloat();
+                    float blue = colorRandom.nextFloat();
 
-                // Ensure colors are bright enough (avoid too dark)
-                red = Math.max(red, 0.3f);
-                green = Math.max(green, 0.3f);
-                blue = Math.max(blue, 0.3f);
+                    // Ensure colors are bright enough (avoid too dark)
+                    red = Math.max(red, 0.6f);
+                    green = Math.max(green, 0.2f);
+                    blue = Math.max(blue, 0.2f);
 
-                // Add layer-based color tinting for visual distinction
-                switch (layer) {
-                    case 0: // Inner layer - slightly more saturated
-                        red *= 1.1f;
-                        green *= 1.1f;
-                        blue *= 1.1f;
-                        break;
-                    case 1: // Middle layer - normal
-                        break;
-                    case 2: // Outer layer - slightly more pastel
-                        red = (red + 0.5f) / 1.5f;
-                        green = (green + 0.5f) / 1.5f;
-                        blue = (blue + 0.5f) / 1.5f;
-                        break;
+                    // Add layer-based color tinting for visual distinction
+                    switch (layer) {
+                        case 0: // Inner layer - slightly more saturated
+                            red *= 1.1f;
+                            green *= 1.1f;
+                            blue *= 1.1f;
+                            break;
+                        case 1: // Middle layer - normal
+                            break;
+                        case 2: // Outer layer - slightly more pastel
+                            red = (red + 0.5f) / 1.5f;
+                            green = (green + 0.5f) / 1.5f;
+                            blue = (blue + 0.5f) / 1.5f;
+                            break;
+                    }
+                    particleColor = new Vector3f(red, green, blue);
+                } else {
+                    // No nearby sparkle - use gray particles
+                    particleColor = new Vector3f(0.5f, 0.5f, 0.5f); // Medium gray
                 }
-
-                Vector3f particleColor = new Vector3f(red, green, blue);
 
                 // Create the particle
                 DustParticleEffect surroundParticle = new DustParticleEffect(particleColor, 0.8f);
@@ -405,61 +606,92 @@ public class SparkleParticleRenderer {
     }
 
     /**
-     * Checks if the player is looking toward the nearest sparkle within the angle threshold
+     * Checks if there's a sparkle within the specified distance from the player
      */
-    private static boolean isPlayerLookingAtSparkle(MinecraftClient client, ClientSparkleManager.ClientSparkle sparkle) {
-        Vec3d playerPos = client.player.getPos();
-        Vec3d sparklePos = Vec3d.ofCenter(sparkle.getPosition());
-
-        // Get direction vectors
-        Vec3d toSparkle = sparklePos.subtract(playerPos).normalize();
-        Vec3d playerFacing = client.player.getRotationVector();
-
-        // Calculate dot product to find angle between vectors
-        double dotProduct = toSparkle.dotProduct(playerFacing);
-
-        // If dot product is above threshold, player is looking in the right direction
-        return dotProduct > LOOKING_THRESHOLD;
-    }
-
-    /**
-     * Determines the fairy's color based on sparkle targeting
-     */
-    private static Vector3f getFairyColor(MinecraftClient client, ClientSparkleManager.ClientSparkle nearestSparkle) {
-        if (client.player == null) return new Vector3f(0.5f, 0.5f, 0.5f); // Gray fallback
+    private static boolean hasSparkleWithinDistance(MinecraftClient client, Vec3d playerPos, double distance) {
+        if (client.player == null) return false;
 
         UUID playerId = client.player.getUuid();
-        List<ClientSparkleManager.ClientSparkle> allSparkles = ClientSparkleManager.getPlayerSparkles(playerId);
+        List<ClientSparkleManager.ClientSparkle> sparkles = ClientSparkleManager.getPlayerSparkles(playerId);
 
-        Vec3d playerPos = client.player.getPos();
-        Vec3d playerFacing = client.player.getRotationVector();
-
-        ClientSparkleManager.ClientSparkle targetedSparkle = null;
-        boolean isNearest = false;
-
-        // Find if player is looking at any sparkle
-        for (ClientSparkleManager.ClientSparkle sparkle : allSparkles) {
+        for (ClientSparkleManager.ClientSparkle sparkle : sparkles) {
             Vec3d sparklePos = Vec3d.ofCenter(sparkle.getPosition());
-            Vec3d toSparkle = sparklePos.subtract(playerPos).normalize();
+            double sparkleDistance = playerPos.distanceTo(sparklePos);
 
-            double dotProduct = toSparkle.dotProduct(playerFacing);
-
-            if (dotProduct > LOOKING_THRESHOLD) {
-                targetedSparkle = sparkle;
-                isNearest = sparkle == nearestSparkle;
-                break; // Found the first (closest in angle) sparkle being targeted
+            if (sparkleDistance <= distance) {
+                return true;
             }
         }
 
-        if (targetedSparkle == null) {
-            // Not looking at any sparkle
-            return new Vector3f(0.7f, 0.7f, 0.7f); // Light gray/white
-        } else if (isNearest) {
-            // Looking at the nearest sparkle
-            return new Vector3f(0.2f, 0.6f, 1.0f); // Blue
-        } else {
-            // Looking at a sparkle but not the nearest
-            return new Vector3f(1.0f, 1.0f, 0.2f); // Yellow
+        return false;
+    }
+
+    /**
+     * Gets the color for a sparkle based on its tier level
+     */
+    private static Vector3f getTierColor(int tierLevel) {
+        switch (tierLevel) {
+            case 0: // COMMON - White
+                return new Vector3f(1.0f, 1.0f, 1.0f);
+            case 1: // UNCOMMON - Green
+                return new Vector3f(0.0f, 1.0f, 0.0f);
+            case 2: // RARE - Blue
+                return new Vector3f(0.0f, 0.5f, 1.0f);
+            case 3: // EPIC - Purple
+                return new Vector3f(0.8f, 0.0f, 1.0f);
+            case 4: // LEGENDARY - Gold
+                return new Vector3f(1.0f, 0.8f, 0.0f);
+            case 5: // DIVINE - Rainbow cycling
+                return getRainbowColor();
+            default:
+                return new Vector3f(1.0f, 1.0f, 1.0f); // White fallback
         }
+    }
+
+    /**
+     * Gets the fairy color based on the nearest sparkle's tier
+     */
+    private static Vector3f getFairyColor(MinecraftClient client, ClientSparkleManager.ClientSparkle sparkle) {
+        return getTierColor(sparkle.getTierLevel());
+    }
+
+    /**
+     * Gets a rainbow color that cycles over time for divine tier sparkles
+     */
+    private static Vector3f getRainbowColor() {
+        // Use system time for smooth color cycling
+        long time = System.currentTimeMillis();
+        float hue = (time % 3000) / 3000.0f; // Full cycle every 3 seconds
+
+        // Convert HSV to RGB (hue, full saturation, full brightness)
+        float r, g, b;
+
+        if (hue < 1.0f/6.0f) {
+            r = 1.0f;
+            g = hue * 6.0f;
+            b = 0.0f;
+        } else if (hue < 2.0f/6.0f) {
+            r = (2.0f/6.0f - hue) * 6.0f;
+            g = 1.0f;
+            b = 0.0f;
+        } else if (hue < 3.0f/6.0f) {
+            r = 0.0f;
+            g = 1.0f;
+            b = (hue - 2.0f/6.0f) * 6.0f;
+        } else if (hue < 4.0f/6.0f) {
+            r = 0.0f;
+            g = (4.0f/6.0f - hue) * 6.0f;
+            b = 1.0f;
+        } else if (hue < 5.0f/6.0f) {
+            r = (hue - 4.0f/6.0f) * 6.0f;
+            g = 0.0f;
+            b = 1.0f;
+        } else {
+            r = 1.0f;
+            g = 0.0f;
+            b = (1.0f - hue) * 6.0f;
+        }
+
+        return new Vector3f(r, g, b);
     }
 }

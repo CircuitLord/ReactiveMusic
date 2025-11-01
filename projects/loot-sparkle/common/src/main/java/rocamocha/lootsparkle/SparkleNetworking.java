@@ -20,6 +20,7 @@ public class SparkleNetworking {
     public static final CustomPayload.Id<SyncSparklePacket> SYNC_SPARKLE = new CustomPayload.Id<>(Identifier.of(LootSparkle.MOD_ID, "sync_sparkle"));
     public static final CustomPayload.Id<RemoveSparklePacket> REMOVE_SPARKLE = new CustomPayload.Id<>(Identifier.of(LootSparkle.MOD_ID, "remove_sparkle"));
     public static final CustomPayload.Id<InteractSparklePacket> INTERACT_SPARKLE = new CustomPayload.Id<>(Identifier.of(LootSparkle.MOD_ID, "interact_sparkle"));
+    public static final CustomPayload.Id<InteractionFailedPacket> INTERACTION_FAILED = new CustomPayload.Id<>(Identifier.of(LootSparkle.MOD_ID, "interaction_failed"));
 
     public static void initialize() {
         LootSparkle.LOGGER.info("Initializing sparkle networking...");
@@ -43,6 +44,7 @@ public class SparkleNetworking {
         try {
             PayloadTypeRegistry.playS2C().register(SYNC_SPARKLE, SyncSparklePacket.CODEC);
             PayloadTypeRegistry.playS2C().register(REMOVE_SPARKLE, RemoveSparklePacket.CODEC);
+            PayloadTypeRegistry.playS2C().register(INTERACTION_FAILED, InteractionFailedPacket.CODEC);
             PayloadTypeRegistry.playC2S().register(INTERACT_SPARKLE, InteractSparklePacket.CODEC);
             LootSparkle.LOGGER.debug("Registered client-side sparkle networking codecs");
         } catch (IllegalArgumentException e) {
@@ -54,6 +56,7 @@ public class SparkleNetworking {
     private static void registerCodecs() {
         PayloadTypeRegistry.playS2C().register(SYNC_SPARKLE, SyncSparklePacket.CODEC);
         PayloadTypeRegistry.playS2C().register(REMOVE_SPARKLE, RemoveSparklePacket.CODEC);
+        PayloadTypeRegistry.playS2C().register(INTERACTION_FAILED, InteractionFailedPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(INTERACT_SPARKLE, InteractSparklePacket.CODEC);
         LootSparkle.LOGGER.debug("Registered sparkle networking codecs");
     }
@@ -61,11 +64,12 @@ public class SparkleNetworking {
     /**
      * Packet sent from server to client to sync a sparkle
      */
-    public record SyncSparklePacket(UUID sparkleId, UUID playerId, BlockPos position) implements CustomPayload {
+    public record SyncSparklePacket(UUID sparkleId, UUID playerId, BlockPos position, int tierLevel) implements CustomPayload {
         public static final PacketCodec<PacketByteBuf, SyncSparklePacket> CODEC = PacketCodec.tuple(
             UUID_CODEC, SyncSparklePacket::sparkleId,
             UUID_CODEC, SyncSparklePacket::playerId,
             BlockPos.PACKET_CODEC, SyncSparklePacket::position,
+            PacketCodecs.INTEGER, SyncSparklePacket::tierLevel,
             SyncSparklePacket::new
         );
 
@@ -103,6 +107,21 @@ public class SparkleNetworking {
         @Override
         public Id<? extends CustomPayload> getId() {
             return INTERACT_SPARKLE;
+        }
+    }
+
+    /**
+     * Packet sent from server to client when sparkle interaction fails
+     */
+    public record InteractionFailedPacket(String reason) implements CustomPayload {
+        public static final PacketCodec<PacketByteBuf, InteractionFailedPacket> CODEC = PacketCodec.tuple(
+            PacketCodecs.STRING, InteractionFailedPacket::reason,
+            InteractionFailedPacket::new
+        );
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return INTERACTION_FAILED;
         }
     }
 

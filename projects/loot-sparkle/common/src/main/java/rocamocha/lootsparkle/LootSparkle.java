@@ -1,6 +1,10 @@
 package rocamocha.lootsparkle;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.minecraft.server.command.CommandManager;
+import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +35,28 @@ public class LootSparkle implements ModInitializer {
         // Initialize networking
         SparkleNetworking.initialize();
 
+        // Register debug commands
+        registerDebugCommands();
+
         LOGGER.info("Loot Sparkle initialized successfully!");
+    }
+
+    /**
+     * Registers debug commands for testing purposes
+     */
+    private void registerDebugCommands() {
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            dispatcher.register(CommandManager.literal("sparkle")
+                .requires(source -> source.hasPermissionLevel(2)) // OP level 2
+                .then(CommandManager.literal("expire")
+                    .executes(context -> {
+                        ServerCommandSource source = context.getSource();
+                        int expiredCount = SparkleManager.expireAllSparkles();
+                        source.sendFeedback(() -> Text.literal("Expired " + expiredCount + " sparkles"), true);
+                        return 1;
+                    })
+                )
+            );
+        });
     }
 }

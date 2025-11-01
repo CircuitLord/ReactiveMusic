@@ -14,9 +14,12 @@ import java.util.Properties;
 public class LootSparkleConfig {
     private static final String CONFIG_FILE_NAME = "loot-sparkle.properties";
     private static final String SPARKLE_LIFETIME_KEY = "sparkle_lifetime_minutes";
-    private static final int DEFAULT_SPARKLE_LIFETIME_MINUTES = 3;
+    private static final String VERTICAL_RADIUS_KEY = "vertical_spawn_radius";
+    private static final int DEFAULT_SPARKLE_LIFETIME_MINUTES = 10;
+    private static final int DEFAULT_VERTICAL_RADIUS = 16;
 
     private static int sparkleLifetimeMinutes = DEFAULT_SPARKLE_LIFETIME_MINUTES;
+    private static int verticalRadius = DEFAULT_VERTICAL_RADIUS;
 
     /**
      * Loads the configuration from the config file
@@ -61,10 +64,27 @@ public class LootSparkleConfig {
                 sparkleLifetimeMinutes = DEFAULT_SPARKLE_LIFETIME_MINUTES;
             }
 
+            // Read vertical radius setting
+            String verticalRadiusStr = properties.getProperty(VERTICAL_RADIUS_KEY,
+                String.valueOf(DEFAULT_VERTICAL_RADIUS));
+            try {
+                verticalRadius = Integer.parseInt(verticalRadiusStr);
+                if (verticalRadius < 0) {
+                    LootSparkle.LOGGER.warn("Invalid vertical radius {}, using default of {} blocks",
+                        verticalRadius, DEFAULT_VERTICAL_RADIUS);
+                    verticalRadius = DEFAULT_VERTICAL_RADIUS;
+                }
+            } catch (NumberFormatException e) {
+                LootSparkle.LOGGER.warn("Invalid vertical radius value '{}', using default of {} blocks",
+                    verticalRadiusStr, DEFAULT_VERTICAL_RADIUS);
+                verticalRadius = DEFAULT_VERTICAL_RADIUS;
+            }
+
             // Save the config (this will create the file with current values if it doesn't exist)
             saveConfig();
 
             LootSparkle.LOGGER.info("Loot Sparkle sparkle lifetime set to {} minutes", sparkleLifetimeMinutes);
+            LootSparkle.LOGGER.info("Loot Sparkle vertical spawn radius set to {} blocks", verticalRadius);
 
         } catch (Exception e) {
             LootSparkle.LOGGER.error("Failed to load Loot Sparkle config, using defaults", e);
@@ -82,10 +102,12 @@ public class LootSparkleConfig {
 
             Properties properties = new Properties();
             properties.setProperty(SPARKLE_LIFETIME_KEY, String.valueOf(sparkleLifetimeMinutes));
+            properties.setProperty(VERTICAL_RADIUS_KEY, String.valueOf(verticalRadius));
 
             // Add comments
             String comments = "Loot Sparkle Mod Configuration\n" +
-                "sparkle_lifetime_minutes: How long sparkles last before disappearing (in minutes)";
+                "sparkle_lifetime_minutes: How long sparkles last before disappearing (in minutes)\n" +
+                "vertical_spawn_radius: Maximum vertical distance sparkles can spawn from player (in blocks)";
 
             try (FileOutputStream fos = new FileOutputStream(configFile.toFile())) {
                 properties.store(fos, comments);
@@ -108,5 +130,12 @@ public class LootSparkleConfig {
      */
     public static int getSparkleLifetimeMinutes() {
         return sparkleLifetimeMinutes;
+    }
+
+    /**
+     * Gets the vertical spawn radius in blocks
+     */
+    public static int getVerticalSpawnRadius() {
+        return verticalRadius;
     }
 }
