@@ -33,8 +33,12 @@ public class Sparkle {
         this.creationTime = System.currentTimeMillis();
         this.lifetime = LootSparkleConfig.getSparkleLifetimeMs();
 
+        LootSparkle.LOGGER.info("Creating sparkle at {} for player {}", position, playerId);
+
         // Determine sparkle tier based on world context
         this.tier = SparkleTier.selectRandomTier(world, position);
+
+        LootSparkle.LOGGER.info("Selected tier {} for sparkle", this.tier.getName());
 
         // Generate loot for this sparkle based on tier
         LootTableIntegration.generateLootForSparkle(this.inventory, this.tier, world, position);
