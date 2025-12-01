@@ -13,11 +13,13 @@ They're loaded from the `resourcepacks` folder, although they're not actually re
 
 ## Testing Songpacks
 
-You can load songpacks from the `Songpacks` section in the UI. Click on the button for your songpack name and it'll start playing.
-This also works for reloading a songpack if you've made changes you want to try without restarting your game.
+Open the songpack menu using `/reactivemusic`. Click on the button for your songpack name and it'll start playing.
+This also works for reloading a songpack if you've made changes you want to try without restarting your game by clicking another songpack and back onto yours.
 
 I also highly recommend turning debug mode on in the Debug section,
 this will make songs switch whenever their events become valid and removes silence gaps entirely to make it easier to test.
+
+You can also run `/reactivemusic toggleLogging` to display what the mod is doing in real-time.
 
 <br>
 
