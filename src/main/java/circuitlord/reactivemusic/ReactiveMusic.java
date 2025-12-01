@@ -4,14 +4,20 @@ import circuitlord.reactivemusic.config.ModConfig;
 import circuitlord.reactivemusic.config.MusicDelayLength;
 import circuitlord.reactivemusic.config.MusicSwitchSpeed;
 import circuitlord.reactivemusic.entries.RMRuntimeEntry;
+import net.fabricmc.api.EnvType;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.sound.SoundInstance;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
@@ -86,6 +92,12 @@ public class ReactiveMusic implements ModInitializer {
 	public static final List<SoundInstance> trackedSoundsMuteMusic = new ArrayList<SoundInstance>();
 
 
+    public static MinecraftServer server;
+
+
+    public static boolean chatLoggingEnabled = false;
+
+
 	@Override
 	public void onInitialize() {
 
@@ -93,6 +105,35 @@ public class ReactiveMusic implements ModInitializer {
 
 		ModConfig.GSON.load();
 		config = ModConfig.getConfig();
+
+
+
+        if (FabricLoader.getInstance().getEnvironmentType().equals(EnvType.SERVER)) {
+
+
+            ServerLifecycleEvents.SERVER_STARTED.register(newServer -> {
+
+                server = newServer;
+
+
+
+                for (ServerPlayerEntity player : PlayerLookup.all(server)) {
+
+                }
+            });
+
+
+
+/*
+            for (ServerPlayerEntity player : PlayerLookup.world((ServerWorld) world)) {
+                ServerPlayNetworking.send(player, payload);
+            }
+*/
+
+            return;
+
+        }
+
 
 
 
@@ -169,11 +210,11 @@ public class ReactiveMusic implements ModInitializer {
 							String key = context.getSource().getClient().world.getRegistryKey().getValue().toString();
 
 							if (config.blacklistedDimensions.contains(key)) {
-								context.getSource().sendFeedback(Text.literal("ReactiveMusic: " + key + " was already in blacklist."));
+								context.getSource().sendFeedback(Text.literal("[ReactiveMusic]: " + key + " was already in blacklist."));
 								return 1;
 							}
 
-							context.getSource().sendFeedback(Text.literal("ReactiveMusic: Added " + key + " to blacklist."));
+							context.getSource().sendFeedback(Text.literal("[ReactiveMusic]: Added " + key + " to blacklist."));
 
 							config.blacklistedDimensions.add(key);
 							ModConfig.saveConfig();
@@ -187,11 +228,11 @@ public class ReactiveMusic implements ModInitializer {
 							String key = context.getSource().getClient().world.getRegistryKey().getValue().toString();
 
 							if (!config.blacklistedDimensions.contains(key)) {
-								context.getSource().sendFeedback(Text.literal("ReactiveMusic: " + key + " was not in blacklist."));
+								context.getSource().sendFeedback(Text.literal("[ReactiveMusic]: " + key + " was not in blacklist."));
 								return 1;
 							}
 
-							context.getSource().sendFeedback(Text.literal("ReactiveMusic: Removed " + key + " from blacklist."));
+							context.getSource().sendFeedback(Text.literal("[ReactiveMusic]: Removed " + key + " from blacklist."));
 
 							config.blacklistedDimensions.remove(key);
 							ModConfig.saveConfig();
@@ -199,6 +240,19 @@ public class ReactiveMusic implements ModInitializer {
 							return 1;
 						})
 				)
+
+                .then(ClientCommandManager.literal("toggleLogging")
+                        .executes(context -> {
+
+                            chatLoggingEnabled = !chatLoggingEnabled;
+
+                            context.getSource().sendFeedback(Text.literal("[ReactiveMusic]: Logging enabled: " + chatLoggingEnabled));
+
+                            return 1;
+                        })
+                )
+
+
 
 			)
 		);
@@ -295,7 +349,7 @@ public class ReactiveMusic implements ModInitializer {
 			// if the new entry contains the same song as our current one, then do a "fake" swap to swap over to the new entry
 			if (wantsToSwitch && currentSong != null && newEntry.songs.contains(currentSong)) {
 
-				LOGGER.info("doing fake swap to new event: " + newEntry.eventString);
+                doDebugLog("doing fake swap to new event: " + newEntry.eventString);
 
 				// do a fake swap
 				currentEntry = newEntry;
@@ -441,11 +495,12 @@ public class ReactiveMusic implements ModInitializer {
 
 			// if this event was valid before and is invalid now
 			if (entry.forceStopMusicOnInvalid && !validEntries.contains(entry)) {
-				LOGGER.info("trying forceStopMusicOnInvalid: " + entry.eventString);
+
+                doDebugLog("trying forceStopMusicOnInvalid: " + entry.eventString);
 
 				if (entry.cachedRandomChance <= entry.forceChance) {
 
-					LOGGER.info("doing forceStopMusicOnInvalid: " + entry.eventString);
+                    doDebugLog("doing forceStopMusicOnInvalid: " + entry.eventString);
 					queuedToStopMusic = true;
 				}
 
@@ -463,19 +518,19 @@ public class ReactiveMusic implements ModInitializer {
 
 				// if this event wasn't valid before and is now
 				if (entry.forceStopMusicOnValid) {
-					LOGGER.info("trying forceStopMusicOnValid: " + entry.eventString);
+                    doDebugLog("trying forceStopMusicOnValid: " + entry.eventString);
 
 					if (randSuccess) {
-						LOGGER.info("doing forceStopMusicOnValid: " + entry.eventString);
+                        doDebugLog("doing forceStopMusicOnValid: " + entry.eventString);
 						queuedToStopMusic = true;
 					}
 				}
 
 				if (entry.forceStartMusicOnValid) {
-					LOGGER.info("trying forceStartMusicOnValid: " + entry.eventString);
+                    doDebugLog("trying forceStartMusicOnValid: " + entry.eventString);
 
 					if (randSuccess) {
-						LOGGER.info("doing forceStartMusicOnValid: " + entry.eventString);
+                        doDebugLog("doing forceStartMusicOnValid: " + entry.eventString);
 						queuedToPlayMusic = true;
 					}
 				}
@@ -517,7 +572,7 @@ public class ReactiveMusic implements ModInitializer {
 		thread.setGainPercentage(0.0f);
 
 		if (song != null) {
-			LOGGER.info("Changing entry: " + newEntry.eventString + " Song name: " + song);
+            doDebugLog("Changing entry: " + newEntry.eventString + " Song name: " + song);
 
 			thread.play(song);
 		}
@@ -620,6 +675,7 @@ public class ReactiveMusic implements ModInitializer {
 
 	static void resetPlayer() {
 
+
 		// if queued or playing
 		if (!thread.notQueuedOrPlaying()) {
 			thread.resetPlayer();
@@ -691,6 +747,20 @@ public class ReactiveMusic implements ModInitializer {
 
 	}
 
+
+
+    private static void doDebugLog(String text) {
+
+        var debugString = "[ReactiveMusic]: " + text;
+
+        LOGGER.info(debugString);
+
+        if (!chatLoggingEnabled || MinecraftClient.getInstance() == null || MinecraftClient.getInstance().player == null)
+            return;
+
+        MinecraftClient.getInstance().player.sendMessage(Text.literal(debugString), false);
+
+    }
 
 
 

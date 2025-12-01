@@ -204,8 +204,8 @@ public class RMSongpackLoader {
             if (!runtimeEntry.errorString.isEmpty()) {
                 songpackZip.errorString += runtimeEntry.errorString;
 
-                // allow it to keep loading if it passes the check below
-                //continue;
+                // bail out, we don't want to potentially have a half valid event that takes more priority than it should
+                continue;
             }
 
             if (runtimeEntry.conditions.isEmpty()) continue;
@@ -249,6 +249,8 @@ public class RMSongpackLoader {
                     }
 
                     songpackZip.errorString += "Failed finding song: \"" + song + "\" for event: \"" + eventName + "\"\n\n";
+
+                    songpackZip.blockLoading = true;
                 } else {
                     try {
                         inputStream.close();

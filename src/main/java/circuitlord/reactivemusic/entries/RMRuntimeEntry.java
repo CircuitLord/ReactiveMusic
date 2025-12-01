@@ -98,7 +98,7 @@ public class RMRuntimeEntry {
                 }
 
                 // see if it's a biome event
-                if (eventSection.startsWith("biome=")) {
+                else if (eventSection.startsWith("biome=")) {
 
                     String biomeName = eventSection.substring(6);
                     if (biomeName.isEmpty())
