@@ -238,7 +238,9 @@ public class RMSongpackLoader {
         for (int i = 0; i < songpackZip.config.entries.length; i++) {
             if (songpackZip.config.entries[i] == null || songpackZip.config.entries[i].songs == null) continue;
 
-            for (int j = 0; j < songpackZip.config.entries[i].songs.length; j++) {
+            // loop over songs backwards so we can remove invalid entries
+            for (int j = songpackZip.config.entries[i].songs.length - 1; j >= 0; j--) {
+
                 String song = songpackZip.config.entries[i].songs[j];
                 var inputStream = getInputStream(songpackZip.path, "music/" + song + ".mp3", songpackZip.embedded);
 
@@ -250,7 +252,15 @@ public class RMSongpackLoader {
 
                     songpackZip.errorString += "Failed finding song: \"" + song + "\" for event: \"" + eventName + "\"\n\n";
 
-                    songpackZip.blockLoading = true;
+                    // remove this invalid audio file
+                    // this is unoptimized and slow but it's fine
+                    java.util.List<String> list = new java.util.ArrayList<>(java.util.Arrays.asList(songpackZip.config.entries[i].songs));
+                    list.remove(j);
+                    songpackZip.config.entries[i].songs = list.toArray(new String[0]);
+
+
+
+                    // songpackZip.blockLoading = true;
                 } else {
                     try {
                         inputStream.close();
