@@ -235,7 +235,7 @@ public class PlayerThread extends Thread {
 /*	public int getFramesPlayed() {
 		return player == null ? 0 : player.getFrames();
 	}*/
-	
+@SuppressWarnings("removal")
 	public void forceKill() {
 		try {
 			resetPlayer();
