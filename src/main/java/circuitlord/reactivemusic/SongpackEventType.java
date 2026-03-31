@@ -52,6 +52,8 @@ public enum SongpackEventType {
 
     NEARBY_MOBS,
 
+    COMBAT,
+
 
 
 
