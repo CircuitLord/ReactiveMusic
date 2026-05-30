@@ -41,7 +41,7 @@ jobs:
       - name: Build
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon chiseledBuild
+          ./gradlew --no-daemon --no-parallel chiseledBuild
 
       - name: Delete older build artifacts
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts }}

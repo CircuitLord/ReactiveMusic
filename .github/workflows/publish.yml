@@ -126,7 +126,7 @@ jobs:
       - name: Build all jars
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon chiseledBuild
+          ./gradlew --no-daemon --no-parallel chiseledBuild
 
       - name: Publish to Modrinth
         if: ${{ inputs.publish_modrinth }}
