@@ -210,13 +210,20 @@ Fortress detection example:
 
 In-game, do `/reactivemusic toggleSoundEventLogging` to start printing the nearby sound events happening into chat.
 
-In the ReactiveMusic.json5 config, you can edit the `soundsMuteMusic` field with the names/partial names of any sound events that you want to mute RM when they play. This requires a game restart to be re-loaded.
+In the ReactiveMusic.json5 config, you can edit the `soundsMuteMusic` field with the names/partial names of any sound events that you want to mute RM when they play. This respects positional sound distance. This requires a game restart to be re-loaded.
+
+If a mod incorrectly tags non-positional music as positional, use `soundsMuteMusicIgnoreDistance` instead.
 
 Example:
 ```
   # Mute RM when near a beacon block
 	soundsMuteMusic: [
 		"block.beacon.ambient"
+	],
+
+  # Mute RM whenever this sound plays, even if the sound position is wrong
+	soundsMuteMusicIgnoreDistance: [
+		"boss.theme"
 	],
 ```
 

@@ -35,7 +35,7 @@ public class SoundManagerMixin {
         }
 
         if (path.contains("music_disc")) {
-            ReactiveMusic.trackedSoundsMuteMusic.add(soundInstance);
+            ReactiveMusic.trackSoundMuteMusic(soundInstance, false);
         }
 
         // cobblemon resource pack uses:
@@ -43,14 +43,21 @@ public class SoundManagerMixin {
         //"battle.pvp.default"
         //"battle.pvw.default"
         else if (path.contains("battle.pv")) {
-            ReactiveMusic.trackedSoundsMuteMusic.add(soundInstance);
+            ReactiveMusic.trackSoundMuteMusic(soundInstance, false);
 
             ReactiveMusic.LOGGER.info("Detected cobblemon battle event, adding to list!");
         }
 
         for (String muteSound : ReactiveMusic.config.soundsMuteMusic) {
             if (path.contains(muteSound)) {
-                ReactiveMusic.trackedSoundsMuteMusic.add(soundInstance);
+                ReactiveMusic.trackSoundMuteMusic(soundInstance, false);
+                break;
+            }
+        }
+
+        for (String muteSound : ReactiveMusic.config.soundsMuteMusicIgnoreDistance) {
+            if (path.contains(muteSound)) {
+                ReactiveMusic.trackSoundMuteMusic(soundInstance, true);
                 break;
             }
         }

@@ -78,7 +78,7 @@ public class ReactiveMusic {
 
     public static boolean printSoundEvents = false;
 
-	public static final List<SoundInstance> trackedSoundsMuteMusic = new ArrayList<SoundInstance>();
+	private static final List<TrackedSoundMuteMusic> trackedSoundsMuteMusic = new ArrayList<>();
 
 
     // Server reference removed - was unused placeholder code
@@ -567,19 +567,35 @@ public class ReactiveMusic {
 
 
 
+	public static void trackSoundMuteMusic(SoundInstance soundInstance, boolean ignoreDistance) {
+		if (soundInstance == null) {
+			return;
+		}
+
+		for (TrackedSoundMuteMusic trackedSound : trackedSoundsMuteMusic) {
+			if (trackedSound.soundInstance == soundInstance) {
+				trackedSound.ignoreDistance = trackedSound.ignoreDistance || ignoreDistance;
+				return;
+			}
+		}
+
+		trackedSoundsMuteMusic.add(new TrackedSoundMuteMusic(soundInstance, ignoreDistance));
+	}
+
 	private static void processTrackedSoundsMuteMusic() {
 
 		// remove if the song is null or not playing anymore
-		trackedSoundsMuteMusic.removeIf(soundInstance -> soundInstance == null || !MinecraftClient.getInstance().getSoundManager().isPlaying(soundInstance));
+		trackedSoundsMuteMusic.removeIf(trackedSound -> trackedSound.soundInstance == null || !MinecraftClient.getInstance().getSoundManager().isPlaying(trackedSound.soundInstance));
 
 		GameOptions options = MinecraftClient.getInstance().options;
 
 		boolean foundSoundInstance = false;
 
-		for (SoundInstance soundInstance : trackedSoundsMuteMusic) {
+		for (TrackedSoundMuteMusic trackedSound : trackedSoundsMuteMusic) {
+			SoundInstance soundInstance = trackedSound.soundInstance;
 
 			// if this is a sound with some sort of falloff
-			if (soundInstance.getAttenuationType() != SoundInstance.AttenuationType.NONE) {
+			if (!trackedSound.ignoreDistance && soundInstance.getAttenuationType() != SoundInstance.AttenuationType.NONE) {
 
 				Vec3d pos = new Vec3d(soundInstance.getX(), soundInstance.getY(), soundInstance.getZ());
 
@@ -626,6 +642,16 @@ public class ReactiveMusic {
 		thread.setMusicDiscDuckPercentage(1f - (musicTrackedSoundsDuckTicks / (float)FADE_DURATION));
 
 
+	}
+
+	private static class TrackedSoundMuteMusic {
+		private final SoundInstance soundInstance;
+		private boolean ignoreDistance;
+
+		private TrackedSoundMuteMusic(SoundInstance soundInstance, boolean ignoreDistance) {
+			this.soundInstance = soundInstance;
+			this.ignoreDistance = ignoreDistance;
+		}
 	}
 
 

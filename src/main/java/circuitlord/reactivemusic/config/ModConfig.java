@@ -57,6 +57,8 @@ public class ModConfig {
 
     public List<String> soundsMuteMusic = new ArrayList<>();
 
+    public List<String> soundsMuteMusicIgnoreDistance = new ArrayList<>();
+
     public boolean hasForcedInitialVolume = false;
 
     public static Screen createScreen(Screen parent) {
@@ -684,6 +686,7 @@ public class ModConfig {
             if (instance.blacklistedDimensions == null) instance.blacklistedDimensions = new ArrayList<>();
             if (instance.savedHomePositions == null) instance.savedHomePositions = new HashMap<>();
             if (instance.soundsMuteMusic == null) instance.soundsMuteMusic = new ArrayList<>();
+            if (instance.soundsMuteMusicIgnoreDistance == null) instance.soundsMuteMusicIgnoreDistance = new ArrayList<>();
             if (instance.loadedUserSongpack == null) instance.loadedUserSongpack = "";
             if (instance.musicDelayLength2 == null) instance.musicDelayLength2 = MusicDelayLength.SONGPACK_DEFAULT;
             if (instance.musicSwitchSpeed2 == null) instance.musicSwitchSpeed2 = MusicSwitchSpeed.SONGPACK_DEFAULT;
