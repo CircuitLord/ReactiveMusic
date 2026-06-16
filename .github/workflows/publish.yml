@@ -11,6 +11,15 @@ on:
           - beta
           - alpha
         default: release
+      loader:
+        description: "Loader targets to publish"
+        type: choice
+        options:
+          - all
+          - fabric
+          - forge
+          - neoforge
+        default: all
       publish_modrinth:
         description: "Publish to Modrinth"
         type: boolean
@@ -32,33 +41,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  resolve-matrix:
+    name: Resolve publish targets
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Resolve matrix
+        id: matrix
+        env:
+          SELECTED_LOADER: ${{ inputs.loader }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+
+          targets = [
+              {"loader": "fabric", "mc": "1.19.2", "game_versions": "1.19.2", "java": 17},
+              {"loader": "forge", "mc": "1.19.2", "game_versions": "1.19.2", "java": 17},
+              {"loader": "fabric", "mc": "1.20.1", "game_versions": ">=1.20 <=1.20.1", "java": 17},
+              {"loader": "forge", "mc": "1.20.1", "game_versions": ">=1.20 <=1.20.1", "java": 17},
+              {"loader": "fabric", "mc": "1.21.1", "game_versions": ">=1.21 <=1.21.1", "java": 21},
+              {"loader": "neoforge", "mc": "1.21.1", "game_versions": ">=1.21 <=1.21.1", "java": 21},
+              {"loader": "fabric", "mc": "1.21.11", "game_versions": ">=1.21.9 <=1.21.12", "java": 21},
+          ]
+
+          selected_loader = os.environ["SELECTED_LOADER"]
+          selected = targets if selected_loader == "all" else [target for target in targets if target["loader"] == selected_loader]
+          print(f"matrix={json.dumps({'include': selected}, separators=(',', ':'))}")
+          PY
+
   publish:
     name: Publish ${{ matrix.loader }} ${{ matrix.mc }}
+    needs: resolve-matrix
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - loader: fabric
-            mc: 1.20.1
-            game_versions: ">=1.20 <=1.20.1"
-            java: 17
-          - loader: forge
-            mc: 1.20.1
-            game_versions: ">=1.20 <=1.20.1"
-            java: 17
-          - loader: fabric
-            mc: 1.21.1
-            game_versions: ">=1.21 <=1.21.1"
-            java: 21
-          - loader: neoforge
-            mc: 1.21.1
-            game_versions: ">=1.21 <=1.21.1"
-            java: 21
-          - loader: fabric
-            mc: 1.21.11
-            game_versions: ">=1.21.9 <=1.21.12"
-            java: 21
+      matrix: ${{ fromJson(needs.resolve-matrix.outputs.matrix) }}
 
     steps:
       - name: Checkout
@@ -123,10 +142,18 @@ jobs:
             fi
           fi
 
-      - name: Build all jars
+      - name: Build ${{ matrix.loader }} jars
+        env:
+          LOADER: ${{ matrix.loader }}
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon --no-parallel chiseledBuild
+          case "$LOADER" in
+            fabric) task=chiseledBuildFabric ;;
+            forge) task=chiseledBuildForge ;;
+            neoforge) task=chiseledBuildNeoforge ;;
+            *) echo "Unknown loader: $LOADER" >&2; exit 1 ;;
+          esac
+          ./gradlew --no-daemon --no-parallel "$task"
 
       - name: Publish to Modrinth
         if: ${{ inputs.publish_modrinth }}
