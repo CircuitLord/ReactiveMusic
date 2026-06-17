@@ -11,8 +11,8 @@ import com.google.gson.stream.JsonReader;
 import net.minecraft.client.gui.DrawContext;
 //?}
 //? if >=1.21.9 {
-import net.minecraft.client.gui.Click;
-//?}
+/*import net.minecraft.client.gui.Click;
+*///?}
 //? if <1.20 {
 /*import net.minecraft.client.util.math.MatrixStack;
 *///?}
@@ -89,6 +89,7 @@ public class ModConfig {
         private static final int PANEL_BORDER = 0x88FFFFFF;
 
         private final Screen parent;
+        private boolean suppressBackgroundRender;
         private int page;
         private int selectedIndex;
         private int detailsScroll;
@@ -176,22 +177,22 @@ public class ModConfig {
         }
 
         //? if >=1.21.9 {
-        @Override
+        /*@Override
         public boolean mouseClicked(Click click, boolean doubled) {
             if (super.mouseClicked(click, doubled)) {
                 return true;
             }
             return selectRowAt(click.x(), click.y());
         }
-        //?} else {
-        /*@Override
+        *///?} else {
+        @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             if (super.mouseClicked(mouseX, mouseY, button)) {
                 return true;
             }
             return selectRowAt(mouseX, mouseY);
         }
-        *///?}
+        //?}
 
         //? if >=1.21 {
         @Override
@@ -221,8 +222,31 @@ public class ModConfig {
             /*this.renderBackground(context);
             *///?}
             renderContent(context);
-            super.render(context, mouseX, mouseY, delta);
+            suppressBackgroundRender = true;
+            try {
+                super.render(context, mouseX, mouseY, delta);
+            } finally {
+                suppressBackgroundRender = false;
+            }
         }
+
+        //? if >=1.21 {
+        @Override
+        public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+            if (suppressBackgroundRender) {
+                return;
+            }
+            super.renderBackground(context, mouseX, mouseY, delta);
+        }
+        //?} else if >=1.20 {
+        /*@Override
+        public void renderBackground(DrawContext context) {
+            if (suppressBackgroundRender) {
+                return;
+            }
+            super.renderBackground(context);
+        }
+        *///?}
         //?} else {
         /*@Override
         public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
