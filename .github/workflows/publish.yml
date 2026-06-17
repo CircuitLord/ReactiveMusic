@@ -164,7 +164,6 @@ jobs:
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
 
           files: build/libs/${{ steps.meta.outputs.mod_version }}/${{ matrix.loader }}/reactivemusic-${{ matrix.loader }}-${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}.jar
-          name: Reactive Music v${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}-${{ matrix.loader }}
           version: ${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}-${{ matrix.loader }}
           version-type: ${{ inputs.version_type }}
           changelog-file: build/release-changelog.md
