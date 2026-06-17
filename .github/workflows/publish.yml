@@ -175,9 +175,7 @@ jobs:
           version-type: ${{ inputs.version_type }}
 
           loaders: ${{ matrix.loader }}
-          game-versions: |
-            ${{ matrix.curseforge_game_versions }}
-            Client
+          game-versions: ${{ matrix.curseforge_game_versions }}
           game-version-filter: none
           java: ${{ matrix.java }}
 
