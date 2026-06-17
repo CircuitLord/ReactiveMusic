@@ -77,6 +77,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix: ${{ fromJson(needs.resolve-matrix.outputs.matrix) }}
 
     steps:
@@ -163,7 +164,7 @@ jobs:
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
 
           files: build/libs/${{ steps.meta.outputs.mod_version }}/${{ matrix.loader }}/reactivemusic-${{ matrix.loader }}-${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}.jar
-          name: Reactive Music ${{ steps.meta.outputs.mod_version }} for Minecraft ${{ matrix.mc }} (${{ matrix.loader }})
+          name: Reactive Music v${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}-${{ matrix.loader }}
           version: ${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}-${{ matrix.loader }}
           version-type: ${{ inputs.version_type }}
           changelog-file: build/release-changelog.md
@@ -185,13 +186,15 @@ jobs:
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
 
           files: build/libs/${{ steps.meta.outputs.mod_version }}/${{ matrix.loader }}/reactivemusic-${{ matrix.loader }}-${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}.jar
-          name: Reactive Music ${{ steps.meta.outputs.mod_version }} for Minecraft ${{ matrix.mc }} (${{ matrix.loader }})
+          name: Reactive Music v${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}-${{ matrix.loader }}
           version: ${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}-${{ matrix.loader }}
           version-type: ${{ inputs.version_type }}
           changelog-file: build/release-changelog.md
 
           loaders: ${{ matrix.loader }}
-          game-versions: ${{ matrix.game_versions }}
+          game-versions: |
+            ${{ matrix.game_versions }}
+            Client
           game-version-filter: none
           java: ${{ matrix.java }}
 
