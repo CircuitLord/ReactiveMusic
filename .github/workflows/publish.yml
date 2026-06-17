@@ -53,13 +53,13 @@ jobs:
           import os
 
           targets = [
-              {"loader": "fabric", "mc": "1.19.2", "game_versions": "1.19.2", "java": 17},
-              {"loader": "forge", "mc": "1.19.2", "game_versions": "1.19.2", "java": 17},
-              {"loader": "fabric", "mc": "1.20.1", "game_versions": ">=1.20 <=1.20.1", "java": 17},
-              {"loader": "forge", "mc": "1.20.1", "game_versions": ">=1.20 <=1.20.1", "java": 17},
-              {"loader": "fabric", "mc": "1.21.1", "game_versions": ">=1.21 <=1.21.1", "java": 21},
-              {"loader": "neoforge", "mc": "1.21.1", "game_versions": ">=1.21 <=1.21.1", "java": 21},
-              {"loader": "fabric", "mc": "1.21.11", "game_versions": ">=1.21.9 <=1.21.12", "java": 21},
+              {"loader": "fabric", "mc": "1.19.2", "game_versions": "1.19.2", "curseforge_game_versions": "1.19.2", "java": 17},
+              {"loader": "forge", "mc": "1.19.2", "game_versions": "1.19.2", "curseforge_game_versions": "1.19.2", "java": 17},
+              {"loader": "fabric", "mc": "1.20.1", "game_versions": ">=1.20 <=1.20.1", "curseforge_game_versions": "1.20.1", "java": 17},
+              {"loader": "forge", "mc": "1.20.1", "game_versions": ">=1.20 <=1.20.1", "curseforge_game_versions": "1.20.1", "java": 17},
+              {"loader": "fabric", "mc": "1.21.1", "game_versions": ">=1.21 <=1.21.1", "curseforge_game_versions": "1.21.1", "java": 21},
+              {"loader": "neoforge", "mc": "1.21.1", "game_versions": ">=1.21 <=1.21.1", "curseforge_game_versions": "1.21.1", "java": 21},
+              {"loader": "fabric", "mc": "1.21.11", "game_versions": ">=1.21.9 <=1.21.12", "curseforge_game_versions": "1.21.11", "java": 21},
           ]
 
           selected_loader = os.environ["SELECTED_LOADER"]
@@ -176,7 +176,7 @@ jobs:
 
           loaders: ${{ matrix.loader }}
           game-versions: |
-            ${{ matrix.game_versions }}
+            ${{ matrix.curseforge_game_versions }}
             Client
           game-version-filter: none
           java: ${{ matrix.java }}
