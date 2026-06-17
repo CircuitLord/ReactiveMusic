@@ -28,10 +28,6 @@ on:
         description: "Publish to CurseForge"
         type: boolean
         default: true
-      changelog:
-        description: "Release notes. Leave blank for a generated default."
-        type: string
-        required: false
 
 permissions:
   contents: read
@@ -96,7 +92,6 @@ jobs:
       - name: Resolve release metadata
         id: meta
         env:
-          CHANGELOG_TEXT: ${{ inputs.changelog }}
           MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
           CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
         run: |
@@ -105,15 +100,6 @@ jobs:
           mod_version="$(grep '^mod.version=' gradle.properties | cut -d= -f2-)"
           modrinth_project="${MODRINTH_PROJECT_ID:-reactive-music}"
           curseforge_project="${CURSEFORGE_PROJECT_ID:-}"
-
-          mkdir -p build
-          if [ -n "$CHANGELOG_TEXT" ]; then
-            printf '%s\n' "$CHANGELOG_TEXT" > build/release-changelog.md
-          elif [ -f CHANGELOG.md ]; then
-            cp CHANGELOG.md build/release-changelog.md
-          else
-            printf 'Reactive Music %s for Minecraft %s (%s).\n' "$mod_version" "${{ matrix.mc }}" "${{ matrix.loader }}" > build/release-changelog.md
-          fi
 
           echo "mod_version=$mod_version" >> "$GITHUB_OUTPUT"
           echo "modrinth_project=$modrinth_project" >> "$GITHUB_OUTPUT"
@@ -166,7 +152,6 @@ jobs:
           files: build/libs/${{ steps.meta.outputs.mod_version }}/${{ matrix.loader }}/reactivemusic-${{ matrix.loader }}-${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}.jar
           version: ${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}-${{ matrix.loader }}
           version-type: ${{ inputs.version_type }}
-          changelog-file: build/release-changelog.md
 
           loaders: ${{ matrix.loader }}
           game-versions: ${{ matrix.game_versions }}
@@ -185,10 +170,9 @@ jobs:
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
 
           files: build/libs/${{ steps.meta.outputs.mod_version }}/${{ matrix.loader }}/reactivemusic-${{ matrix.loader }}-${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}.jar
-          name: Reactive Music v${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}-${{ matrix.loader }}
+          name: v${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}-${{ matrix.loader }}
           version: ${{ steps.meta.outputs.mod_version }}+${{ matrix.mc }}-${{ matrix.loader }}
           version-type: ${{ inputs.version_type }}
-          changelog-file: build/release-changelog.md
 
           loaders: ${{ matrix.loader }}
           game-versions: |
