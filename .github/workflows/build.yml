@@ -6,15 +6,9 @@ on:
       - "**"
   pull_request:
   workflow_dispatch:
-    inputs:
-      upload_artifacts:
-        description: "Upload built release jars as a short-lived artifact"
-        type: boolean
-        default: false
 
 permissions:
   contents: read
-  actions: write
 
 concurrency:
   group: build-${{ github.ref }}
@@ -37,41 +31,11 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
 
       - name: Build
         run: |
           chmod +x ./gradlew
           ./gradlew --no-daemon --no-parallel chiseledBuild
 
-      - name: Delete older build artifacts
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const artifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              per_page: 100,
-            });
-
-            for (const artifact of artifacts) {
-              if (artifact.name.startsWith('reactive-music-jars-')) {
-                await github.rest.actions.deleteArtifact({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  artifact_id: artifact.id,
-                });
-              }
-            }
-
-      - name: Upload built jars
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: reactive-music-jars-${{ github.run_number }}
-          path: |
-            build/libs/**/*.jar
-            !build/libs/**/*-sources.jar
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 2
