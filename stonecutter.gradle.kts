@@ -37,7 +37,7 @@ for (branch in stonecutter.tree.branches) {
         // Active version exists in this branch — direct dependsOn works
         for (type in types) tasks.register("runActive$type$loader") {
             group = "project"
-            dependsOn("${activeNode.hierarchy}run$type")
+            dependsOn("${activeNode.hierarchy}:run$type")
         }
     } else {
         // No active version in this branch — use chiseled tasks to set up sources

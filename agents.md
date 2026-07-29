@@ -8,7 +8,7 @@ ReactiveMusic is a cross-loader Minecraft mod that replaces vanilla music with d
 - `fabric/`, `forge/`, and `neoforge/` contain loader-specific setup.
 - `versions/<mc version>/gradle.properties` contains per-version dependency values.
 - `stonecutter.gradle.kts` controls the active Minecraft version and helper tasks.
-- `run/` is the shared dev run directory.
+- `run/<mc version>/<loader>/` contains isolated development instances.
 
 ## Stonecutter
 
@@ -20,9 +20,26 @@ Common commands:
 
 - Refresh active source state: `./gradlew "Refresh active project"`
 - Run active Fabric client: `./gradlew runActiveClientFabric`
-- Run active NeoForge client: `./gradlew runActiveClientNeoForge`
+- Run active NeoForge client: `./gradlew runActiveClientNeoforge`
 - Run NeoForge 1.21.1 directly: `./gradlew :neoforge:1.21.1:runClient`
 - Build all supported artifacts: `./gradlew chiseledBuild`
+
+## Committing
+
+1. Run `./gradlew chiseledBuild --no-build-cache`.
+2. Before staging, run `./gradlew "Reset active project"` to normalize sources to `1.19.2`.
+3. Review `git status` and `git diff`, stage explicit paths, then review `git diff --cached` before committing.
+
+## Runtime smoke testing
+
+Before releases, run `powershell -ExecutionPolicy Bypass -File scripts/release-smoke-test.ps1`. It builds production artifacts, then uses cached HeadlessMC installations to run every supported client in parallel. Each client creates a world, waits for a loaded chunk, verifies ReactiveMusic starts a song, and exits automatically.
+
+- `1.19.2`: Fabric and Forge
+- `1.20.1`: Fabric and Forge
+- `1.21.1`: Fabric and NeoForge
+- `1.21.11`: Fabric
+
+Finish with `./gradlew "Reset active project"` and `./gradlew chiseledBuild --no-build-cache`.
 
 Supported targets:
 

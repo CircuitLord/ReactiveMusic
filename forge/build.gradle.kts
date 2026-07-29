@@ -58,8 +58,8 @@ loom {
 
     runConfigs.all {
         isIdeConfigGenerated = true
-        runDir = "../../../run"
-        vmArgs("-Dmixin.debug.export=true")
+        runDir = "../../../run/$minecraft/$loader"
+        vmArgs("-Dmixin.debug.export=true", "-Dreactivemusic.performanceLogging=true")
     }
 }
 

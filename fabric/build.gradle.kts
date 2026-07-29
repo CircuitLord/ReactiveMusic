@@ -58,8 +58,8 @@ dependencies {
 loom {
     runConfigs.all {
         isIdeConfigGenerated = true
-        runDir = "../../../run"
-        vmArgs("-Dmixin.debug.export=true")
+        runDir = "../../../run/$minecraft/$loader"
+        vmArgs("-Dmixin.debug.export=true", "-Dreactivemusic.performanceLogging=true")
     }
 }
 
@@ -85,27 +85,6 @@ tasks.remapJar {
 
 tasks.jar {
     archiveClassifier = "dev"
-}
-
-val prepareRunClasspath by tasks.registering {
-    dependsOn(tasks.jar)
-    doLast {
-        val classesDir = layout.buildDirectory.dir("classes/java/main").get().asFile
-        val resourcesDir = layout.buildDirectory.dir("resources/main").get().asFile
-        classesDir.mkdirs()
-        resourcesDir.mkdirs()
-        copy {
-            from(zipTree(tasks.jar.get().archiveFile.get().asFile))
-            into(classesDir)
-        }
-        file("out/production/classes").mkdirs()
-        file("out/production/resources").mkdirs()
-        file("../../../run/.architectury-transformer").mkdirs()
-    }
-}
-
-tasks.matching { it.name == "runClient" || it.name == "runServer" }.configureEach {
-    dependsOn(prepareRunClasspath)
 }
 
 tasks.processResources {
