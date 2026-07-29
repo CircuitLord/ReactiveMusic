@@ -2,10 +2,10 @@ package circuitlord.reactivemusic;
 
 import net.minecraft.loot.entry.TagEntry;
 //? if >=1.20 {
-import net.minecraft.registry.tag.TagKey;
-//?} else {
-/*import net.minecraft.tag.TagKey;
-*///?}
+/*import net.minecraft.registry.tag.TagKey;
+*///?} else {
+import net.minecraft.tag.TagKey;
+//?}
 import net.minecraft.world.biome.Biome;
 
 import java.util.ArrayList;

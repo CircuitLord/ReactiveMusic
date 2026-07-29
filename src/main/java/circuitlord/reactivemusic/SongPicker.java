@@ -4,6 +4,7 @@ package circuitlord.reactivemusic;
 import circuitlord.reactivemusic.config.ModConfig;
 import circuitlord.reactivemusic.entries.RMRuntimeEntry;
 import circuitlord.reactivemusic.mixin.BossBarHudAccessor;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.block.Block;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.CreditsScreen;
@@ -18,12 +19,12 @@ import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.entity.vehicle.MinecartEntity;
 
 //? if >=1.20 {
-import net.minecraft.registry.Registries;
+/*import net.minecraft.registry.Registries;
 import net.minecraft.registry.tag.TagKey;
-//?} else {
-/*import net.minecraft.tag.TagKey;
+*///?} else {
+import net.minecraft.tag.TagKey;
 import net.minecraft.util.registry.Registry;
-*///?}
+//?}
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 
@@ -46,14 +47,15 @@ public final class SongPicker {
 
 
     private static final Set<String> BLOCK_COUNTER_BLACKLIST = Set.of(); // = Set.of("ore", "debris");
+    private static final Map<Block, String> BLOCK_ID_CACHE = new IdentityHashMap<>();
 
     public static boolean queuedToPrintBlockCounter = false;
     public static BlockPos cachedBlockCounterOrigin;
     public static int currentBlockCounterX = 99999;
     public static int currentBlockCounterY = 99999;
 
-    public static Map<String, Integer> blockCounterMap = new HashMap<>();
-    public static Map<String, Integer> cachedBlockChecker = new HashMap<>();
+    public static Object2IntOpenHashMap<String> blockCounterMap = new Object2IntOpenHashMap<>();
+    public static Object2IntOpenHashMap<String> cachedBlockChecker = new Object2IntOpenHashMap<>();
 
     public static String currentBiomeName = "";
     public static String currentDimName = "";
@@ -183,12 +185,12 @@ public final class SongPicker {
         /*songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation(playerPos, world.getSeaLevel()) == Biome.Precipitation.RAIN);
         songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitation(playerPos, world.getSeaLevel()) == Biome.Precipitation.SNOW);
         *///?} else if >=1.20 {
-        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation(playerPos) == Biome.Precipitation.RAIN);
+        /*songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation(playerPos) == Biome.Precipitation.RAIN);
         songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitation(playerPos) == Biome.Precipitation.SNOW);
-        //?} else {
-        /*songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation() == Biome.Precipitation.RAIN);
+        *///?} else {
+        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation() == Biome.Precipitation.RAIN);
         songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitation() == Biome.Precipitation.SNOW);
-        *///?}
+        //?}
 
         songpackEventMap.put(SongpackEventType.STORM, world.isThundering());
 
@@ -287,9 +289,6 @@ public final class SongPicker {
 
     public static void tickBlockCounterMap() {
 
-        long startTime = System.currentTimeMillis();
-        long startNano = System.nanoTime();
-
         int RADIUS = 25;
 
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -329,19 +328,17 @@ public final class SongPicker {
 
                 player.sendMessage(Text.of("[ReactiveMusic]: Logging Block Counter map! Radius: " + RADIUS), false);
 
-                blockCounterMap.entrySet().stream()
-                        .sorted(Map.Entry.<String, Integer>comparingByValue(Comparator.reverseOrder()))
-                        .forEach(entry -> player.sendMessage(Text.of(entry.getKey() + ": " + entry.getValue()), false));
+                blockCounterMap.object2IntEntrySet().stream()
+                        .sorted((first, second) -> Integer.compare(second.getIntValue(), first.getIntValue()))
+                        .forEach(entry -> player.sendMessage(Text.of(entry.getKey() + ": " + entry.getIntValue()), false));
 
                 queuedToPrintBlockCounter = false;
 
             }
 
-            // copy
-            cachedBlockChecker.clear();
-            cachedBlockChecker.putAll(blockCounterMap);
-
-            // reset
+            Object2IntOpenHashMap<String> completedScan = cachedBlockChecker;
+            cachedBlockChecker = blockCounterMap;
+            blockCounterMap = completedScan;
             blockCounterMap.clear();
             cachedBlockCounterOrigin = player.getBlockPos();
 
@@ -361,11 +358,7 @@ public final class SongPicker {
 
 
                 Block block = world.getBlockState(mutablePos).getBlock();
-                //? if >=1.20 {
-                String key = Registries.BLOCK.getId(block).toString();
-                //?} else {
-                /*String key = Registry.BLOCK.getId(block).toString();
-                *///?}
+                String key = getBlockId(block);
 
                 boolean isBlacklisted = false;
                 for (String black : BLOCK_COUNTER_BLACKLIST) {
@@ -377,26 +370,28 @@ public final class SongPicker {
                 if (isBlacklisted)
                     continue;
 
-                blockCounterMap.merge(key, 1, Integer::sum);
+                blockCounterMap.addTo(key, 1);
 
             }
         }
 
 
-
-        //ReactiveMusic.LOGGER.info("tickBlockCounterMap() took " + (System.currentTimeMillis() - startTime) + "ms");
-
-        long endNano = System.nanoTime();
-        long elapsedNano = endNano - startNano;
-        double elapsedMs = elapsedNano / 1_000_000.0;
-
-        //ReactiveMusic.LOGGER.info("tickBlockCounterMap() took (" + elapsedMs + "ms)");
-
-
-
-
     }
 
+
+
+    private static String getBlockId(Block block) {
+        String id = BLOCK_ID_CACHE.get(block);
+        if (id != null) return id;
+
+        //? if >=1.20 {
+        /*id = Registries.BLOCK.getId(block).toString();
+        *///?} else {
+        id = Registry.BLOCK.getId(block).toString();
+        //?}
+        BLOCK_ID_CACHE.put(block, id);
+        return id;
+    }
 
 
     private static Box GetBoxAroundPlayer(ClientPlayerEntity player, float radiusXZ, float radiusY) {
@@ -501,8 +496,8 @@ public final class SongPicker {
 
             boolean blocksValid = false;
             for (var blockCond : condition.blocks) {
-                for (var kvp : cachedBlockChecker.entrySet()) {
-                    if (kvp.getKey().contains(blockCond.block) && kvp.getValue() >= blockCond.requiredCount) {
+                for (var kvp : cachedBlockChecker.object2IntEntrySet()) {
+                    if (kvp.getKey().contains(blockCond.block) && kvp.getIntValue() >= blockCond.requiredCount) {
                         blocksValid = true;
                         break;
                     }

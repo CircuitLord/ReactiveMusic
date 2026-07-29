@@ -8,14 +8,14 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 //? if >=1.20 {
-import net.minecraft.client.gui.DrawContext;
-//?}
+/*import net.minecraft.client.gui.DrawContext;
+*///?}
 //? if >=1.21.9 {
 /*import net.minecraft.client.gui.Click;
 *///?}
 //? if <1.20 {
-/*import net.minecraft.client.util.math.MatrixStack;
-*///?}
+import net.minecraft.client.util.math.MatrixStack;
+//?}
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.OrderedText;
@@ -195,16 +195,16 @@ public class ModConfig {
         //?}
 
         //? if >=1.21 {
-        @Override
+        /*@Override
         public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
             return scrollDetails(mouseX, mouseY, verticalAmount) || super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         }
-        //?} else {
-        /*@Override
+        *///?} else {
+        @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
             return scrollDetails(mouseX, mouseY, amount) || super.mouseScrolled(mouseX, mouseY, amount);
         }
-        *///?}
+        //?}
 
         @Override
         public void close() {
@@ -214,13 +214,13 @@ public class ModConfig {
         }
 
         //? if >=1.20 {
-        @Override
+        /*@Override
         public void render(DrawContext context, int mouseX, int mouseY, float delta) {
             //? if >=1.21 {
-            this.renderBackground(context, mouseX, mouseY, delta);
-            //?} else {
-            /*this.renderBackground(context);
-            *///?}
+            /^this.renderBackground(context, mouseX, mouseY, delta);
+            ^///?} else {
+            this.renderBackground(context);
+            //?}
             renderContent(context);
             suppressBackgroundRender = true;
             try {
@@ -231,33 +231,33 @@ public class ModConfig {
         }
 
         //? if >=1.21 {
-        @Override
+        /^@Override
         public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
             if (suppressBackgroundRender) {
                 return;
             }
             super.renderBackground(context, mouseX, mouseY, delta);
         }
-        //?} else if >=1.20 {
-        /*@Override
+        ^///?} else if >=1.20 {
+        /^@Override
         public void renderBackground(DrawContext context) {
             if (suppressBackgroundRender) {
                 return;
             }
             super.renderBackground(context);
         }
-        *///?}
-        //?} else {
-        /*@Override
+        ^///?}
+        *///?} else {
+        @Override
         public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
             this.renderBackground(matrices);
             renderContent(matrices);
             super.render(matrices, mouseX, mouseY, delta);
         }
-        *///?}
+        //?}
 
         //? if >=1.20 {
-        private void renderContent(DrawContext context) {
+        /*private void renderContent(DrawContext context) {
             int centerX = this.width / 2;
             int controlLabelX = Math.max(20, centerX - 160);
 
@@ -324,8 +324,8 @@ public class ModConfig {
             context.fill(left, top, left + 1, bottom, PANEL_BORDER);
             context.fill(right - 1, top, right, bottom, PANEL_BORDER);
         }
-        //?} else {
-        /*private void renderContent(MatrixStack matrices) {
+        *///?} else {
+        private void renderContent(MatrixStack matrices) {
             int centerX = this.width / 2;
             int controlLabelX = Math.max(20, centerX - 160);
 
@@ -393,7 +393,7 @@ public class ModConfig {
             fill(matrices, left, top, left + 1, bottom, PANEL_BORDER);
             fill(matrices, right - 1, top, right, bottom, PANEL_BORDER);
         }
-        *///?}
+        //?}
 
         private boolean scrollDetails(double mouseX, double mouseY, double amount) {
             if (mouseX < detailsLeft() || mouseX > detailsRight() || mouseY < SONGPACK_START_Y - 4 || mouseY > detailsBottom()) {
@@ -629,10 +629,10 @@ public class ModConfig {
 
         private static ButtonWidget button(int x, int y, int width, int height, Text text, ButtonWidget.PressAction action) {
             //? if >=1.20 {
-            return ButtonWidget.builder(text, action).dimensions(x, y, width, height).build();
-            //?} else {
-            /*return new ButtonWidget(x, y, width, height, text, action);
-            *///?}
+            /*return ButtonWidget.builder(text, action).dimensions(x, y, width, height).build();
+            *///?} else {
+            return new ButtonWidget(x, y, width, height, text, action);
+            //?}
         }
 
         private static Text enumText(Enum<?> value) {

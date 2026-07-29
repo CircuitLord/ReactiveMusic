@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 public class ReactiveMusic {
@@ -25,6 +26,8 @@ public class ReactiveMusic {
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	private static final int WAIT_FOR_SWITCH_DURATION = 100;
+	private static final boolean PERFORMANCE_LOGGING_ENABLED = Boolean.getBoolean("reactivemusic.performanceLogging");
+	private static final long PERFORMANCE_LOG_INTERVAL_NANOS = 5_000_000_000L;
 	public static final int FADE_DURATION = 150;
 	public static final int SILENCE_DURATION = 100;
 
@@ -57,6 +60,11 @@ public class ReactiveMusic {
 	static int slowTickUpdateCounter = 0;
 
 	static boolean currentDimBlacklisted = false;
+
+	private static long performanceWindowStartNanos = 0;
+	private static long performanceTotalNanos = 0;
+	private static long performanceWorstNanos = 0;
+	private static int performanceSamples = 0;
 
 	boolean doSilenceForNextQueuedSong = true;
 
@@ -140,6 +148,7 @@ public class ReactiveMusic {
 		MinecraftClient mc = MinecraftClient.getInstance();
 		if (mc == null) return;
 
+		long performanceStartNanos = PERFORMANCE_LOGGING_ENABLED ? System.nanoTime() : 0;
 
 		// force a reasonable volume once on mod install, if you have full 100% everything it's way too loud
 		if (!config.hasForcedInitialVolume) {
@@ -151,11 +160,11 @@ public class ReactiveMusic {
 				LOGGER.info("Forcing master volume to a lower default, this will only happen once on mod-install to avoid loud defaults.");
 
 				//? if >=1.20 {
-				mc.options.getSoundVolumeOption(SoundCategory.MASTER).setValue(0.5);
+				/*mc.options.getSoundVolumeOption(SoundCategory.MASTER).setValue(0.5);
 				mc.options.write();
-				//?} else {
-				/*mc.options.write();
-				*///?}
+				*///?} else {
+				mc.options.write();
+				//?}
 			}
 		}
 
@@ -322,6 +331,31 @@ public class ReactiveMusic {
 
 		previousValidEntries = validEntries;
 
+		if (PERFORMANCE_LOGGING_ENABLED) recordPerformanceSample(System.nanoTime() - performanceStartNanos);
+	}
+
+	private static void recordPerformanceSample(long elapsedNanos) {
+		long now = System.nanoTime();
+		if (performanceWindowStartNanos == 0) performanceWindowStartNanos = now;
+
+		performanceTotalNanos += elapsedNanos;
+		performanceWorstNanos = Math.max(performanceWorstNanos, elapsedNanos);
+		performanceSamples++;
+
+		long windowNanos = now - performanceWindowStartNanos;
+		if (windowNanos < PERFORMANCE_LOG_INTERVAL_NANOS) return;
+
+		double averageMs = performanceTotalNanos / (double) performanceSamples / 1_000_000.0;
+		double worstMs = performanceWorstNanos / 1_000_000.0;
+		double windowSeconds = windowNanos / 1_000_000_000.0;
+		LOGGER.info(String.format(Locale.ROOT,
+				"Performance over %.1fs: mod tick avg %.3fms, worst %.3fms (%d samples)",
+				windowSeconds, averageMs, worstMs, performanceSamples));
+
+		performanceWindowStartNanos = now;
+		performanceTotalNanos = 0;
+		performanceWorstNanos = 0;
+		performanceSamples = 0;
 	}
 
 	private static @NotNull List<String> getSelectedSongs(RMRuntimeEntry newEntry, List<RMRuntimeEntry> validEntries) {

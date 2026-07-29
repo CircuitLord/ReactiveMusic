@@ -3,13 +3,13 @@ package circuitlord.reactivemusic.fabric;
 import circuitlord.reactivemusic.platform.BiomeTagHelper;
 
 //? if <1.21 {
-/*import java.util.Map;
-*///?}
+import java.util.Map;
+//?}
 
 public class FabricBiomeTagHelper implements BiomeTagHelper {
 
     //? if <1.21 {
-    /*private static final Map<String, String> V1_REMAP = Map.ofEntries(
+    private static final Map<String, String> V1_REMAP = Map.ofEntries(
         Map.entry("is_hot", "climate_hot"),
         Map.entry("is_cold", "climate_cold"),
         Map.entry("is_wet", "climate_wet"),
@@ -28,7 +28,7 @@ public class FabricBiomeTagHelper implements BiomeTagHelper {
         Map.entry("is_savanna_tree", "tree_savanna"),
         Map.entry("is_jungle_tree", "tree_jungle")
     );
-    *///?}
+    //?}
 
     @Override
     public String getTagNamespace() {
@@ -36,9 +36,9 @@ public class FabricBiomeTagHelper implements BiomeTagHelper {
     }
 
     //? if <1.21 {
-    /*@Override
+    @Override
     public String remapTagPath(String path) {
         return V1_REMAP.getOrDefault(path, path);
     }
-    *///?}
+    //?}
 }
