@@ -80,10 +80,10 @@ public class ModConfig {
         private static final int ROW_HEIGHT = 44;
         private static final int SONGPACK_START_Y = 164;
         private static final int BUTTON_HEIGHT = 20;
-        private static final int LABEL_COLOR = 0xFFFFFF;
-        private static final int MUTED_COLOR = 0xA0A0A0;
-        private static final int ERROR_COLOR = 0xFF7777;
-        private static final int WARNING_COLOR = 0xFFD35A;
+        private static final int LABEL_COLOR = 0xFFFFFFFF;
+        private static final int MUTED_COLOR = 0xFFA0A0A0;
+        private static final int ERROR_COLOR = 0xFFFF7777;
+        private static final int WARNING_COLOR = 0xFFFFD35A;
         private static final int SELECTED_BG = 0x553C6EA8;
         private static final int PANEL_BG = 0x66000000;
         private static final int PANEL_BORDER = 0x88FFFFFF;
@@ -216,11 +216,11 @@ public class ModConfig {
         //? if >=1.20 {
         /*@Override
         public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-            //? if >=1.21 {
+            //? if >=1.21.9 {
+            /^renderContent(context);
+            super.render(context, mouseX, mouseY, delta);
+            ^///?} else if >=1.21 {
             /^this.renderBackground(context, mouseX, mouseY, delta);
-            ^///?} else {
-            this.renderBackground(context);
-            //?}
             renderContent(context);
             suppressBackgroundRender = true;
             try {
@@ -228,6 +228,16 @@ public class ModConfig {
             } finally {
                 suppressBackgroundRender = false;
             }
+            ^///?} else {
+            this.renderBackground(context);
+            renderContent(context);
+            suppressBackgroundRender = true;
+            try {
+                super.render(context, mouseX, mouseY, delta);
+            } finally {
+                suppressBackgroundRender = false;
+            }
+            //?}
         }
 
         //? if >=1.21 {
