@@ -218,12 +218,14 @@ Example:
 ```
   # Mute RM when near a beacon block
 	soundsMuteMusic: [
-		"block.beacon.ambient"
+		"block.beacon.ambient",
+		"othermod.xy"
 	],
 
   # Mute RM whenever this sound plays, even if the sound position is wrong
 	soundsMuteMusicIgnoreDistance: [
-		"boss.theme"
+		"boss.theme",
+		"partial-event-name"
 	],
 ```
 
