@@ -1,15 +1,15 @@
 
 # Making Songpacks
 
-NOTE: You can find a video version of this wiki page [here](https://www.youtube.com/watch?v=YvEap8IUS-c)!
-
 Songpacks are constructed as folders with a yaml configuration file and a folder with mp3 music files.
 
 They're loaded from the `resourcepacks` folder, although they're not actually resource packs and are instead selected from the configuration UI. This is purely to make including songpacks easier.
 
 **Download the Songpack Template [here](https://raw.githubusercontent.com/CircuitLord/ReactiveMusic/master/docs/ReactiveMusicSongpackTemplate-v6.zip)!**
 
-<br>
+You can find a video version of this wiki page [here](https://www.youtube.com/watch?v=YvEap8IUS-c)!
+> Highly recommended to use VSCode with the YAML extension as shown in the video, or else you will have issues making properly formatted YAML files!
+
 
 ## Testing Songpacks
 
