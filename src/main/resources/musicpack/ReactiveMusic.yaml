@@ -10,7 +10,7 @@ entries:
 
 
   # --- Outside game state/special songs ---
-  - events: [ "MAIN_MENU" ]
+  - events: [ "MENU" ]
     forceStopMusicOnChanged: true
     forceStartMusicOnValid: true
     songs:
@@ -46,12 +46,12 @@ entries:
       - "Ruthless"
 
 
-  - events: [ "UNDERWATER" ]
+  - events: [ "SWIM" ]
     allowFallback: true
     songs:
       - "Eventide"
 
-  - events: [ "UNDERGROUND" ]
+  - events: [ "UNDER" ]
     forceStopMusicOnChanged: true
     songs:
       - "WintersBreath"

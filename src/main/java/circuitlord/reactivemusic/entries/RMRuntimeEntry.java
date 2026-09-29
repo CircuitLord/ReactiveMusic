@@ -1,10 +1,17 @@
 package circuitlord.reactivemusic.entries;
 
-import circuitlord.reactivemusic.SongPicker;
 import circuitlord.reactivemusic.SongpackEntry;
-import circuitlord.reactivemusic.SongpackEventType;
 import circuitlord.reactivemusic.SongpackZip;
 import circuitlord.reactivemusic.platform.BiomeTagHelper;
+import circuitlord.reactivemusic.entries.predicate.RMAttackerPredicate;
+import circuitlord.reactivemusic.entries.predicate.RMBiomeNamePredicate;
+import circuitlord.reactivemusic.entries.predicate.RMBiomeTagPredicate;
+import circuitlord.reactivemusic.entries.predicate.RMBlockCountPredicate;
+import circuitlord.reactivemusic.entries.predicate.RMDimensionPredicate;
+import circuitlord.reactivemusic.entries.predicate.RMNearbyEntityPredicate;
+import circuitlord.reactivemusic.entries.predicate.RMNotPredicate;
+import circuitlord.reactivemusic.entries.predicate.RMOrPredicate;
+import circuitlord.reactivemusic.entries.predicate.RMPredicate;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
 
@@ -15,7 +22,7 @@ import java.util.List;
 public class RMRuntimeEntry {
 
 
-    public List<RMEntryCondition> conditions = new ArrayList<>();
+    public List<RMPredicate> conditions = new ArrayList<>();
 
     public String songpack;
 
@@ -61,156 +68,141 @@ public class RMRuntimeEntry {
 
         for (String event : songpackEntry.events) {
 
-            RMEntryCondition condition = new RMEntryCondition();
-
             String cleanedEvent = event.replaceAll("\\s", "");
             cleanedEvent = cleanedEvent.toLowerCase();
 
             // backwards compat with v0.5
             if (songpack.convertBiomeToBiomeTag) {
-                cleanedEvent = cleanedEvent.replace("biome=", "biometag=");
+                cleanedEvent = cleanedEvent.replace("biome=", "tag=");
             }
 
-            // Split by "||"
+            // Split by "||" (OR)
             String[] eventSections = cleanedEvent.split("\\|\\|");
 
-            boolean eventHasData = false;
+            List<RMPredicate> segmentPredicates = new ArrayList<>();
 
-            // Parse each event section (may only be one)
-            for (String eventSection : eventSections) {
+            // Parse each "!"-optional, "||"-separated segment (may only be one)
+            for (String rawSection : eventSections) {
 
-                if (eventSection.startsWith("block=")) {
+                boolean negate = rawSection.startsWith("!");
+                String eventSection = negate ? rawSection.substring(1) : rawSection;
 
-                    String blockData = eventSection.substring(6);
-                    String[] parts = blockData.split(",");
+                RMPredicate predicate = resolveSegment(Entry, eventSection);
+                if (predicate == null) continue;
 
-                    // make sure it's a number, dunno why this is the syntax for that
-                    if (parts.length >= 2 && parts[1].matches("\\d+")) {
-
-                        RMEntryBlockCondition blockCond = new RMEntryBlockCondition();
-                        blockCond.block = parts[0];
-                        blockCond.requiredCount = Integer.parseInt(parts[1]);
-
-                        condition.blocks.add(blockCond);
-
-                        eventHasData = true;
-                    }
-                    else {
-                        Entry.errorString += "Invalid syntax: " + eventSection + "!\n\n";
-                    }
-                }
-
-                // see if it's a biome event
-                else if (eventSection.startsWith("biome=")) {
-
-                    String biomeName = eventSection.substring(6);
-                    if (biomeName.isEmpty())
-                        continue;
-
-                    condition.biomeTypes.add(biomeName);
-                    eventHasData = true;
-                }
-
-                // Biome-tags
-                else if (eventSection.startsWith("biometag=")) {
-
-                    String rawTagString = eventSection.substring(9);
-                    if (rawTagString.isEmpty())
-                        continue;
-
-                    String path = normalizeBiomeTagPath(rawTagString);
-                    TagKey<Biome> biomeTag = BiomeTagHelper.INSTANCE.createBiomeTagKey(path);
-
-                    if (biomeTag != null) {
-                        condition.biomeTags.add(biomeTag);
-                        SongPicker.registerBiomeTag(biomeTag);
-                        eventHasData = true;
-                    } else {
-                        Entry.errorString += "Biome tag '" + rawTagString + "' is not available on this platform!\n\n";
-                    }
-
-                }
-
-                // nearby entities of a given type: entity=<id>[,radius]
-                else if (eventSection.startsWith("entity=")) {
-
-                    String entityData = eventSection.substring(7);
-                    if (entityData.isEmpty())
-                        continue;
-
-                    String[] parts = entityData.split(",");
-
-                    RMEntryEntityCondition entityCond = new RMEntryEntityCondition();
-                    entityCond.entityId = parts[0];
-
-                    if (parts.length >= 2) {
-                        if (parts[1].matches("\\d+(\\.\\d+)?")) {
-                            entityCond.radius = Double.parseDouble(parts[1]);
-                        } else {
-                            Entry.errorString += "Invalid radius in: " + eventSection + "!\n\n";
-                            continue;
-                        }
-                    }
-
-                    condition.nearbyEntities.add(entityCond);
-                    eventHasData = true;
-                }
-
-                // entities that recently attacked/were attacked by the player: attacker=<id>
-                else if (eventSection.startsWith("attacker=")) {
-
-                    String entityId = eventSection.substring(9);
-                    if (entityId.isEmpty())
-                        continue;
-
-                    RMEntryEntityCondition attackerCond = new RMEntryEntityCondition();
-                    attackerCond.entityId = entityId;
-
-                    condition.attackers.add(attackerCond);
-                    eventHasData = true;
-                }
-
-                // dimensions
-                else if (eventSection.startsWith("dim=")) {
-                    String dimName = eventSection.substring(4);
-                    if (dimName.isEmpty())
-                        continue;
-
-                    condition.dimTypes.add(dimName);
-                    eventHasData = true;
-                }
-
-                // songpack events
-                else {
-                    try {
-                        // try to cast to SongpackEvent
-                        // needs uppercase for enum names
-                        SongpackEventType eventType = Enum.valueOf(SongpackEventType.class, eventSection.toUpperCase());
-
-                        // it's a songpack event
-                        if (eventType != SongpackEventType.NONE) {
-                            condition.songpackEvents.add(eventType);
-                            eventHasData = true;
-                            continue;
-                        }
-                    } catch (Exception e) {
-                        Entry.errorString += "Could not find event with name " + eventSection + "!\n\n";
-                        //e.printStackTrace();
-                    }
-                }
+                segmentPredicates.add(negate ? new RMNotPredicate(predicate) : predicate);
             }
 
             // --- If we didn't find any valid conditions, skip this ---
-            if (!eventHasData) {
+            if (segmentPredicates.isEmpty()) {
                 continue;
             }
 
-            Entry.conditions.add(condition);
+            RMPredicate combined = segmentPredicates.size() == 1
+                    ? segmentPredicates.get(0)
+                    : new RMOrPredicate(segmentPredicates);
+
+            Entry.conditions.add(combined);
 
         }
 
         return Entry;
 
+    }
+
+    private static RMPredicate resolveSegment(RMRuntimeEntry Entry, String eventSection) {
+
+        if (eventSection.startsWith("block=")) {
+
+            String blockData = eventSection.substring(6);
+            String[] parts = blockData.split(",");
+
+            // make sure it's a number, dunno why this is the syntax for that
+            if (parts.length >= 2 && parts[1].matches("\\d+")) {
+                return new RMBlockCountPredicate(parts[0], Integer.parseInt(parts[1]));
+            } else {
+                Entry.errorString += "Invalid syntax: " + eventSection + "!\n\n";
+                return null;
+            }
+        }
+
+        // see if it's a biome event
+        else if (eventSection.startsWith("biome=")) {
+
+            String biomeName = eventSection.substring(6);
+            if (biomeName.isEmpty())
+                return null;
+
+            return new RMBiomeNamePredicate(biomeName);
+        }
+
+        // Biome-tags
+        else if (eventSection.startsWith("tag=")) {
+
+            String rawTagString = eventSection.substring(4);
+            if (rawTagString.isEmpty())
+                return null;
+
+            String path = normalizeBiomeTagPath(rawTagString);
+            TagKey<Biome> biomeTag = BiomeTagHelper.INSTANCE.createBiomeTagKey(path);
+
+            if (biomeTag != null) {
+                return new RMBiomeTagPredicate(biomeTag);
+            } else {
+                Entry.errorString += "Biome tag '" + rawTagString + "' is not available on this platform!\n\n";
+                return null;
+            }
+        }
+
+        // nearby entities of a given type: entity=<id>[,radius]
+        else if (eventSection.startsWith("entity=")) {
+
+            String entityData = eventSection.substring(7);
+            if (entityData.isEmpty())
+                return null;
+
+            String[] parts = entityData.split(",");
+            double radius = 20.0;
+
+            if (parts.length >= 2) {
+                if (parts[1].matches("\\d+(\\.\\d+)?")) {
+                    radius = Double.parseDouble(parts[1]);
+                } else {
+                    Entry.errorString += "Invalid radius in: " + eventSection + "!\n\n";
+                    return null;
+                }
+            }
+
+            return new RMNearbyEntityPredicate(parts[0], radius);
+        }
+
+        // entities that recently attacked/were attacked by the player: attacker=<id>
+        else if (eventSection.startsWith("attacker=")) {
+
+            String entityId = eventSection.substring(9);
+            if (entityId.isEmpty())
+                return null;
+
+            return new RMAttackerPredicate(entityId);
+        }
+
+        // dimensions
+        else if (eventSection.startsWith("dim=")) {
+            String dimName = eventSection.substring(4);
+            if (dimName.isEmpty())
+                return null;
+
+            return new RMDimensionPredicate(dimName);
+        }
+
+        // bare-word tags: plain SongpackEventType lookups and macro-expanded composites
+        else {
+            RMPredicate predicate = RMTagRegistry.resolve(eventSection);
+            if (predicate == null) {
+                Entry.errorString += "Could not find event with name " + eventSection + "!\n\n";
+            }
+            return predicate;
+        }
     }
 
 
@@ -227,6 +219,3 @@ public class RMRuntimeEntry {
 
 
 }
-
-
-

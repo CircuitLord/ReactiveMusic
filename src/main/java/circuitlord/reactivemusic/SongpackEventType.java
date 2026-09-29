@@ -4,7 +4,7 @@ public enum SongpackEventType {
 
     NONE,
 
-    MAIN_MENU,
+    MENU,
     CREDITS,
 
 
@@ -23,21 +23,14 @@ public enum SongpackEventType {
     STORM,
 
 
-    // --- world height ---
-    UNDERWATER,
-    UNDERGROUND,
-    DEEP_UNDERGROUND,
-    HIGH_UP,
-
-    // --- Entities ---
-    MINECART,
-    BOAT,
-    HORSE,
-    PIG,
-
     //Actions
-    FISHING,
-    DYING,
+    FISH,
+    RIDE,
+    RAIL,
+    GLIDE,
+    SWIM,
+    SAIL,
+    AFK,
 
 
     // TODO: remove
@@ -59,4 +52,3 @@ public enum SongpackEventType {
     GENERIC
 
 }
-

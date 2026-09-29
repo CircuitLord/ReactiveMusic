@@ -3,6 +3,7 @@ package circuitlord.reactivemusic;
 
 import circuitlord.reactivemusic.config.ModConfig;
 import circuitlord.reactivemusic.entries.RMRuntimeEntry;
+import circuitlord.reactivemusic.entries.predicate.RMPredicate;
 import circuitlord.reactivemusic.mixin.BossBarHudAccessor;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.world.level.block.Block;
@@ -14,11 +15,10 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 
 import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.entity.animal.equine.Horse;
-import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.vehicle.boat.Boat;
 import net.minecraft.world.entity.vehicle.minecart.Minecart;
+import net.minecraft.world.entity.EquipmentSlot;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.TagKey;
@@ -69,6 +69,16 @@ public final class SongPicker {
     public static String currentBiomeName = "";
     public static String currentDimName = "";
 
+    public static double currentPlayerY = 0;
+    public static float currentHealth = 20f;
+    public static boolean currentSkyHidden = false;
+    public static int currentSeaLevel = 63;
+
+    private static Vec3 lastMovedPos = null;
+    private static long lastMovedTick = 0;
+    private static final double AFK_MOVE_EPSILON_SQ = 0.0025; // ~0.05 blocks/tick
+    private static final long AFK_TICKS = 1200; // 1 minute @ 20tps
+
 
     private static final Random rand = new Random();
 
@@ -101,7 +111,7 @@ public final class SongPicker {
         Level world = mc.level;
 
 
-        songpackEventMap.put(SongpackEventType.MAIN_MENU, player == null || world == null);
+        songpackEventMap.put(SongpackEventType.MENU, player == null || world == null);
         songpackEventMap.put(SongpackEventType.CREDITS, mc.screen instanceof WinScreen);
 
         // Early out if not in-game
@@ -160,31 +170,40 @@ public final class SongPicker {
         songpackEventMap.put(SongpackEventType.SUNRISE, sunrise);
 
 
+        // Live state used by height/health tags (RMTagRegistry)
+        currentPlayerY = playerPos.getY();
+        currentHealth = player.getHealth();
+        currentSkyHidden = underground;
+
         // Actions
 
-        songpackEventMap.put(SongpackEventType.DYING, player.getHealth() / player.getMaxHealth() < 0.35);
-        songpackEventMap.put(SongpackEventType.FISHING, player.fishing != null);
+        songpackEventMap.put(SongpackEventType.FISH, player.fishing != null);
 
-        songpackEventMap.put(SongpackEventType.MINECART, riding instanceof Minecart);
-        songpackEventMap.put(SongpackEventType.BOAT, riding instanceof Boat);
-        songpackEventMap.put(SongpackEventType.HORSE, riding instanceof Horse);
-        songpackEventMap.put(SongpackEventType.PIG, riding instanceof Pig);
+        boolean ridingIsMoving = riding != null && isMoving(riding);
+        songpackEventMap.put(SongpackEventType.RAIL, riding instanceof Minecart && ridingIsMoving);
+        songpackEventMap.put(SongpackEventType.SAIL, riding instanceof Boat && ridingIsMoving);
+        songpackEventMap.put(SongpackEventType.RIDE, riding instanceof LivingEntity livingRiding
+                && !livingRiding.getItemBySlot(EquipmentSlot.SADDLE).isEmpty() && ridingIsMoving);
+
+        songpackEventMap.put(SongpackEventType.GLIDE, player.isFallFlying());
+        songpackEventMap.put(SongpackEventType.SWIM, player.isUnderWater() || player.isSwimming());
+
+        Vec3 currentPos = player.position();
+        if (lastMovedPos == null || currentPos.distanceToSqr(lastMovedPos) > AFK_MOVE_EPSILON_SQ) {
+            lastMovedPos = currentPos;
+            lastMovedTick = world.getGameTime();
+        }
+        songpackEventMap.put(SongpackEventType.AFK, world.getGameTime() - lastMovedTick > AFK_TICKS);
 
 
         songpackEventMap.put(SongpackEventType.OVERWORLD, indimension == Level.OVERWORLD);
         songpackEventMap.put(SongpackEventType.NETHER, indimension == Level.NETHER);
         songpackEventMap.put(SongpackEventType.END, indimension == Level.END);
 
-
-        songpackEventMap.put(SongpackEventType.UNDERGROUND, indimension == Level.OVERWORLD && underground && playerPos.getY() < 55);
-        songpackEventMap.put(SongpackEventType.DEEP_UNDERGROUND, indimension == Level.OVERWORLD && underground && playerPos.getY() < 15);
-        songpackEventMap.put(SongpackEventType.HIGH_UP, indimension == Level.OVERWORLD && !underground && playerPos.getY() > 128);
-
-        songpackEventMap.put(SongpackEventType.UNDERWATER, player.isUnderWater());
-
         // Weather
-        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitationAt(playerPos, world.getSeaLevel()) == Biome.Precipitation.RAIN);
-        songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitationAt(playerPos, world.getSeaLevel()) == Biome.Precipitation.SNOW);
+        currentSeaLevel = world.getSeaLevel();
+        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitationAt(playerPos, currentSeaLevel) == Biome.Precipitation.RAIN);
+        songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitationAt(playerPos, currentSeaLevel) == Biome.Precipitation.SNOW);
 
         songpackEventMap.put(SongpackEventType.STORM, world.isThundering());
 
@@ -405,7 +424,13 @@ public final class SongPicker {
     }
 
 
-    private static String getEntityTypeId(EntityType<?> type) {
+    private static boolean isMoving(Entity entity) {
+        Vec3 delta = entity.getDeltaMovement();
+        return (delta.x * delta.x + delta.z * delta.z) > 0.0025; // ~0.05 blocks/tick horizontally
+    }
+
+
+    public static String getEntityTypeId(EntityType<?> type) {
         String id = ENTITY_TYPE_ID_CACHE.get(type);
         if (id != null) return id;
 
@@ -500,89 +525,8 @@ public final class SongPicker {
 
     
     public static boolean isEntryValid(RMRuntimeEntry entry) {
-
-        for (var condition : entry.conditions) {
-
-            // each condition functions as an OR, if at least one of them is true then the condition is true
-
-
-            boolean songpackEventsValid = false;
-
-            for (SongpackEventType songpackEvent : condition.songpackEvents) {
-                if (songpackEventMap.containsKey(songpackEvent) && songpackEventMap.get(songpackEvent)) {
-                    songpackEventsValid = true;
-                    break;
-                }
-            }
-
-            boolean blocksValid = false;
-            for (var blockCond : condition.blocks) {
-                for (var kvp : cachedBlockChecker.object2IntEntrySet()) {
-                    if (kvp.getKey().contains(blockCond.block) && kvp.getIntValue() >= blockCond.requiredCount) {
-                        blocksValid = true;
-                        break;
-                    }
-                }
-            }
-
-            boolean biomeTypesValid = false;
-            for (var biome : condition.biomeTypes) {
-                if (currentBiomeName.contains(biome)) {
-                    biomeTypesValid = true;
-                    break;
-                }
-            }
-
-            boolean biomeTagsValid = false;
-            for (var biomeTag : condition.biomeTags) {
-                if (biomeTagEventMap.containsKey(biomeTag) && biomeTagEventMap.get(biomeTag)) {
-                    biomeTagsValid = true;
-                    break;
-                }
-            }
-
-            boolean dimsValid = false;
-            for (var dim : condition.dimTypes) {
-                if (currentDimName.contains(dim)) {
-                    dimsValid = true;
-                    break;
-                }
-            }
-
-            boolean nearbyEntitiesValid = false;
-            for (var entityCond : condition.nearbyEntities) {
-                for (var nearby : cachedNearbyEntities) {
-                    if (nearby.distance <= entityCond.radius && nearby.typeId.contains(entityCond.entityId)) {
-                        nearbyEntitiesValid = true;
-                        break;
-                    }
-                }
-                if (nearbyEntitiesValid) break;
-            }
-
-            boolean attackersValid = false;
-            for (var attackerCond : condition.attackers) {
-                for (var attackerEntity : recentEntityDamageSources.keySet()) {
-                    if (getEntityTypeId(attackerEntity.getType()).contains(attackerCond.entityId)) {
-                        attackersValid = true;
-                        break;
-                    }
-                }
-                if (attackersValid) break;
-            }
-
-
-            if (!songpackEventsValid && !biomeTypesValid && !biomeTagsValid && !dimsValid && !blocksValid
-                    && !nearbyEntitiesValid && !attackersValid) {
-                // none of the OR conditions were valid on this condition, return false
-                return false;
-            }
-
-        }
-
-        // we passed without failing so it must be true
-        return true;
-        
+        // each condition is AND'd; NOT/OR are already baked into the predicate tree at parse time
+        return entry.conditions.stream().allMatch(RMPredicate::test);
     }
 
 

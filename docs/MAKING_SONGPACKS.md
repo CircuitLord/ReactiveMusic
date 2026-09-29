@@ -52,7 +52,7 @@ Songpack entries define what songs play in specific events. You can have as many
 Here's an example songpack entry:
 
 ```
-- events: [ "MAIN_MENU" ]
+- events: [ "MENU" ]
   songs:
     - "DuNock-Street-TitleEdit"
 ```
@@ -87,7 +87,13 @@ A proper entry looks like this!
 
 <br><br>
 
-You can also combine multiple events for more specific songs, or do an "OR" condition
+You can combine tags using three operators:
+
+- **AND** — separate array entries: `[ "DAY", "BIOME=MOUNTAIN" ]` requires both.
+- **OR** — `||` within one entry: `[ "BIOME=ocean || SWIM" ]` requires either.
+- **NOT** — a leading `!` on a tag: `[ "!NETHER" ]` requires it to *not* be true.
+
+These combine freely, including on the shorthand tags below:
 
 ```
   - events: [ "DAY", "BIOME=MOUNTAIN" ]
@@ -95,21 +101,32 @@ You can also combine multiple events for more specific songs, or do an "OR" cond
       - "ForTheKing"
       - "Freedom"
 
-  - events: [ "BIOME=ocean || UNDERWATER" ]
+  - events: [ "BIOME=ocean || SWIM" ]
     songs:
       - "Freedom"
+
+  - events: [ "!NETHER", "ROOF || CLOUDS" ]
+    songs:
+      - "WhereIBelong"
 ```
 
 <br><br>
 
-## Events (SongpackEventTypes)
+## Events (tags)
 
-This lists all the available songpack events you have available.
+This lists all the available songpack tags you have available. Some are plain
+flags; others (marked *shorthand*) expand into a combination of the more
+specific tags/conditions further down this page (biome, dimension, entity,
+block) — using the shorthand or spelling it out yourself works identically.
 
 ### Special
-- `MAIN_MENU`
+- `MENU`
 - `CREDITS`
 - `HOME` (within 45 blocks of bed)
+
+### Dimension
+- `OVERWORLD`, `NETHER`, `END`
+- `DIM=dimname` — see [Dimension Events](#dimension-events) below
 
 ### Time
 - `DAY`
@@ -121,30 +138,42 @@ This lists all the available songpack events you have available.
 - `RAIN`
 - `SNOW`
 - `STORM`
-
-### World Height
-- `UNDERWATER`
-- `UNDERGROUND`
-- `DEEP_UNDERGROUND`
-- `HIGH_UP`
-
-### Entities
-- `NEARBY_MOBS` (nearby >= 1 monster, may not work that well and may be replaced with combat events soon)
-- `MINECART`
-- `BOAT`
-- `HORSE`
-- `PIG`
+- `CLEAR` — no rain or storm
 
 ### Actions
-- `FISHING`
-- `DYING`
+- `FISH` — fishing rod cast out
+- `RIDE` — riding a saddled mount that's moving
+- `RAIL` — riding a minecart that's moving
+- `SAIL` — riding a boat that's moving
+- `GLIDE` — flying with an elytra
+- `SWIM` — underwater or swimming
+- `AFK` — hasn't moved in the last minute
 
 ### Location
 - `VILLAGE` (nearby villagers)
+- `ROOF` — *shorthand* for Nether, above y=128
+- `CLOUDS` — *shorthand* for Overworld, above y=320
+- `PEAKS` — *shorthand* for Overworld, above y=220
+- `LEVEL` — *shorthand* for Overworld, above sea level
+- `UNDER` — *shorthand* for Overworld, sky not visible
+- `DEEP` — *shorthand* for Overworld, below y=0
 
 ### Combat
 - `BOSS` (whenever a boss bar is on-screen)
-- `COMBAT` ()
+- `COMBAT` (recently damaged, or damaged by, another entity)
+- `LOW` — health below 10hp
+- `CRIT` — health below 4hp
+- `WARDEN` — *shorthand* for `ATTACKER=warden`
+- `NEAR_WARDEN` — *shorthand* for `ENTITY=warden,40`
+- `DRAGON` — *shorthand* for `ATTACKER=ender_dragon`
+- `NEAR_DRAGON` — *shorthand* for `ENTITY=ender_dragon,120`
+- `WITHER` — *shorthand* for `ATTACKER=wither`
+- `NEAR_WITHER` — *shorthand* for `ENTITY=wither,60`
+- `GUARDIAN` — *shorthand* for `ATTACKER=elder_guardian`
+
+### Other
+- `NEARBY_MOBS` (nearby >= 1 monster)
+- `GENERIC` (always true — matches everything, useful as a fallback entry)
 
 <br><br>
 
@@ -161,12 +190,12 @@ You can search for any biome by using `BIOME=biomename`. This can be the full bi
 
 <br><br>
 
-Biome tags can be used by specifying `BIOMETAG=BIOME_TAG`. They're good for automatically having compatibility with modded biomes. You can find the full list of tags [here](https://maven.fabricmc.net/docs/fabric-api-0.100.3+1.21/net/fabricmc/fabric/api/tag/convention/v2/ConventionalBiomeTags.html)
+Biome tags can be used by specifying `TAG=BIOME_TAG`. They're good for automatically having compatibility with modded biomes. You can find the full list of tags [here](https://maven.fabricmc.net/docs/fabric-api-0.100.3+1.21/net/fabricmc/fabric/api/tag/convention/v2/ConventionalBiomeTags.html)
 
-NOTE: putting the "IS_" in front of the tag is optional ("BIOMETAG=IS_MOUNTAIN" and "BIOMETAG=MOUNTAIN" are both valid
+NOTE: putting the "IS_" in front of the tag is optional ("TAG=IS_MOUNTAIN" and "TAG=MOUNTAIN" are both valid)
 
 ```
-  - events: [ "DAY", "BIOMETAG=IS_HOT" ]
+  - events: [ "DAY", "TAG=IS_HOT" ]
     songs:
       - "ForTheKing"
 ```
