@@ -4,9 +4,9 @@ package circuitlord.reactivemusic.mixin;
 import circuitlord.reactivemusic.ReactiveMusic;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.multiplayer.ClientLevel;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -14,14 +14,14 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Environment(EnvType.CLIENT)
-@Mixin(MinecraftClient.class)
+@Mixin(Minecraft.class)
 public class MinecraftClientMixin {
 
     @Shadow
-    public ClientPlayerEntity player;
+    public LocalPlayer player;
 
     @Shadow
-    public ClientWorld world;
+    public ClientLevel level;
 
     @Inject(method = "tick", at = @At("RETURN"))
     private void reactivemusic$tick(CallbackInfo ci) {

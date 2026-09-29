@@ -4,12 +4,12 @@ import circuitlord.reactivemusic.config.ModConfig;
 import circuitlord.reactivemusic.config.MusicDelayLength;
 import circuitlord.reactivemusic.config.MusicSwitchSpeed;
 import circuitlord.reactivemusic.entries.RMRuntimeEntry;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.sound.SoundInstance;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.Options;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,7 +145,7 @@ public class ReactiveMusic {
 		if (currentSongpack == null) return;
 		if (loadedEntries.isEmpty()) return;
 
-		MinecraftClient mc = MinecraftClient.getInstance();
+		Minecraft mc = Minecraft.getInstance();
 		if (mc == null) return;
 
 		long performanceStartNanos = PERFORMANCE_LOGGING_ENABLED ? System.nanoTime() : 0;
@@ -155,16 +155,12 @@ public class ReactiveMusic {
 			config.hasForcedInitialVolume = true;
 			ModConfig.saveConfig();
 
-			if (mc.options.getSoundVolume(SoundCategory.MASTER) > 0.5) {
+			if (mc.options.getFinalSoundSourceVolume(SoundSource.MASTER) > 0.5) {
 
 				LOGGER.info("Forcing master volume to a lower default, this will only happen once on mod-install to avoid loud defaults.");
 
-				//? if >=1.20 {
-				/*mc.options.getSoundVolumeOption(SoundCategory.MASTER).setValue(0.5);
-				mc.options.write();
-				*///?} else {
-				mc.options.write();
-				//?}
+				mc.options.getSoundSourceOptionInstance(SoundSource.MASTER).set(0.5);
+				mc.options.save();
 			}
 		}
 
@@ -178,8 +174,8 @@ public class ReactiveMusic {
 			currentDimBlacklisted = false;
 
 			// see if the dimension we're in is blacklisted -- update at same time as event map to keep them in sync
-			if (mc != null && mc.world != null) {
-				String curDim = mc.world.getRegistryKey().getValue().toString();
+			if (mc != null && mc.level != null) {
+				String curDim = mc.level.dimension().identifier().toString();
 
 				for (String dim : config.blacklistedDimensions) {
 					if (dim.equals(curDim)) {
@@ -619,9 +615,9 @@ public class ReactiveMusic {
 	private static void processTrackedSoundsMuteMusic() {
 
 		// remove if the song is null or not playing anymore
-		trackedSoundsMuteMusic.removeIf(trackedSound -> trackedSound.soundInstance == null || !MinecraftClient.getInstance().getSoundManager().isPlaying(trackedSound.soundInstance));
+		trackedSoundsMuteMusic.removeIf(trackedSound -> trackedSound.soundInstance == null || !Minecraft.getInstance().getSoundManager().isActive(trackedSound.soundInstance));
 
-		GameOptions options = MinecraftClient.getInstance().options;
+		Options options = Minecraft.getInstance().options;
 
 		boolean foundSoundInstance = false;
 
@@ -629,16 +625,12 @@ public class ReactiveMusic {
 			SoundInstance soundInstance = trackedSound.soundInstance;
 
 			// if this is a sound with some sort of falloff
-			if (!trackedSound.ignoreDistance && soundInstance.getAttenuationType() != SoundInstance.AttenuationType.NONE) {
+			if (!trackedSound.ignoreDistance && soundInstance.getAttenuation() != SoundInstance.Attenuation.NONE) {
 
-				Vec3d pos = new Vec3d(soundInstance.getX(), soundInstance.getY(), soundInstance.getZ());
+				Vec3 pos = new Vec3(soundInstance.getX(), soundInstance.getY(), soundInstance.getZ());
 
-				if (MinecraftClient.getInstance().player != null) {
-					//? if >=1.21.9 {
-					/*Vec3d dist = MinecraftClient.getInstance().player.getEntityPos().subtract(pos);
-					*///?} else {
-					Vec3d dist = MinecraftClient.getInstance().player.getPos().subtract(pos);
-					//?}
+				if (Minecraft.getInstance().player != null) {
+					Vec3 dist = Minecraft.getInstance().player.position().subtract(pos);
 
 					if (dist.length() > 65.f) {
 						continue;
@@ -647,7 +639,7 @@ public class ReactiveMusic {
 			}
 
 			// if we can't hear it, don't include it
-			if (options.getSoundVolume(soundInstance.getCategory()) < 0.04) {
+			if (options.getFinalSoundSourceVolume(soundInstance.getSource()) < 0.04) {
 				continue;
 			}
 
@@ -696,10 +688,10 @@ public class ReactiveMusic {
 
         LOGGER.info(debugString);
 
-        if (!chatLoggingEnabled || MinecraftClient.getInstance() == null || MinecraftClient.getInstance().player == null)
+        if (!chatLoggingEnabled || Minecraft.getInstance() == null || Minecraft.getInstance().player == null)
             return;
 
-        MinecraftClient.getInstance().player.sendMessage(Text.literal(debugString), false);
+        Minecraft.getInstance().player.sendSystemMessage(Component.literal(debugString));
 
     }
 

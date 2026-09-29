@@ -1,6 +1,6 @@
 package circuitlord.reactivemusic.config;
 
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 
 /**
  * Legacy placeholder kept so old references/imports do not break.

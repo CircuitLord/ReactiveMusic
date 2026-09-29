@@ -7,21 +7,14 @@ import circuitlord.reactivemusic.platform.PlatformHelper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
-//? if >=1.20 {
-/*import net.minecraft.client.gui.DrawContext;
-*///?}
-//? if >=1.21.9 {
-/*import net.minecraft.client.gui.Click;
-*///?}
-//? if <1.20 {
-import net.minecraft.client.util.math.MatrixStack;
-//?}
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -53,7 +46,7 @@ public class ModConfig {
 
     public List<String> blacklistedDimensions = new ArrayList<>();
 
-    public HashMap<String, Vec3d> savedHomePositions = new HashMap<>();
+    public HashMap<String, Vec3> savedHomePositions = new HashMap<>();
 
     public List<String> soundsMuteMusic = new ArrayList<>();
 
@@ -89,13 +82,12 @@ public class ModConfig {
         private static final int PANEL_BORDER = 0x88FFFFFF;
 
         private final Screen parent;
-        private boolean suppressBackgroundRender;
         private int page;
         private int selectedIndex;
         private int detailsScroll;
 
         private VanillaConfigScreen(Screen parent, int page, int selectedIndex) {
-            super(Text.literal("Reactive Music"));
+            super(Component.literal("Reactive Music"));
             this.parent = parent;
             this.page = page;
             RMSongpackLoader.fetchAvailableSongpacks();
@@ -109,27 +101,27 @@ public class ModConfig {
             int controlWidth = Math.min(150, Math.max(100, this.width - controlX - 20));
             ModConfig config = getConfig();
 
-            addDrawableChild(button(controlX, 42, controlWidth, BUTTON_HEIGHT, enumText(config.musicDelayLength2), b -> {
+            addRenderableWidget(button(controlX, 42, controlWidth, BUTTON_HEIGHT, enumText(config.musicDelayLength2), b -> {
                 config.musicDelayLength2 = next(config.musicDelayLength2, MusicDelayLength.values());
                 saveConfig();
                 b.setMessage(enumText(config.musicDelayLength2));
             }));
 
-            addDrawableChild(button(controlX, 68, controlWidth, BUTTON_HEIGHT, enumText(config.musicSwitchSpeed2), b -> {
+            addRenderableWidget(button(controlX, 68, controlWidth, BUTTON_HEIGHT, enumText(config.musicSwitchSpeed2), b -> {
                 config.musicSwitchSpeed2 = next(config.musicSwitchSpeed2, MusicSwitchSpeed.values());
                 saveConfig();
                 b.setMessage(enumText(config.musicSwitchSpeed2));
             }));
 
-            addDrawableChild(button(controlX, 94, controlWidth, BUTTON_HEIGHT, toggleText(config.debugModeEnabled), b -> {
+            addRenderableWidget(button(controlX, 94, controlWidth, BUTTON_HEIGHT, toggleText(config.debugModeEnabled), b -> {
                 config.debugModeEnabled = !config.debugModeEnabled;
                 saveConfig();
-                if (this.client != null) {
-                    this.client.setScreen(new VanillaConfigScreen(parent, page, selectedIndex));
+                if (this.minecraft != null) {
+                    this.minecraft.setScreen(new VanillaConfigScreen(parent, page, selectedIndex));
                 }
             }));
 
-            addDrawableChild(button(centerX - 80, 120, 160, BUTTON_HEIGHT, Text.literal("Open Songpack Folder"), b -> openSongpackFolder()));
+            addRenderableWidget(button(centerX - 80, 120, 160, BUTTON_HEIGHT, Component.literal("Open Songpack Folder"), b -> openSongpackFolder()));
 
             int perPage = rowsPerPage();
             int pages = totalPages(perPage);
@@ -145,145 +137,80 @@ public class ModConfig {
                 boolean failed = songpack.blockLoading;
                 boolean loaded = isLoaded(songpack);
                 int index = i;
-                ButtonWidget loadButton = button(loadButtonX, y + 5, 76, BUTTON_HEIGHT, Text.literal(failed ? "Failed" : loaded ? "Loaded" : "Load"), b -> {
+                Button loadButton = button(loadButtonX, y + 5, 76, BUTTON_HEIGHT, Component.literal(failed ? "Failed" : loaded ? "Loaded" : "Load"), b -> {
                     selectedIndex = index;
                     detailsScroll = 0;
                     setActiveSongpack(songpack);
-                    if (this.client != null) {
-                        this.client.setScreen(new VanillaConfigScreen(parent, page, selectedIndex));
+                    if (this.minecraft != null) {
+                        this.minecraft.setScreen(new VanillaConfigScreen(parent, page, selectedIndex));
                     }
                 });
                 loadButton.active = !failed && !loaded;
-                addDrawableChild(loadButton);
+                addRenderableWidget(loadButton);
             }
 
-            ButtonWidget prev = button(centerX - 154, this.height - 28, 70, BUTTON_HEIGHT, Text.literal("Previous"), b -> {
-                if (this.client != null) {
-                    this.client.setScreen(new VanillaConfigScreen(parent, page - 1, selectedIndex));
+            Button prev = button(centerX - 154, this.height - 28, 70, BUTTON_HEIGHT, Component.literal("Previous"), b -> {
+                if (this.minecraft != null) {
+                    this.minecraft.setScreen(new VanillaConfigScreen(parent, page - 1, selectedIndex));
                 }
             });
             prev.active = page > 0;
-            addDrawableChild(prev);
+            addRenderableWidget(prev);
 
-            addDrawableChild(button(centerX - 40, this.height - 28, 80, BUTTON_HEIGHT, Text.literal("Done"), b -> close()));
+            addRenderableWidget(button(centerX - 40, this.height - 28, 80, BUTTON_HEIGHT, Component.literal("Done"), b -> onClose()));
 
-            ButtonWidget next = button(centerX + 84, this.height - 28, 70, BUTTON_HEIGHT, Text.literal("Next"), b -> {
-                if (this.client != null) {
-                    this.client.setScreen(new VanillaConfigScreen(parent, page + 1, selectedIndex));
+            Button next = button(centerX + 84, this.height - 28, 70, BUTTON_HEIGHT, Component.literal("Next"), b -> {
+                if (this.minecraft != null) {
+                    this.minecraft.setScreen(new VanillaConfigScreen(parent, page + 1, selectedIndex));
                 }
             });
             next.active = page + 1 < pages;
-            addDrawableChild(next);
+            addRenderableWidget(next);
         }
 
-        //? if >=1.21.9 {
-        /*@Override
-        public boolean mouseClicked(Click click, boolean doubled) {
+        @Override
+        public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
             if (super.mouseClicked(click, doubled)) {
                 return true;
             }
             return selectRowAt(click.x(), click.y());
         }
-        *///?} else {
-        @Override
-        public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (super.mouseClicked(mouseX, mouseY, button)) {
-                return true;
-            }
-            return selectRowAt(mouseX, mouseY);
-        }
-        //?}
 
-        //? if >=1.21 {
-        /*@Override
+        @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
             return scrollDetails(mouseX, mouseY, verticalAmount) || super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         }
-        *///?} else {
-        @Override
-        public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
-            return scrollDetails(mouseX, mouseY, amount) || super.mouseScrolled(mouseX, mouseY, amount);
-        }
-        //?}
 
         @Override
-        public void close() {
-            if (this.client != null) {
-                this.client.setScreen(parent);
+        public void onClose() {
+            if (this.minecraft != null) {
+                this.minecraft.setScreen(parent);
             }
         }
 
-        //? if >=1.20 {
-        /*@Override
-        public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-            //? if >=1.21.9 {
-            /^renderContent(context);
-            super.render(context, mouseX, mouseY, delta);
-            ^///?} else if >=1.21 {
-            /^this.renderBackground(context, mouseX, mouseY, delta);
+        @Override
+        public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
             renderContent(context);
-            suppressBackgroundRender = true;
-            try {
-                super.render(context, mouseX, mouseY, delta);
-            } finally {
-                suppressBackgroundRender = false;
-            }
-            ^///?} else {
-            this.renderBackground(context);
-            renderContent(context);
-            suppressBackgroundRender = true;
-            try {
-                super.render(context, mouseX, mouseY, delta);
-            } finally {
-                suppressBackgroundRender = false;
-            }
-            //?}
+            super.extractRenderState(context, mouseX, mouseY, delta);
         }
 
-        //? if >=1.21 {
-        /^@Override
-        public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-            if (suppressBackgroundRender) {
-                return;
-            }
-            super.renderBackground(context, mouseX, mouseY, delta);
-        }
-        ^///?} else if >=1.20 {
-        /^@Override
-        public void renderBackground(DrawContext context) {
-            if (suppressBackgroundRender) {
-                return;
-            }
-            super.renderBackground(context);
-        }
-        ^///?}
-        *///?} else {
-        @Override
-        public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-            this.renderBackground(matrices);
-            renderContent(matrices);
-            super.render(matrices, mouseX, mouseY, delta);
-        }
-        //?}
-
-        //? if >=1.20 {
-        /*private void renderContent(DrawContext context) {
+        private void renderContent(GuiGraphicsExtractor context) {
             int centerX = this.width / 2;
             int controlLabelX = Math.max(20, centerX - 160);
 
-            context.drawCenteredTextWithShadow(this.textRenderer, this.title, centerX, 16, LABEL_COLOR);
-            context.drawTextWithShadow(this.textRenderer, Text.literal("Music Delay Length"), controlLabelX, 47, LABEL_COLOR);
-            context.drawTextWithShadow(this.textRenderer, Text.literal("Music Switch Speed"), controlLabelX, 73, LABEL_COLOR);
-            context.drawTextWithShadow(this.textRenderer, Text.literal("Debug Mode Enabled"), controlLabelX, 99, LABEL_COLOR);
-            context.drawTextWithShadow(this.textRenderer, Text.literal("Songpacks"), listLeft(), 144, LABEL_COLOR);
-            context.drawTextWithShadow(this.textRenderer, Text.literal("Details"), detailsLeft(), 144, LABEL_COLOR);
-            context.drawTextWithShadow(this.textRenderer, Text.literal(pageLabel()), centerX - this.textRenderer.getWidth(pageLabel()) / 2, this.height - 44, MUTED_COLOR);
+            context.centeredText(this.font, this.title, centerX, 16, LABEL_COLOR);
+            context.text(this.font, Component.literal("Music Delay Length"), controlLabelX, 47, LABEL_COLOR, true);
+            context.text(this.font, Component.literal("Music Switch Speed"), controlLabelX, 73, LABEL_COLOR, true);
+            context.text(this.font, Component.literal("Debug Mode Enabled"), controlLabelX, 99, LABEL_COLOR, true);
+            context.text(this.font, Component.literal("Songpacks"), listLeft(), 144, LABEL_COLOR, true);
+            context.text(this.font, Component.literal("Details"), detailsLeft(), 144, LABEL_COLOR, true);
+            context.text(this.font, Component.literal(pageLabel()), centerX - this.font.width(pageLabel()) / 2, this.height - 44, MUTED_COLOR, true);
 
             renderSongpackRows(context);
             renderDetails(context);
         }
 
-        private void renderSongpackRows(DrawContext context) {
+        private void renderSongpackRows(GuiGraphicsExtractor context) {
             int left = listLeft();
             int right = listRight();
             int rowTextRight = right - 86;
@@ -298,112 +225,42 @@ public class ModConfig {
                     context.fill(left - 4, y - 3, right, y + ROW_HEIGHT - 5, SELECTED_BG);
                 }
                 RowText row = rowText(songpack);
-                context.drawTextWithShadow(this.textRenderer, fit((i == selectedIndex ? "> " : "  ") + row.name, rowTextRight - left), left, y, row.color);
-                context.drawTextWithShadow(this.textRenderer, fit(row.detail, rowTextRight - left), left + 10, y + 12, row.detailColor);
+                context.text(this.font, fit((i == selectedIndex ? "> " : "  ") + row.name, rowTextRight - left), left, y, row.color, true);
+                context.text(this.font, fit(row.detail, rowTextRight - left), left + 10, y + 12, row.detailColor, true);
             }
         }
 
-        private void renderDetails(DrawContext context) {
+        private void renderDetails(GuiGraphicsExtractor context) {
             int left = detailsLeft();
             int right = detailsRight();
             int top = SONGPACK_START_Y - 4;
             int bottom = detailsBottom();
             drawPanel(context, left, top, right, bottom);
 
-            List<OrderedText> lines = detailsLines(right - left - 16);
+            List<FormattedCharSequence> lines = detailsLines(right - left - 16);
             int visibleLines = Math.max(1, (bottom - top - 16) / 10);
             detailsScroll = Math.max(0, Math.min(detailsScroll, maxDetailsScroll(lines, visibleLines)));
 
             int y = top + 8;
             int end = Math.min(lines.size(), detailsScroll + visibleLines);
             for (int i = detailsScroll; i < end; i++) {
-                context.drawTextWithShadow(this.textRenderer, lines.get(i), left + 8, y, LABEL_COLOR);
+                context.text(this.font, lines.get(i), left + 8, y, LABEL_COLOR, true);
                 y += 10;
             }
 
             if (lines.size() > visibleLines) {
                 String scroll = "Scroll " + (detailsScroll + 1) + " / " + (maxDetailsScroll(lines, visibleLines) + 1);
-                context.drawTextWithShadow(this.textRenderer, Text.literal(scroll), right - 8 - this.textRenderer.getWidth(scroll), bottom - 12, MUTED_COLOR);
+                context.text(this.font, Component.literal(scroll), right - 8 - this.font.width(scroll), bottom - 12, MUTED_COLOR, true);
             }
         }
 
-        private void drawPanel(DrawContext context, int left, int top, int right, int bottom) {
+        private void drawPanel(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
             context.fill(left, top, right, bottom, PANEL_BG);
             context.fill(left, top, right, top + 1, PANEL_BORDER);
             context.fill(left, bottom - 1, right, bottom, PANEL_BORDER);
             context.fill(left, top, left + 1, bottom, PANEL_BORDER);
             context.fill(right - 1, top, right, bottom, PANEL_BORDER);
         }
-        *///?} else {
-        private void renderContent(MatrixStack matrices) {
-            int centerX = this.width / 2;
-            int controlLabelX = Math.max(20, centerX - 160);
-
-            this.textRenderer.drawWithShadow(matrices, this.title, centerX - this.textRenderer.getWidth(this.title) / 2, 16, LABEL_COLOR);
-            this.textRenderer.drawWithShadow(matrices, Text.literal("Music Delay Length"), controlLabelX, 47, LABEL_COLOR);
-            this.textRenderer.drawWithShadow(matrices, Text.literal("Music Switch Speed"), controlLabelX, 73, LABEL_COLOR);
-            this.textRenderer.drawWithShadow(matrices, Text.literal("Debug Mode Enabled"), controlLabelX, 99, LABEL_COLOR);
-            this.textRenderer.drawWithShadow(matrices, Text.literal("Songpacks"), listLeft(), 144, LABEL_COLOR);
-            this.textRenderer.drawWithShadow(matrices, Text.literal("Details"), detailsLeft(), 144, LABEL_COLOR);
-            String label = pageLabel();
-            this.textRenderer.drawWithShadow(matrices, label, centerX - this.textRenderer.getWidth(label) / 2, this.height - 44, MUTED_COLOR);
-
-            renderSongpackRows(matrices);
-            renderDetails(matrices);
-        }
-
-        private void renderSongpackRows(MatrixStack matrices) {
-            int left = listLeft();
-            int right = listRight();
-            int rowTextRight = right - 86;
-            int perPage = rowsPerPage();
-            int start = page * perPage;
-            int end = Math.min(RMSongpackLoader.availableSongpacks.size(), start + perPage);
-
-            for (int i = start; i < end; i++) {
-                SongpackZip songpack = RMSongpackLoader.availableSongpacks.get(i);
-                int y = SONGPACK_START_Y + (i - start) * ROW_HEIGHT;
-                if (i == selectedIndex) {
-                    fill(matrices, left - 4, y - 3, right, y + ROW_HEIGHT - 5, SELECTED_BG);
-                }
-                RowText row = rowText(songpack);
-                this.textRenderer.drawWithShadow(matrices, fit((i == selectedIndex ? "> " : "  ") + row.name, rowTextRight - left), left, y, row.color);
-                this.textRenderer.drawWithShadow(matrices, fit(row.detail, rowTextRight - left), left + 10, y + 12, row.detailColor);
-            }
-        }
-
-        private void renderDetails(MatrixStack matrices) {
-            int left = detailsLeft();
-            int right = detailsRight();
-            int top = SONGPACK_START_Y - 4;
-            int bottom = detailsBottom();
-            drawPanel(matrices, left, top, right, bottom);
-
-            List<OrderedText> lines = detailsLines(right - left - 16);
-            int visibleLines = Math.max(1, (bottom - top - 16) / 10);
-            detailsScroll = Math.max(0, Math.min(detailsScroll, maxDetailsScroll(lines, visibleLines)));
-
-            int y = top + 8;
-            int end = Math.min(lines.size(), detailsScroll + visibleLines);
-            for (int i = detailsScroll; i < end; i++) {
-                this.textRenderer.drawWithShadow(matrices, lines.get(i), left + 8, y, LABEL_COLOR);
-                y += 10;
-            }
-
-            if (lines.size() > visibleLines) {
-                String scroll = "Scroll " + (detailsScroll + 1) + " / " + (maxDetailsScroll(lines, visibleLines) + 1);
-                this.textRenderer.drawWithShadow(matrices, scroll, right - 8 - this.textRenderer.getWidth(scroll), bottom - 12, MUTED_COLOR);
-            }
-        }
-
-        private void drawPanel(MatrixStack matrices, int left, int top, int right, int bottom) {
-            fill(matrices, left, top, right, bottom, PANEL_BG);
-            fill(matrices, left, top, right, top + 1, PANEL_BORDER);
-            fill(matrices, left, bottom - 1, right, bottom, PANEL_BORDER);
-            fill(matrices, left, top, left + 1, bottom, PANEL_BORDER);
-            fill(matrices, right - 1, top, right, bottom, PANEL_BORDER);
-        }
-        //?}
 
         private boolean scrollDetails(double mouseX, double mouseY, double amount) {
             if (mouseX < detailsLeft() || mouseX > detailsRight() || mouseY < SONGPACK_START_Y - 4 || mouseY > detailsBottom()) {
@@ -411,13 +268,13 @@ public class ModConfig {
             }
 
             int visibleLines = Math.max(1, (detailsBottom() - (SONGPACK_START_Y - 4) - 16) / 10);
-            List<OrderedText> lines = detailsLines(detailsRight() - detailsLeft() - 16);
+            List<FormattedCharSequence> lines = detailsLines(detailsRight() - detailsLeft() - 16);
             detailsScroll = Math.max(0, Math.min(detailsScroll - (int) Math.signum(amount) * 3, maxDetailsScroll(lines, visibleLines)));
             return true;
         }
 
-        private List<OrderedText> detailsLines(int width) {
-            ArrayList<OrderedText> lines = new ArrayList<>();
+        private List<FormattedCharSequence> detailsLines(int width) {
+            ArrayList<FormattedCharSequence> lines = new ArrayList<>();
             SongpackZip songpack = selectedSongpack();
             if (songpack == null) {
                 addWrapped(lines, "No songpacks found.", width);
@@ -455,7 +312,7 @@ public class ModConfig {
             return lines;
         }
 
-        private void addWrapped(List<OrderedText> lines, String value, int width) {
+        private void addWrapped(List<FormattedCharSequence> lines, String value, int width) {
             if (value == null || value.isEmpty()) {
                 addBlank(lines);
                 return;
@@ -464,16 +321,16 @@ public class ModConfig {
                 if (line.isEmpty()) {
                     addBlank(lines);
                 } else {
-                    lines.addAll(this.textRenderer.wrapLines(Text.literal(line), width));
+                    lines.addAll(this.font.split(Component.literal(line), width));
                 }
             }
         }
 
-        private void addBlank(List<OrderedText> lines) {
-            lines.add(Text.literal(" ").asOrderedText());
+        private void addBlank(List<FormattedCharSequence> lines) {
+            lines.add(Component.literal(" ").getVisualOrderText());
         }
 
-        private int maxDetailsScroll(List<OrderedText> lines, int visibleLines) {
+        private int maxDetailsScroll(List<FormattedCharSequence> lines, int visibleLines) {
             return Math.max(0, lines.size() - visibleLines);
         }
 
@@ -611,46 +468,42 @@ public class ModConfig {
             return newline >= 0 ? value.substring(0, newline) : value;
         }
 
-        private Text fit(String value, int maxWidth) {
+        private Component fit(String value, int maxWidth) {
             if (value == null || value.isEmpty()) {
-                return Text.literal("");
+                return Component.literal("");
             }
-            if (this.textRenderer.getWidth(value) <= maxWidth) {
-                return Text.literal(value);
+            if (this.font.width(value) <= maxWidth) {
+                return Component.literal(value);
             }
             String suffix = "...";
-            int max = Math.max(0, maxWidth - this.textRenderer.getWidth(suffix));
+            int max = Math.max(0, maxWidth - this.font.width(suffix));
             String trimmed = value;
-            while (!trimmed.isEmpty() && this.textRenderer.getWidth(trimmed) > max) {
+            while (!trimmed.isEmpty() && this.font.width(trimmed) > max) {
                 trimmed = trimmed.substring(0, trimmed.length() - 1);
             }
-            return Text.literal(trimmed + suffix);
+            return Component.literal(trimmed + suffix);
         }
 
         private static void openSongpackFolder() {
             Path path = PlatformHelper.INSTANCE.getGameDir().resolve("resourcepacks");
             try {
                 Files.createDirectories(path);
-                Util.getOperatingSystem().open(path.toFile());
+                Util.getPlatform().openFile(path.toFile());
             } catch (IOException e) {
                 ReactiveMusic.LOGGER.error("Failed to open songpack folder", e);
             }
         }
 
-        private static ButtonWidget button(int x, int y, int width, int height, Text text, ButtonWidget.PressAction action) {
-            //? if >=1.20 {
-            /*return ButtonWidget.builder(text, action).dimensions(x, y, width, height).build();
-            *///?} else {
-            return new ButtonWidget(x, y, width, height, text, action);
-            //?}
+        private static Button button(int x, int y, int width, int height, Component text, Button.OnPress action) {
+            return Button.builder(text, action).bounds(x, y, width, height).build();
         }
 
-        private static Text enumText(Enum<?> value) {
-            return Text.literal(value.name());
+        private static Component enumText(Enum<?> value) {
+            return Component.literal(value.name());
         }
 
-        private static Text toggleText(boolean value) {
-            return Text.literal(value ? "On" : "Off");
+        private static Component toggleText(boolean value) {
+            return Component.literal(value ? "On" : "Off");
         }
 
         private static <T extends Enum<T>> T next(T current, T[] values) {

@@ -1,12 +1,8 @@
 package circuitlord.reactivemusic.entries;
 
 import circuitlord.reactivemusic.SongpackEventType;
-//? if >=1.20 {
-/*import net.minecraft.registry.tag.TagKey;
-*///?} else {
-import net.minecraft.tag.TagKey;
-//?}
-import net.minecraft.world.biome.Biome;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.biome.Biome;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,5 +20,11 @@ public class RMEntryCondition {
     public List<TagKey<Biome>> biomeTags = new ArrayList<>();
 
     public List<RMEntryBlockCondition> blocks = new ArrayList<>();
+
+    // nearby entities of a given type, regardless of relation to the player
+    public List<RMEntryEntityCondition> nearbyEntities = new ArrayList<>();
+
+    // entities that recently attacked/were attacked by the player, matched by type
+    public List<RMEntryEntityCondition> attackers = new ArrayList<>();
 
 }

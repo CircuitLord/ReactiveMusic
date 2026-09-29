@@ -144,6 +144,7 @@ This lists all the available songpack events you have available.
 
 ### Combat
 - `BOSS` (whenever a boss bar is on-screen)
+- `COMBAT` ()
 
 <br><br>
 
@@ -184,6 +185,36 @@ Dimensions can be specified by doing `DIM=dimname`. Similar to biome events, thi
     songs:
       - "Storm"
 ```
+
+<br><br>
+
+
+## Entity Events
+
+You can detect specific nearby entity types (not just a generic "mobs nearby" flag) by using `ENTITY=entityname`, optionally with a radius in blocks: `ENTITY=entityname,radius`. The default radius is 20 blocks. Entities are only scanned up to 64 blocks horizontally and 40 blocks vertically, so radius values are effectively capped there. This can be the full entity id (e.g. `minecraft:warden`) or just part of it, similar to biome/dimension matching.
+
+```
+  # play boss music whenever a warden is within 40 blocks, regardless of combat state
+  - events: [ "ENTITY=warden,40" ]
+    forceStopMusicOnChanged: true
+    songs:
+      - "TheDeepDark"
+```
+
+You can also detect the specific entity that's currently attacking (or being attacked by) the player using `ATTACKER=entityname`. This is more specific than the generic `COMBAT` event above, and lets you have different music for different enemies.
+
+```
+  - events: [ "ATTACKER=zombie" ]
+    songs:
+      - "LastStand"
+
+  - events: [ "ATTACKER=warden" ]
+    forceStopMusicOnChanged: true
+    songs:
+      - "RunForYourLife"
+```
+
+Attacker detection sticks around for a few seconds after the last hit so the music doesn't cut in and out between swings.
 
 <br><br>
 

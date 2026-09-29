@@ -5,12 +5,8 @@ import circuitlord.reactivemusic.SongpackEntry;
 import circuitlord.reactivemusic.SongpackEventType;
 import circuitlord.reactivemusic.SongpackZip;
 import circuitlord.reactivemusic.platform.BiomeTagHelper;
-//? if >=1.20 {
-/*import net.minecraft.registry.tag.TagKey;
-*///?} else {
-import net.minecraft.tag.TagKey;
-//?}
-import net.minecraft.world.biome.Biome;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.biome.Biome;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -133,6 +129,45 @@ public class RMRuntimeEntry {
                         Entry.errorString += "Biome tag '" + rawTagString + "' is not available on this platform!\n\n";
                     }
 
+                }
+
+                // nearby entities of a given type: entity=<id>[,radius]
+                else if (eventSection.startsWith("entity=")) {
+
+                    String entityData = eventSection.substring(7);
+                    if (entityData.isEmpty())
+                        continue;
+
+                    String[] parts = entityData.split(",");
+
+                    RMEntryEntityCondition entityCond = new RMEntryEntityCondition();
+                    entityCond.entityId = parts[0];
+
+                    if (parts.length >= 2) {
+                        if (parts[1].matches("\\d+(\\.\\d+)?")) {
+                            entityCond.radius = Double.parseDouble(parts[1]);
+                        } else {
+                            Entry.errorString += "Invalid radius in: " + eventSection + "!\n\n";
+                            continue;
+                        }
+                    }
+
+                    condition.nearbyEntities.add(entityCond);
+                    eventHasData = true;
+                }
+
+                // entities that recently attacked/were attacked by the player: attacker=<id>
+                else if (eventSection.startsWith("attacker=")) {
+
+                    String entityId = eventSection.substring(9);
+                    if (entityId.isEmpty())
+                        continue;
+
+                    RMEntryEntityCondition attackerCond = new RMEntryEntityCondition();
+                    attackerCond.entityId = entityId;
+
+                    condition.attackers.add(attackerCond);
+                    eventHasData = true;
                 }
 
                 // dimensions

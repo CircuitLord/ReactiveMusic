@@ -51,6 +51,7 @@ public enum SongpackEventType {
     VILLAGE,
 
     NEARBY_MOBS,
+    COMBAT,
 
 
 
