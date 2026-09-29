@@ -1,9 +1,9 @@
 @file:Suppress("UnstableApiUsage")
 
 plugins {
-    id("dev.architectury.loom")
+    id("dev.architectury.loom-no-remap")
     id("architectury-plugin")
-    id("com.github.johnrengelman.shadow")
+    id("com.gradleup.shadow")
 }
 
 val loader = prop("loom.platform")!!
@@ -43,15 +43,14 @@ repositories {
 
 dependencies {
     minecraft("com.mojang:minecraft:$minecraft")
-    mappings("net.fabricmc:yarn:$minecraft+build.${common.mod.dep("yarn_build")}:v2")
-    modImplementation("net.fabricmc:fabric-loader:${common.mod.dep("fabric_loader")}")
-    modImplementation("net.fabricmc.fabric-api:fabric-api:${common.mod.dep("fabric_api")}")
+    implementation("net.fabricmc:fabric-loader:${common.mod.dep("fabric_loader")}")
+    implementation("net.fabricmc.fabric-api:fabric-api:${common.mod.dep("fabric_api")}")
 
-    modApi("com.terraformersmc:modmenu:${common.mod.dep("modmenu")}") {
+    api("com.terraformersmc:modmenu:${common.mod.dep("modmenu")}") {
         exclude(group = "net.fabricmc", module = "fabric-loader")
     }
 
-    commonBundle(project(common.path, "namedElements")) { isTransitive = false }
+    commonBundle(project(common.path)) { isTransitive = false }
     shadowBundle(project(common.path, "transformProductionFabric")) { isTransitive = false }
 }
 
@@ -65,26 +64,17 @@ loom {
 
 java {
     withSourcesJar()
-    val java = if (stonecutter.eval(minecraft, ">=1.20.5"))
-        JavaVersion.VERSION_21 else JavaVersion.VERSION_17
-    targetCompatibility = java
-    sourceCompatibility = java
-}
-
-tasks.shadowJar {
-    configurations = listOf(shadowBundle)
-    archiveClassifier = "dev-shadow"
-}
-
-tasks.remapJar {
-    injectAccessWidener = true
-    input = tasks.shadowJar.get().archiveFile
-    archiveClassifier = null
-    dependsOn(tasks.shadowJar)
+    targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_25
 }
 
 tasks.jar {
     archiveClassifier = "dev"
+}
+
+tasks.shadowJar {
+    configurations = listOf(shadowBundle)
+    archiveClassifier = null
 }
 
 tasks.processResources {
@@ -104,7 +94,7 @@ tasks.build {
 tasks.register<Copy>("buildAndCollect") {
     group = "versioned"
     description = "Must run through 'chiseledBuild'"
-    from(tasks.remapJar.get().archiveFile, tasks.remapSourcesJar.get().archiveFile)
+    from(tasks.shadowJar.get().archiveFile, tasks.named("sourcesJar").get().outputs.files.singleFile)
     into(rootProject.layout.buildDirectory.file("libs/${mod.version}/$loader"))
     dependsOn("build")
 }

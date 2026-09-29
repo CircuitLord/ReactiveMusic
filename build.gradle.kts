@@ -1,5 +1,5 @@
 plugins {
-    id("dev.architectury.loom")
+    id("dev.architectury.loom-no-remap")
     id("architectury-plugin")
 }
 
@@ -22,17 +22,13 @@ repositories {
 
 dependencies {
     minecraft("com.mojang:minecraft:$minecraft")
-    mappings("net.fabricmc:yarn:$minecraft+build.${mod.dep("yarn_build")}:v2")
-    modImplementation("net.fabricmc:fabric-loader:${mod.dep("fabric_loader")}")
-
+    implementation("net.fabricmc:fabric-loader:${mod.dep("fabric_loader")}")
 }
 
 java {
     withSourcesJar()
-    val java = if (stonecutter.eval(minecraft, ">=1.20.5"))
-        JavaVersion.VERSION_21 else JavaVersion.VERSION_17
-    targetCompatibility = java
-    sourceCompatibility = java
+    targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_25
 }
 
 tasks.build {

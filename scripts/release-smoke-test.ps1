@@ -15,6 +15,7 @@ $RuntimeTestVersion = "4.5.1"
 $HeadlessMc = Join-Path $CacheRoot "headlessmc-launcher-$HeadlessMcVersion.jar"
 $Java17 = "C:\Program Files\Java\jdk-17\bin\java.exe"
 $Java21 = "C:\Program Files\Java\jdk-21\bin\java.exe"
+$Java25 = "C:\Program Files\Java\jdk-25\bin\java.exe"
 $StartedAt = Get-Date
 
 Add-Type -TypeDefinition @'
@@ -140,14 +141,11 @@ public static class ProcessAudioMuter
 }
 '@
 
+# NOTE: Minecraft 26.1.2 ships unobfuscated (no more Yarn/intermediary remap step), so this target
+# needs Java 25 and a HeadlessMC build new enough to launch it. This entry is UNTESTED against
+# HeadlessMC 2.10.0 -- verify a manual run against 26.1.2 works before trusting this in CI.
 $Targets = @(
-    [pscustomobject]@{ Minecraft = "1.19.2"; Loader = "fabric"; LoaderVersion = "0.16.14"; RuntimeLoader = "fabric"; Java = 17; FabricApi = "0.77.0+1.19.2" }
-    [pscustomobject]@{ Minecraft = "1.19.2"; Loader = "forge"; LoaderVersion = "43.5.2"; RuntimeLoader = "lexforge"; Java = 17; FabricApi = $null }
-    [pscustomobject]@{ Minecraft = "1.20.1"; Loader = "fabric"; LoaderVersion = "0.16.14"; RuntimeLoader = "fabric"; Java = 17; FabricApi = "0.92.6+1.20.1" }
-    [pscustomobject]@{ Minecraft = "1.20.1"; Loader = "forge"; LoaderVersion = "47.3.0"; RuntimeLoader = "lexforge"; Java = 17; FabricApi = $null }
-    [pscustomobject]@{ Minecraft = "1.21.1"; Loader = "fabric"; LoaderVersion = "0.16.14"; RuntimeLoader = "fabric"; Java = 21; FabricApi = "0.116.7+1.21.1" }
-    [pscustomobject]@{ Minecraft = "1.21.1"; Loader = "neoforge"; LoaderVersion = "21.1.66"; RuntimeLoader = "neoforge"; Java = 21; FabricApi = $null }
-    [pscustomobject]@{ Minecraft = "1.21.11"; Loader = "fabric"; LoaderVersion = "0.18.4"; RuntimeLoader = "fabric"; Java = 21; FabricApi = "0.141.3+1.21.11" }
+    [pscustomobject]@{ Minecraft = "26.1.2"; Loader = "fabric"; LoaderVersion = "0.19.5"; RuntimeLoader = "fabric"; Java = 25; FabricApi = "0.155.3+26.1.2" }
 )
 
 function Write-Status {
@@ -399,7 +397,7 @@ function Complete-Target {
     return [pscustomobject]@{ Target = $Run.Key; Status = $status; Detail = $detail }
 }
 
-foreach ($java in @($Java17, $Java21)) {
+foreach ($java in @($Java17, $Java21, $Java25)) {
     if (-not (Test-Path $java)) {
         throw "Required Java executable not found: $java"
     }
@@ -408,7 +406,7 @@ foreach ($java in @($Java17, $Java21)) {
 New-Item -ItemType Directory -Force $OutputRoot,$InstanceRoot,$CacheRoot,$MinecraftRoot,$DownloadRoot,(Join-Path $CacheRoot "HeadlessMC") | Out-Null
 Get-File "https://github.com/headlesshq/headlessmc/releases/download/$HeadlessMcVersion/headlessmc-launcher-$HeadlessMcVersion.jar" $HeadlessMc
 
-$javaPaths = "$(Get-ForwardSlashPath $Java17);$(Get-ForwardSlashPath $Java21)"
+$javaPaths = "$(Get-ForwardSlashPath $Java17);$(Get-ForwardSlashPath $Java21);$(Get-ForwardSlashPath $Java25)"
 @(
     "hmc.java.versions=$javaPaths"
     "hmc.java.auto=false"
