@@ -64,8 +64,9 @@ loom {
 
 java {
     withSourcesJar()
-    targetCompatibility = JavaVersion.VERSION_25
-    sourceCompatibility = JavaVersion.VERSION_25
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
 }
 
 tasks.jar {
