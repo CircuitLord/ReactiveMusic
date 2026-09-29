@@ -128,13 +128,14 @@ public class ReactiveMusic {
 			}
 		}
 
-		// load the default one
-		if (!loadedUserSongpack) {
+		// fall back to the first available songpack, if any (there's no bundled default anymore -
+		// this is just whatever the user has in resourcepacks/)
+		if (!loadedUserSongpack && !RMSongpackLoader.availableSongpacks.isEmpty()) {
 
-			// for the cases where something is broken in the base songpack
-			if (!RMSongpackLoader.availableSongpacks.get(0).blockLoading) {
-				// first is the default songpack
-				setActiveSongpack(RMSongpackLoader.availableSongpacks.get(0));
+			SongpackZip firstAvailable = RMSongpackLoader.availableSongpacks.get(0);
+
+			if (!firstAvailable.blockLoading) {
+				setActiveSongpack(firstAvailable);
 			}
 		}
 	}

@@ -5,6 +5,8 @@ Songpacks are constructed as folders with a yaml configuration file and a folder
 
 They're loaded from the `resourcepacks` folder, although they're not actually resource packs and are instead selected from the configuration UI. This is purely to make including songpacks easier.
 
+There's no bundled default songpack — the mod stays silent until you add one and select it from `/reactivemusic`.
+
 **Download the Songpack Template [here](https://raw.githubusercontent.com/CircuitLord/ReactiveMusic/master/docs/ReactiveMusicSongpackTemplate-v6.zip)!**
 
 You can find a video version of this wiki page [here](https://www.youtube.com/watch?v=YvEap8IUS-c)!

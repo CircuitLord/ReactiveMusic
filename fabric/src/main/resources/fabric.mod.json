@@ -3,7 +3,7 @@
 	"id": "${id}",
 	"version": "${version}",
 	"name": "${name}",
-	"description": "Refactors Minecraft's music to be dynamic and reactive, including new fantasy and celtic tracks to give an air of adventure.",
+	"description": "Refactors Minecraft's music to be dynamic and reactive, using a user-supplied songpack.",
 	"authors": [
 		"CircuitLord"
 	],
