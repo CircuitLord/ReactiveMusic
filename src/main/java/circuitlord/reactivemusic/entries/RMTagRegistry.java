@@ -11,6 +11,7 @@ import circuitlord.reactivemusic.entries.predicate.RMAndPredicate;
 import circuitlord.reactivemusic.entries.predicate.RMPredicate;
 import circuitlord.reactivemusic.entries.predicate.RMSongpackEventPredicate;
 import circuitlord.reactivemusic.entries.predicate.RMStatePredicate;
+import circuitlord.reactivemusic.entries.predicate.RMStructurePredicate;
 
 import java.util.HashMap;
 import java.util.List;
@@ -83,6 +84,24 @@ public class RMTagRegistry {
                 new RMStatePredicate(() -> SongPicker.currentWitherBossBar))));
         TAGS.put("GUARDIAN", () -> new RMAttackerPredicate("elder_guardian"));
         TAGS.put("RAID", () -> new RMStatePredicate(() -> SongPicker.currentRaidBossBar));
+
+        // structure shorthand - real registry ids verified against the actual 26.1.2 data
+        // (a couple of tags.md's guesses didn't match anything: ocean_monument -> monument,
+        // jungle_temple -> jungle_pyramid; matching is substring-based like BIOME=/ENTITY=,
+        // so e.g. STRUCT=mineshaft also catches mineshaft_mesa)
+        TAGS.put("STRONGHOLD", () -> new RMStructurePredicate("stronghold"));
+        TAGS.put("FORTRESS", () -> new RMStructurePredicate("fortress"));
+        TAGS.put("BASTION", () -> new RMStructurePredicate("bastion_remnant"));
+        TAGS.put("MANSION", () -> new RMStructurePredicate("mansion"));
+        TAGS.put("MONUMENT", () -> new RMStructurePredicate("monument"));
+        TAGS.put("MINESHAFT", () -> new RMStructurePredicate("mineshaft"));
+        TAGS.put("ANCIENT_CITY", () -> new RMStructurePredicate("ancient_city"));
+        TAGS.put("END_CITY", () -> new RMStructurePredicate("end_city"));
+        TAGS.put("TRIAL", () -> new RMStructurePredicate("trial_chambers"));
+        TAGS.put("PYRAMID", () -> new RMStructurePredicate("desert_pyramid"));
+        TAGS.put("TEMPLE", () -> new RMStructurePredicate("jungle_pyramid"));
+        TAGS.put("OUTPOST", () -> new RMStructurePredicate("pillager_outpost"));
+        TAGS.put("SHIPWRECK", () -> new RMStructurePredicate("shipwreck"));
     }
 
     /**

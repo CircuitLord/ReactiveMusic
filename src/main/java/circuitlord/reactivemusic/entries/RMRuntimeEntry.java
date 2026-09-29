@@ -12,6 +12,8 @@ import circuitlord.reactivemusic.entries.predicate.RMNearbyEntityPredicate;
 import circuitlord.reactivemusic.entries.predicate.RMNotPredicate;
 import circuitlord.reactivemusic.entries.predicate.RMOrPredicate;
 import circuitlord.reactivemusic.entries.predicate.RMPredicate;
+import circuitlord.reactivemusic.entries.predicate.RMStructurePredicate;
+import circuitlord.reactivemusic.entries.predicate.RMStructureTagPredicate;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
 
@@ -184,6 +186,26 @@ public class RMRuntimeEntry {
                 return null;
 
             return new RMAttackerPredicate(entityId);
+        }
+
+        // structures: struct=<id>
+        else if (eventSection.startsWith("struct=")) {
+
+            String structureId = eventSection.substring(7);
+            if (structureId.isEmpty())
+                return null;
+
+            return new RMStructurePredicate(structureId);
+        }
+
+        // structure tags: structtag=<id>
+        else if (eventSection.startsWith("structtag=")) {
+
+            String tagId = eventSection.substring(10);
+            if (tagId.isEmpty())
+                return null;
+
+            return new RMStructureTagPredicate(tagId);
         }
 
         // dimensions

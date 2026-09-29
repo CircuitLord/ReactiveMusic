@@ -80,6 +80,11 @@ public final class SongPicker {
     public static boolean currentWitherBossBar = false;
     public static boolean currentRaidBossBar = false;
 
+    // populated by the server-side structure sync payload (see fabric/RMStructureSyncServer) -
+    // stays empty if the server doesn't run the mod or has the sync gamerule disabled
+    public static Set<String> currentStructureIds = Set.of();
+    public static Set<String> currentStructureTagIds = Set.of();
+
     private static Vec3 lastMovedPos = null;
     private static long lastMovedTick = 0;
     private static final double AFK_MOVE_EPSILON_SQ = 0.0025; // ~0.05 blocks/tick
@@ -99,6 +104,27 @@ public final class SongPicker {
         if (!biomeTagEventMap.containsKey(tag)) {
             biomeTagEventMap.put(tag, false);
         }
+    }
+
+    public static void onStructureSyncReceived(Set<String> structureIds, Set<String> structureTagIds) {
+        currentStructureIds = structureIds;
+        currentStructureTagIds = structureTagIds;
+    }
+
+    // reads the current state directly (no soundpack, no waiting for a position change needed) -
+    // structures only update from the server on a position change, so deferring this to "next
+    // update" like the block counter debug print does could sit unfired indefinitely if the
+    // player isn't moving
+    public static void printStructureDebug() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+
+        String message = "[ReactiveMusic]: Structures at current position: "
+                + (currentStructureIds.isEmpty() ? "(none)" : String.join(", ", currentStructureIds))
+                + " | Tags: " + (currentStructureTagIds.isEmpty() ? "(none)" : String.join(", ", currentStructureTagIds));
+
+        mc.player.sendSystemMessage(Component.literal(message));
+        ReactiveMusic.LOGGER.info(message);
     }
 
 

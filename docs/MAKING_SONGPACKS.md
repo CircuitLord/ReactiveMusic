@@ -277,6 +277,32 @@ Fortress detection example:
 <br><br>
 
 
+## Structure Events
+
+You can detect what structure the player is standing in with `STRUCT=structurename`, similar to biome/dimension matching (full id or a partial/soft-search match).
+
+```
+  - events: [ "STRUCT=stronghold" ]
+    forceStopMusicOnChanged: true
+    songs:
+      - "EndPortalRoom"
+```
+
+There's also `STRUCTTAG=` for structure tags, same matching rules.
+
+Shorthand tags are available for the common vanilla structures:
+
+- `STRONGHOLD`, `FORTRESS`, `BASTION`, `MANSION`, `MONUMENT`, `MINESHAFT`, `ANCIENT_CITY`, `END_CITY`, `TRIAL`, `PYRAMID`, `TEMPLE`, `OUTPOST`, `SHIPWRECK`
+
+**This requires the mod installed on the server too** (not just the client) — structure data isn't something the client can reliably know on its own, so it's synced from the server. If the server doesn't have the mod (or a server admin has turned it off, see below), `STRUCT=`/`STRUCTTAG=`/the shorthand tags above will simply never match, same as any other condition whose data isn't available — no errors, the rest of your songpack keeps working normally.
+
+Server admins can disable structure syncing with `/gamerule reactivemusicStructureSync false`. It defaults to on. This is a real vanilla gamerule, not a separate config file, so it shows up in `/gamerule` like any other and can be set in a server's `server.properties`/datapack/command block setup like usual.
+
+Use `/reactivemusic logStructures` to print the structures/tags currently detected at your position to chat and the log — this works without any songpack loaded or selected, so it's the fastest way to confirm the server round-trip is actually working before you build `STRUCT=` conditions around it.
+
+<br><br>
+
+
 # Mod Configuration
 
 ## Making Sounds Mute Music
