@@ -91,6 +91,8 @@ public final class SongPicker {
     public static boolean queuedEndPortalLitPulse = false;
 
     private static String lastLoggedBiomeName = null;
+    private static Set<String> previousActiveTags = Set.of();
+    private static Set<String> previousActiveBossBars = Set.of();
 
     private static Vec3 lastMovedPos = null;
     private static long lastMovedTick = 0;
@@ -390,6 +392,24 @@ public final class SongPicker {
 
 
         songpackEventMap.put(SongpackEventType.GENERIC, true);
+
+        if (ReactiveMusic.config.debugModeEnabled) {
+            Set<String> activeTags = new TreeSet<>();
+            for (var mapEntry : songpackEventMap.entrySet()) {
+                if (mapEntry.getKey() != SongpackEventType.GENERIC && Boolean.TRUE.equals(mapEntry.getValue())) {
+                    activeTags.add(mapEntry.getKey().name());
+                }
+            }
+            logSetChange("Tags", previousActiveTags, activeTags);
+            previousActiveTags = activeTags;
+
+            Set<String> activeBossBars = new TreeSet<>();
+            if (currentDragonBossBar) activeBossBars.add("dragon");
+            if (currentWitherBossBar) activeBossBars.add("wither");
+            if (currentRaidBossBar) activeBossBars.add("raid");
+            logSetChange("Boss bars", previousActiveBossBars, activeBossBars);
+            previousActiveBossBars = activeBossBars;
+        }
     }
 
 
