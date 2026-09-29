@@ -107,7 +107,7 @@ These combine freely, including on the shorthand tags below:
     songs:
       - "Freedom"
 
-  - events: [ "!NETHER", "ROOF || CLOUDS" ]
+  - events: [ "!NETHER", "SWIM || VILLAGE" ]
     songs:
       - "WhereIBelong"
 ```
