@@ -5,7 +5,6 @@ pluginManagement {
         maven("https://maven.fabricmc.net/")
         maven("https://maven.architectury.dev")
         maven("https://maven.minecraftforge.net")
-        maven("https://maven.neoforged.net/releases/")
         maven("https://maven.kikugie.dev/snapshots")
     }
 }
@@ -18,12 +17,11 @@ stonecutter {
     centralScript = "build.gradle.kts"
     kotlinController = true
     create(rootProject) {
-        versions("1.19.2", "1.20.1", "1.21.1", "1.21.11")
+        versions("26.1.2")
+        // 26.2 needs more porting work beyond the mapping-scheme switch: Minecraft.screen was
+        // removed in favor of setScreenAndShow(Screen) with no public getter, and Gui.getBossOverlay()
+        // was relocated. Re-add "26.2" here once ModConfig/SongPicker are updated for those.
         branch("fabric")
-        branch("forge") { versions("1.19.2", "1.20.1") }
-        branch("neoforge") { versions("1.21.1") }
-        // NeoForge 1.21.11 blocked on yarn-mappings-patch-neoforge update
-        // Re-add: branch("neoforge") { versions("1.21.1", "1.21.11") }
     }
 }
 
