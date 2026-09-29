@@ -2,12 +2,10 @@ package circuitlord.reactivemusic.mixin;
 
 import circuitlord.reactivemusic.ReactiveMusic;
 import circuitlord.reactivemusic.SongPicker;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.client.sounds.SoundEngine;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -19,12 +17,6 @@ public class SoundManagerMixin {
     private void play(SoundInstance soundInstance, CallbackInfoReturnable<SoundEngine.PlayResult> cir) {
 
         String path = soundInstance.getIdentifier().getPath();
-
-        Minecraft mc = Minecraft.getInstance();
-
-        if (mc.player != null && ReactiveMusic.printSoundEvents) {
-            mc.player.sendSystemMessage(Component.literal("[ReactiveMusic]: Sound: " + path + " Attenuation: " + soundInstance.getAttenuation()));
-        }
 
         // vanilla plays this globally (via a LevelEvent, same mechanism as e.g. the wither's spawn
         // sound) the instant the last eye of ender completes a portal frame - same signal DCME-style

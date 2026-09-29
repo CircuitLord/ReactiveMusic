@@ -21,7 +21,7 @@ This also works for reloading a songpack if you've made changes you want to try 
 I also highly recommend turning debug mode on in the Debug section,
 this will make songs switch whenever their events become valid and removes silence gaps entirely to make it easier to test.
 
-You can also run `/reactivemusic toggleLogging` to display what the mod is doing in real-time.
+Debug mode also makes the mod log what it's doing to the console/log file (song switches, biome/structure changes, etc.) — no separate logging commands needed, and it doesn't spam chat.
 
 <br>
 
@@ -306,7 +306,7 @@ Shorthand tags are available for the common vanilla structures:
 
 Server admins can disable structure syncing with `/gamerule reactivemusicStructureSync false`. It defaults to on. This is a real vanilla gamerule, not a separate config file, so it shows up in `/gamerule` like any other and can be set in a server's `server.properties`/datapack/command block setup like usual.
 
-Use `/reactivemusic logStructures` to print the structures/tags currently detected at your position to chat and the log — this works without any songpack loaded or selected, so it's the fastest way to confirm the server round-trip is actually working before you build `STRUCT=` conditions around it.
+With debug mode on (see [Testing Songpacks](#testing-songpacks)), the mod logs structure enter/leave changes to the console — this works without any songpack loaded or selected, so it's the fastest way to confirm the server round-trip is actually working before you build `STRUCT=` conditions around it.
 
 <br><br>
 
@@ -315,7 +315,7 @@ Use `/reactivemusic logStructures` to print the structures/tags currently detect
 
 ## Making Sounds Mute Music
 
-In-game, do `/reactivemusic toggleSoundEventLogging` to start printing the nearby sound events happening into chat.
+You'll need the sound event's path (e.g. `block.beacon.ambient`) to match against — check a resource pack's `sounds.json` or the Minecraft Wiki if you're not sure of the exact name.
 
 In the ReactiveMusic.json5 config, you can edit the `soundsMuteMusic` field with the names/partial names of any sound events that you want to mute RM when they play. This respects positional sound distance. This requires a game restart to be re-loaded.
 

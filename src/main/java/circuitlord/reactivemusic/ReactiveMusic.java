@@ -84,15 +84,10 @@ public class ReactiveMusic {
 	private static List<RMRuntimeEntry> loadedEntries = new ArrayList<>();
 
 
-    public static boolean printSoundEvents = false;
-
 	private static final List<TrackedSoundMuteMusic> trackedSoundsMuteMusic = new ArrayList<>();
 
 
     // Server reference removed - was unused placeholder code
-
-
-    public static boolean chatLoggingEnabled = false;
 
 
 	public static void init() {
@@ -683,17 +678,12 @@ public class ReactiveMusic {
 
 
 
+    // console-only, gated by the mod config's debug toggle - no separate logging commands/flags,
+    // and no chat output (chat gets flooded fast since this fires on every entry validity change)
     private static void doDebugLog(String text) {
+        if (!config.debugModeEnabled) return;
 
-        var debugString = "[ReactiveMusic]: " + text;
-
-        LOGGER.info(debugString);
-
-        if (!chatLoggingEnabled || Minecraft.getInstance() == null || Minecraft.getInstance().player == null)
-            return;
-
-        Minecraft.getInstance().player.sendSystemMessage(Component.literal(debugString));
-
+        LOGGER.info("[ReactiveMusic]: " + text);
     }
 
 

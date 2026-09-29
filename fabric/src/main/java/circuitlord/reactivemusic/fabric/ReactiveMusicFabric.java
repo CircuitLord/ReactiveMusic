@@ -34,20 +34,6 @@ public class ReactiveMusicFabric implements ClientModInitializer {
                         })
                 )
 
-                .then(ClientCommands.literal("logStructures")
-                        .executes(context -> {
-                            SongPicker.printStructureDebug();
-                            return 1;
-                        })
-                )
-
-                .then(ClientCommands.literal("toggleSoundEventLogging")
-                        .executes(context -> {
-                            ReactiveMusic.printSoundEvents = !ReactiveMusic.printSoundEvents;
-                            return 1;
-                        })
-                )
-
                 .then(ClientCommands.literal("blacklistDimension")
                         .executes(context -> {
                             String key = context.getSource().getClient().level.dimension().identifier().toString();
@@ -76,14 +62,6 @@ public class ReactiveMusicFabric implements ClientModInitializer {
                             context.getSource().sendFeedback(Component.literal("[ReactiveMusic]: Removed " + key + " from blacklist."));
                             ReactiveMusic.config.blacklistedDimensions.remove(key);
                             ModConfig.saveConfig();
-                            return 1;
-                        })
-                )
-
-                .then(ClientCommands.literal("toggleLogging")
-                        .executes(context -> {
-                            ReactiveMusic.chatLoggingEnabled = !ReactiveMusic.chatLoggingEnabled;
-                            context.getSource().sendFeedback(Component.literal("[ReactiveMusic]: Logging enabled: " + ReactiveMusic.chatLoggingEnabled));
                             return 1;
                         })
                 )

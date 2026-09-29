@@ -90,6 +90,8 @@ public final class SongPicker {
     // tick - it's a global one-shot event, not per-player sustained state like everything else here
     public static boolean queuedEndPortalLitPulse = false;
 
+    private static String lastLoggedBiomeName = null;
+
     private static Vec3 lastMovedPos = null;
     private static long lastMovedTick = 0;
     private static final double AFK_MOVE_EPSILON_SQ = 0.0025; // ~0.05 blocks/tick
@@ -112,24 +114,23 @@ public final class SongPicker {
     }
 
     public static void onStructureSyncReceived(Set<String> structureIds, Set<String> structureTagIds) {
+        if (ReactiveMusic.config.debugModeEnabled) {
+            logSetChange("Structures", currentStructureIds, structureIds);
+        }
+
         currentStructureIds = structureIds;
         currentStructureTagIds = structureTagIds;
     }
 
-    // reads the current state directly (no soundpack, no waiting for a position change needed) -
-    // structures only update from the server on a position change, so deferring this to "next
-    // update" like the block counter debug print does could sit unfired indefinitely if the
-    // player isn't moving
-    public static void printStructureDebug() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
+    private static void logSetChange(String label, Set<String> oldValues, Set<String> newValues) {
+        Set<String> entered = new HashSet<>(newValues);
+        entered.removeAll(oldValues);
 
-        String message = "[ReactiveMusic]: Structures at current position: "
-                + (currentStructureIds.isEmpty() ? "(none)" : String.join(", ", currentStructureIds))
-                + " | Tags: " + (currentStructureTagIds.isEmpty() ? "(none)" : String.join(", ", currentStructureTagIds));
+        Set<String> left = new HashSet<>(oldValues);
+        left.removeAll(newValues);
 
-        mc.player.sendSystemMessage(Component.literal(message));
-        ReactiveMusic.LOGGER.info(message);
+        if (!entered.isEmpty()) ReactiveMusic.LOGGER.info("[ReactiveMusic]: " + label + " entered: " + String.join(", ", entered));
+        if (!left.isEmpty()) ReactiveMusic.LOGGER.info("[ReactiveMusic]: " + label + " left: " + String.join(", ", left));
     }
 
 
@@ -165,6 +166,13 @@ public final class SongPicker {
         currentBiomeName = (String) biome.unwrapKey().map((key) -> {
             return key.identifier().toString();
         }).orElse("[unregistered]");
+
+        if (ReactiveMusic.config.debugModeEnabled && !currentBiomeName.equals(lastLoggedBiomeName)) {
+            if (lastLoggedBiomeName != null) {
+                ReactiveMusic.LOGGER.info("[ReactiveMusic]: Biome changed: " + lastLoggedBiomeName + " -> " + currentBiomeName);
+            }
+            lastLoggedBiomeName = currentBiomeName;
+        }
 
         boolean underground = !world.canSeeSky(playerPos);
         var indimension = world.dimension();
