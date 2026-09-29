@@ -138,8 +138,6 @@ public class ReactiveMusic {
 	public static void newTick() {
 
 		if (thread == null) return;
-		if (currentSongpack == null) return;
-		if (loadedEntries.isEmpty()) return;
 
 		Minecraft mc = Minecraft.getInstance();
 		if (mc == null) return;
@@ -185,6 +183,12 @@ public class ReactiveMusic {
 
 			slowTickUpdateCounter = 0;
 		}
+
+		// nothing to actually play without an active songpack - but event/state tracking above
+		// (and its debug logging) still needs to run without one, so this can't be an early
+		// return at the top of the method
+		if (currentSongpack == null) return;
+		if (loadedEntries.isEmpty()) return;
 
 
 		// -------------------------
