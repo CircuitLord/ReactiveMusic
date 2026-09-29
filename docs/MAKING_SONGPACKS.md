@@ -125,6 +125,14 @@ block) — using the shorthand or spelling it out yourself works identically.
 - `MENU`
 - `CREDITS`
 - `HOME` (within 45 blocks of bed)
+- `END_PORTAL_LIT` — the moment an end portal is completed (last eye of ender
+  placed), **anywhere in the world**, not just near you. Detected client-side
+  off the same global sound cue the game itself plays for it (comparable to
+  how the wither's spawn sound works) — no server-side support needed. This
+  is a **one-shot pulse**: it reads true for a single tick right when it
+  happens, then goes back to false, rather than staying true like every other
+  tag here. Pair it with `forceStartMusicOnValid`/`forceStopMusicOnChanged`
+  if you want a one-off musical sting rather than a sustained event.
 
 ### Dimension
 - `OVERWORLD`, `NETHER`, `END`

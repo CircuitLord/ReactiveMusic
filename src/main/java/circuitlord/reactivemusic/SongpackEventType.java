@@ -6,6 +6,7 @@ public enum SongpackEventType {
 
     MENU,
     CREDITS,
+    END_PORTAL_LIT,
 
 
     HOME,

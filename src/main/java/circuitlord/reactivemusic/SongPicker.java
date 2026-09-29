@@ -85,6 +85,11 @@ public final class SongPicker {
     public static Set<String> currentStructureIds = Set.of();
     public static Set<String> currentStructureTagIds = Set.of();
 
+    // set by SoundManagerMixin the instant the global "end portal lit" sound plays; consumed (and
+    // cleared) by the very next tickEventMap() call, so END_PORTAL_LIT reads true for exactly one
+    // tick - it's a global one-shot event, not per-player sustained state like everything else here
+    public static boolean queuedEndPortalLitPulse = false;
+
     private static Vec3 lastMovedPos = null;
     private static long lastMovedTick = 0;
     private static final double AFK_MOVE_EPSILON_SQ = 0.0025; // ~0.05 blocks/tick
@@ -145,6 +150,9 @@ public final class SongPicker {
 
         songpackEventMap.put(SongpackEventType.MENU, player == null || world == null);
         songpackEventMap.put(SongpackEventType.CREDITS, mc.screen instanceof WinScreen);
+
+        songpackEventMap.put(SongpackEventType.END_PORTAL_LIT, queuedEndPortalLitPulse);
+        queuedEndPortalLitPulse = false;
 
         // Early out if not in-game
         if (player == null || world == null) return;

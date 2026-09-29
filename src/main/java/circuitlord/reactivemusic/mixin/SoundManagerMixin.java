@@ -1,6 +1,7 @@
 package circuitlord.reactivemusic.mixin;
 
 import circuitlord.reactivemusic.ReactiveMusic;
+import circuitlord.reactivemusic.SongPicker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundManager;
@@ -23,6 +24,13 @@ public class SoundManagerMixin {
 
         if (mc.player != null && ReactiveMusic.printSoundEvents) {
             mc.player.sendSystemMessage(Component.literal("[ReactiveMusic]: Sound: " + path + " Attenuation: " + soundInstance.getAttenuation()));
+        }
+
+        // vanilla plays this globally (via a LevelEvent, same mechanism as e.g. the wither's spawn
+        // sound) the instant the last eye of ender completes a portal frame - same signal DCME-style
+        // mods use since there's no other reliable client-side way to detect it
+        if (path.contains("end_portal.spawn")) {
+            SongPicker.queuedEndPortalLitPulse = true;
         }
 
         if (path.contains("music_disc")) {
