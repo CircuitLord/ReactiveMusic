@@ -13,8 +13,11 @@
 	},
 	"license": "GPLv3",
 	"icon": "assets/reactivemusic/icon.png",
-	"environment": "client",
+	"environment": "*",
 	"entrypoints": {
+		"main": [
+			"circuitlord.reactivemusic.fabric.ReactiveMusicFabricCommon"
+		],
 		"client": [
 			"circuitlord.reactivemusic.fabric.ReactiveMusicFabric"
 		],

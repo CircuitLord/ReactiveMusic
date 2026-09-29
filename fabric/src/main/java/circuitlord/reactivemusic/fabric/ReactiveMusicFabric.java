@@ -17,6 +17,8 @@ public class ReactiveMusicFabric implements ClientModInitializer {
         ReactiveMusic.init();
         ReactiveMusic.initClient();
 
+        RMStructureSyncClient.init();
+
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(ClientCommands.literal("reactivemusic")
                 .executes(context -> {
                     Minecraft mc = context.getSource().getClient();
@@ -28,6 +30,13 @@ public class ReactiveMusicFabric implements ClientModInitializer {
                 .then(ClientCommands.literal("logBlockCounter")
                         .executes(context -> {
                             SongPicker.queuedToPrintBlockCounter = true;
+                            return 1;
+                        })
+                )
+
+                .then(ClientCommands.literal("logStructures")
+                        .executes(context -> {
+                            SongPicker.printStructureDebug();
                             return 1;
                         })
                 )
