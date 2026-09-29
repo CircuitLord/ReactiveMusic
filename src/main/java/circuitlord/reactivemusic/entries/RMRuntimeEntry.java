@@ -6,7 +6,6 @@ import circuitlord.reactivemusic.platform.BiomeTagHelper;
 import circuitlord.reactivemusic.entries.predicate.RMAttackerPredicate;
 import circuitlord.reactivemusic.entries.predicate.RMBiomeNamePredicate;
 import circuitlord.reactivemusic.entries.predicate.RMBiomeTagPredicate;
-import circuitlord.reactivemusic.entries.predicate.RMBlockCountPredicate;
 import circuitlord.reactivemusic.entries.predicate.RMDimensionPredicate;
 import circuitlord.reactivemusic.entries.predicate.RMNearbyEntityPredicate;
 import circuitlord.reactivemusic.entries.predicate.RMNotPredicate;
@@ -114,22 +113,8 @@ public class RMRuntimeEntry {
 
     private static RMPredicate resolveSegment(RMRuntimeEntry Entry, String eventSection) {
 
-        if (eventSection.startsWith("block=")) {
-
-            String blockData = eventSection.substring(6);
-            String[] parts = blockData.split(",");
-
-            // make sure it's a number, dunno why this is the syntax for that
-            if (parts.length >= 2 && parts[1].matches("\\d+")) {
-                return new RMBlockCountPredicate(parts[0], Integer.parseInt(parts[1]));
-            } else {
-                Entry.errorString += "Invalid syntax: " + eventSection + "!\n\n";
-                return null;
-            }
-        }
-
         // see if it's a biome event
-        else if (eventSection.startsWith("biome=")) {
+        if (eventSection.startsWith("biome=")) {
 
             String biomeName = eventSection.substring(6);
             if (biomeName.isEmpty())

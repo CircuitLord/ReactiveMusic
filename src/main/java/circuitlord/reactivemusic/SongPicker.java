@@ -5,10 +5,8 @@ import circuitlord.reactivemusic.config.ModConfig;
 import circuitlord.reactivemusic.entries.RMRuntimeEntry;
 import circuitlord.reactivemusic.entries.predicate.RMPredicate;
 import circuitlord.reactivemusic.mixin.BossBarHudAccessor;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.world.BossEvent;
 import net.minecraft.network.chat.contents.TranslatableContents;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.WinScreen;
 import net.minecraft.client.player.LocalPlayer;
@@ -16,13 +14,11 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 
-import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.vehicle.boat.Boat;
 import net.minecraft.world.entity.vehicle.minecart.Minecart;
 import net.minecraft.world.entity.EquipmentSlot;
 
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.BlockPos;
@@ -56,17 +52,6 @@ public final class SongPicker {
         public double distance;
     }
 
-
-    private static final Set<String> BLOCK_COUNTER_BLACKLIST = Set.of(); // = Set.of("ore", "debris");
-    private static final Map<Block, String> BLOCK_ID_CACHE = new IdentityHashMap<>();
-
-    public static boolean queuedToPrintBlockCounter = false;
-    public static BlockPos cachedBlockCounterOrigin;
-    public static int currentBlockCounterX = 99999;
-    public static int currentBlockCounterY = 99999;
-
-    public static Object2IntOpenHashMap<String> blockCounterMap = new Object2IntOpenHashMap<>();
-    public static Object2IntOpenHashMap<String> cachedBlockChecker = new Object2IntOpenHashMap<>();
 
     public static String currentBiomeName = "";
     public static String currentDimName = "";
@@ -332,20 +317,6 @@ public final class SongPicker {
 
         }
 
-        {
-            List<Monster> nearbyHostile = world.getEntitiesOfClass(Monster.class,
-                    GetBoxAroundPlayer(player, 12.f, 6.f),
-                    entity -> entity != null);
-
-            songpackEventMap.put(SongpackEventType.NEARBY_MOBS, nearbyHostile.size() >= 1);
-
-        }
-
-
-        //songpackEventMap.put(SongpackEventType.HOSTILE_MOBS, aggroMobsCount >= 4);
-
-        //System.out.println("Villager count: " + villagerCount + ", Aggro mobs count: " + aggroMobsCount);
-
 
         // try to get boss bars
         boolean bossBarActive = false;
@@ -414,109 +385,6 @@ public final class SongPicker {
 
 
 
-    public static void tickBlockCounterMap() {
-
-        int RADIUS = 25;
-
-        Minecraft mc = Minecraft.getInstance();
-        LocalPlayer player = mc.player;
-        Level world = mc.level;
-        if (player == null || world == null)
-            return;
-
-
-
-        // Advance y, then x
-/*        currentBlockCounterY++;
-        if (currentBlockCounterY > RADIUS) {
-            currentBlockCounterY = -RADIUS;
-
-            currentBlockCounterX++;
-
-            ReactiveMusic.LOGGER.info("blockchecker X:" + currentBlockCounterX);
-            if (currentBlockCounterX > RADIUS) {
-                currentBlockCounterX = -RADIUS;
-
-               // ReactiveMusic.LOGGER.info("blockchecker X:" + currentBlockCounterX);
-            }
-        }*/
-
-        // just X
-        currentBlockCounterX++;
-        if (currentBlockCounterX > RADIUS) {
-            currentBlockCounterX = -RADIUS;
-        }
-
-        // finished iterating, reset
-        if (currentBlockCounterX == -RADIUS/* && currentBlockCounterY == -RADIUS*/) {
-            // ReactiveMusic.LOGGER.info("Finished checking for blocks, resetting! Total: " + blockCounterMap.size());
-
-            if (queuedToPrintBlockCounter) {
-
-                player.sendSystemMessage(Component.literal("[ReactiveMusic]: Logging Block Counter map! Radius: " + RADIUS));
-
-                blockCounterMap.object2IntEntrySet().stream()
-                        .sorted((first, second) -> Integer.compare(second.getIntValue(), first.getIntValue()))
-                        .forEach(entry -> player.sendSystemMessage(Component.literal(entry.getKey() + ": " + entry.getIntValue())));
-
-                queuedToPrintBlockCounter = false;
-
-            }
-
-            Object2IntOpenHashMap<String> completedScan = cachedBlockChecker;
-            cachedBlockChecker = blockCounterMap;
-            blockCounterMap = completedScan;
-            blockCounterMap.clear();
-            cachedBlockCounterOrigin = player.blockPosition();
-
-        }
-
-        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
-
-        for (int y = -RADIUS; y <= RADIUS; y++) {
-            for (int z = -RADIUS; z <= RADIUS; z++) {
-
-                // don't allocate new blockpos everytime
-                mutablePos.set(
-                        cachedBlockCounterOrigin.getX() + currentBlockCounterX,
-                        cachedBlockCounterOrigin.getY() + y,
-                        cachedBlockCounterOrigin.getZ() + z
-                );
-
-
-                Block block = world.getBlockState(mutablePos).getBlock();
-                String key = getBlockId(block);
-
-                boolean isBlacklisted = false;
-                for (String black : BLOCK_COUNTER_BLACKLIST) {
-                    if (key.contains(black)) {
-                        isBlacklisted = true;
-                        break;
-                    }
-                }
-                if (isBlacklisted)
-                    continue;
-
-                blockCounterMap.addTo(key, 1);
-
-            }
-        }
-
-
-    }
-
-
-
-    private static String getBlockId(Block block) {
-        String id = BLOCK_ID_CACHE.get(block);
-        if (id != null) return id;
-
-        id = BuiltInRegistries.BLOCK.getKey(block).toString();
-        BLOCK_ID_CACHE.put(block, id);
-        return id;
-    }
-
-
     private static boolean isMoving(Entity entity) {
         Vec3 delta = entity.getDeltaMovement();
         return (delta.x * delta.x + delta.z * delta.z) > 0.0025; // ~0.05 blocks/tick horizontally
@@ -530,14 +398,6 @@ public final class SongPicker {
         id = EntityType.getKey(type).toString();
         ENTITY_TYPE_ID_CACHE.put(type, id);
         return id;
-    }
-
-
-    private static AABB GetBoxAroundPlayer(LocalPlayer player, float radiusXZ, float radiusY) {
-
-        return new AABB(player.getX() - radiusXZ, player.getY() - radiusY, player.getZ() - radiusXZ,
-                player.getX() + radiusXZ, player.getY() + radiusY, player.getZ() + radiusXZ);
-
     }
 
 

@@ -193,7 +193,6 @@ custom name instead). The dragon and raid boss bars can't be renamed, so they
 always match by key.
 
 ### Other
-- `NEARBY_MOBS` (nearby >= 1 monster)
 - `GENERIC` (always true — matches everything, useful as a fallback entry)
 
 <br><br>
@@ -269,20 +268,6 @@ Attacker detection sticks around for a few seconds after the last hit so the mus
 <br><br>
 
 
-## Block Events
-
-In version 1.2.0 and above, you can detect nearby blocks in a square 25 block radius.
-
-Use `/reactivemusic logBlockCounter` to print the nearby block counts to get an idea of what numbers to use.
-
-Fortress detection example:
-```
-# 1000 nether bricks and 2 brick fences within 25 blocks
-[ "DIM=NETHER", "BLOCK=nether_bricks,1000", "BLOCK=nether_brick_fence,2" ]
-```
-
-
-<br><br>
 
 
 ## Structure Events

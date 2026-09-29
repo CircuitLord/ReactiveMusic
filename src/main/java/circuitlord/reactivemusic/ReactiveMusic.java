@@ -159,9 +159,6 @@ public class ReactiveMusic {
 		}
 
 
-		// always tick this
-		SongPicker.tickBlockCounterMap();
-
 		slowTickUpdateCounter++;
 		if (slowTickUpdateCounter > 20) {
 

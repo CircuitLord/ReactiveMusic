@@ -1,7 +1,6 @@
 package circuitlord.reactivemusic.fabric;
 
 import circuitlord.reactivemusic.ReactiveMusic;
-import circuitlord.reactivemusic.SongPicker;
 import circuitlord.reactivemusic.config.ModConfig;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
@@ -26,13 +25,6 @@ public class ReactiveMusicFabric implements ClientModInitializer {
                     mc.execute(() -> mc.setScreen(screen));
                     return 1;
                 })
-
-                .then(ClientCommands.literal("logBlockCounter")
-                        .executes(context -> {
-                            SongPicker.queuedToPrintBlockCounter = true;
-                            return 1;
-                        })
-                )
 
                 .then(ClientCommands.literal("blacklistDimension")
                         .executes(context -> {
