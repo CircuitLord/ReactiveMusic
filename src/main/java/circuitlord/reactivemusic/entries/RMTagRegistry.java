@@ -69,16 +69,20 @@ public class RMTagRegistry {
         TAGS.put("LOW", () -> new RMStatePredicate(() -> SongPicker.currentHealth < 10f));
         TAGS.put("CRIT", () -> new RMStatePredicate(() -> SongPicker.currentHealth < 4f));
 
-        // combat: entity/attacker shorthand
-        // NOTE: the "...or <boss> bossbar is visible" alternative from tags.md isn't included yet -
-        // that needs boss-identity detection (which boss a bossbar belongs to), not just entity/attacker checks.
+        // combat: entity/attacker shorthand, now with boss-identity detection
+        // (boss bar color is hardcoded per boss type in vanilla - see SongPicker.tickEventMap)
         TAGS.put("WARDEN", () -> new RMAttackerPredicate("warden"));
         TAGS.put("NEAR_WARDEN", () -> new RMNearbyEntityPredicate("warden", 40));
         TAGS.put("DRAGON", () -> new RMAttackerPredicate("ender_dragon"));
-        TAGS.put("NEAR_DRAGON", () -> new RMNearbyEntityPredicate("ender_dragon", 120));
+        TAGS.put("NEAR_DRAGON", () -> new RMOrPredicate(List.of(
+                new RMNearbyEntityPredicate("ender_dragon", 120),
+                new RMStatePredicate(() -> SongPicker.currentDragonBossBar))));
         TAGS.put("WITHER", () -> new RMAttackerPredicate("wither"));
-        TAGS.put("NEAR_WITHER", () -> new RMNearbyEntityPredicate("wither", 60));
+        TAGS.put("NEAR_WITHER", () -> new RMOrPredicate(List.of(
+                new RMNearbyEntityPredicate("wither", 60),
+                new RMStatePredicate(() -> SongPicker.currentWitherBossBar))));
         TAGS.put("GUARDIAN", () -> new RMAttackerPredicate("elder_guardian"));
+        TAGS.put("RAID", () -> new RMStatePredicate(() -> SongPicker.currentRaidBossBar));
     }
 
     /**

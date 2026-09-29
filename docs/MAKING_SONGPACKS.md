@@ -166,10 +166,21 @@ block) — using the shorthand or spelling it out yourself works identically.
 - `WARDEN` — *shorthand* for `ATTACKER=warden`
 - `NEAR_WARDEN` — *shorthand* for `ENTITY=warden,40`
 - `DRAGON` — *shorthand* for `ATTACKER=ender_dragon`
-- `NEAR_DRAGON` — *shorthand* for `ENTITY=ender_dragon,120`
+- `NEAR_DRAGON` — *shorthand* for `ENTITY=ender_dragon,120` OR the dragon's boss bar is visible
 - `WITHER` — *shorthand* for `ATTACKER=wither`
-- `NEAR_WITHER` — *shorthand* for `ENTITY=wither,60`
+- `NEAR_WITHER` — *shorthand* for `ENTITY=wither,60` OR the wither's boss bar is visible
 - `GUARDIAN` — *shorthand* for `ATTACKER=elder_guardian`
+- `RAID` — a raid's boss bar is visible
+
+Boss identification (`NEAR_DRAGON`/`NEAR_WITHER`/`RAID`'s boss bar checks) works
+by the boss bar's translation key (`entity.minecraft.ender_dragon`,
+`entity.minecraft.wither`, `event.minecraft.raid`) — the same identity signal
+resource packs use to reskin boss bars, so it's locale-independent and specific
+to the exact boss. It falls back to the boss bar's color (dragon = pink,
+wither = purple, raid = red) only when there's no translation key to read,
+which happens for a custom-named wither (a renamed wither's boss bar shows the
+custom name instead). The dragon and raid boss bars can't be renamed, so they
+always match by key.
 
 ### Other
 - `NEARBY_MOBS` (nearby >= 1 monster)

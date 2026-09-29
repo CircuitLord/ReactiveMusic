@@ -6,6 +6,8 @@ import circuitlord.reactivemusic.entries.RMRuntimeEntry;
 import circuitlord.reactivemusic.entries.predicate.RMPredicate;
 import circuitlord.reactivemusic.mixin.BossBarHudAccessor;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import net.minecraft.world.BossEvent;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.WinScreen;
@@ -73,6 +75,10 @@ public final class SongPicker {
     public static float currentHealth = 20f;
     public static boolean currentSkyHidden = false;
     public static int currentSeaLevel = 63;
+
+    public static boolean currentDragonBossBar = false;
+    public static boolean currentWitherBossBar = false;
+    public static boolean currentRaidBossBar = false;
 
     private static Vec3 lastMovedPos = null;
     private static long lastMovedTick = 0;
@@ -299,6 +305,9 @@ public final class SongPicker {
 
         // try to get boss bars
         boolean bossBarActive = false;
+        currentDragonBossBar = false;
+        currentWitherBossBar = false;
+        currentRaidBossBar = false;
 
         if (mc.gui != null && mc.gui.getBossOverlay() != null) {
             try {
@@ -307,6 +316,28 @@ public final class SongPicker {
 
                 if (!bossBars.isEmpty()) {
                     bossBarActive = true;
+                }
+
+                // Identify by the boss bar's translation key first - locale-independent and, unlike
+                // color, specific to the exact boss (verified against the real 26.1.2 jar: dragon and
+                // raid always use "entity.minecraft.ender_dragon"/"event.minecraft.raid", fixed, never
+                // overridable). Falls back to the boss bar's color (vanilla hardcodes one per boss
+                // type) only when there's no translation key - e.g. a custom-named wither, since a
+                // renamed wither's boss bar shows the custom name instead of its translation key.
+                for (var bossBar : bossBars.values()) {
+                    String key = bossBar.getName().getContents() instanceof TranslatableContents translatable
+                            ? translatable.getKey() : null;
+
+                    if (key != null) {
+                        if (key.equals("entity.minecraft.ender_dragon")) currentDragonBossBar = true;
+                        else if (key.equals("entity.minecraft.wither")) currentWitherBossBar = true;
+                        else if (key.equals("event.minecraft.raid")) currentRaidBossBar = true;
+                    } else {
+                        BossEvent.BossBarColor color = bossBar.getColor();
+                        if (color == BossEvent.BossBarColor.PINK) currentDragonBossBar = true;
+                        else if (color == BossEvent.BossBarColor.PURPLE) currentWitherBossBar = true;
+                        else if (color == BossEvent.BossBarColor.RED) currentRaidBossBar = true;
+                    }
                 }
             } catch (Exception e) {
             }
