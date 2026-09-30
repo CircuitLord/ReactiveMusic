@@ -29,6 +29,7 @@ public class ReactiveMusic {
 	private static final boolean PERFORMANCE_LOGGING_ENABLED = Boolean.getBoolean("reactivemusic.performanceLogging");
 	private static final long PERFORMANCE_LOG_INTERVAL_NANOS = 5_000_000_000L;
 	public static final int FADE_DURATION = 150;
+	public static final int QUICK_FADE_DURATION = 20;
 	public static final int SILENCE_DURATION = 100;
 
 	public static int additionalSilence = 0;
@@ -52,6 +53,10 @@ public class ReactiveMusic {
 	static int waitForStopTicks = 0;
 	static int waitForNewSongTicks = 99999;
 	static int fadeOutTicks = 0;
+	// which duration the current fade-out episode uses - FADE_DURATION normally, QUICK_FADE_DURATION
+	// when triggered by an entry marked forcesQuickFade. Set at the moment a fade-out is queued,
+	// consumed by tickFadeOut() and the resume-fade-in adjustment below, reset in resetPlayer().
+	static int fadeOutDuration = FADE_DURATION;
 	//static int fadeInTicks = 0;
 	static int silenceTicks = 0;
 
@@ -244,7 +249,7 @@ public class ReactiveMusic {
 				fadeOutTicks--;
 
 				// Copy the behavior from below where it fades out
-				thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
+				thread.setGainPercentage(1f - (fadeOutTicks / (float)fadeOutDuration));
 			}
 
 
@@ -313,6 +318,7 @@ public class ReactiveMusic {
 		// this can happen if no entry is valid or the dimension is blacklisted
 		else {
 
+			fadeOutDuration = FADE_DURATION;
 			tickFadeOut();
 
 		}
@@ -405,6 +411,7 @@ public class ReactiveMusic {
 				if (entry.cachedRandomChance <= entry.forceChance) {
 
                     doDebugLog("doing forceStopMusicOnInvalid: " + entry.eventString);
+					fadeOutDuration = FADE_DURATION;
 					queuedToStopMusic = true;
 				}
 
@@ -421,11 +428,12 @@ public class ReactiveMusic {
 				boolean randSuccess = entry.cachedRandomChance <= entry.forceChance;
 
 				// if this event wasn't valid before and is now
-				if (entry.forceStopMusicOnValid) {
+				if (entry.forceStopMusicOnValid || entry.forcesQuickFade) {
                     doDebugLog("trying forceStopMusicOnValid: " + entry.eventString);
 
 					if (randSuccess) {
                         doDebugLog("doing forceStopMusicOnValid: " + entry.eventString);
+						fadeOutDuration = entry.forcesQuickFade ? QUICK_FADE_DURATION : FADE_DURATION;
 						queuedToStopMusic = true;
 					}
 				}
@@ -455,9 +463,9 @@ public class ReactiveMusic {
 		if (!thread.isPlaying())
 			return;
 
-		if (fadeOutTicks < FADE_DURATION) {
+		if (fadeOutTicks < fadeOutDuration) {
 			fadeOutTicks++;
-			thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
+			thread.setGainPercentage(1f - (fadeOutTicks / (float)fadeOutDuration));
 		}
 		else {
 			resetPlayer();
@@ -586,6 +594,7 @@ public class ReactiveMusic {
 		}
 
 		fadeOutTicks = 0;
+		fadeOutDuration = FADE_DURATION;
 		queuedToStopMusic = false;
 		currentEntry = null;
 		currentSong = null;

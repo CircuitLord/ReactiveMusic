@@ -76,6 +76,17 @@ There are also a couple of other advanced params you can use:
 
 <br><br>
 
+**Some tags always force a quick fade-out once they become valid**, regardless
+of `forceStopMusicOnValid`/`forceChance` or the songpack's `musicSwitchSpeed` —
+these are all "something just happened, react now" moments: any combat tag
+(`COMBAT`, `LOW`, `CRIT`, `WARDEN`, `NEAR_WARDEN`, `DRAGON`, `NEAR_DRAGON`,
+`WITHER`, `NEAR_WITHER`, `GUARDIAN`, `RAID`), `END_PORTAL_LIT`, `MENU`,
+`CREDITS`, `RAIN`, and `STORM`. This is automatic — you don't need to set
+anything on the entry yourself, just use one of these tags anywhere in its
+`events`.
+
+<br><br>
+
 
 ### IMPORTANT: Spacing matters! Use tabs to properly indent the entries and their properties.
 A proper entry looks like this!
@@ -145,8 +156,9 @@ block) — using the shorthand or spelling it out yourself works identically.
 - `SUNSET`
 
 ### Weather
-- `RAIN`
-- `SNOW`
+- `RAIN` — also true while it's snowing (vanilla only has one weather-active
+  flag; snow is just how it renders in cold biomes, there's no separate
+  "is snowing" state to check)
 - `STORM`
 - `CLEAR` — no rain or storm
 
@@ -167,6 +179,13 @@ block) — using the shorthand or spelling it out yourself works identically.
 - `LEVEL` — *shorthand* for Overworld, above sea level
 - `UNDER` — *shorthand* for Overworld, sky not visible
 - `DEEP` — *shorthand* for Overworld, below y=0
+
+**`UNDER` is restricted by default** — an entry that doesn't mention `UNDER`
+anywhere (positively or with `!`) implicitly gets `!UNDER` added to it, so it
+won't play while the player is underground unless you explicitly opt in with
+`UNDER`. This only affects the Overworld (`UNDER` is always false elsewhere),
+so Nether/End entries are unaffected. Add `UNDER` (or `!UNDER`, which is the
+same as doing nothing) yourself to override this.
 
 ### Combat
 - `BOSS` (whenever a boss bar is on-screen)

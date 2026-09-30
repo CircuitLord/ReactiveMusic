@@ -20,7 +20,6 @@ public enum SongpackEventType {
 
     // --- Weather ---
     RAIN,
-    SNOW,
     STORM,
 
 

@@ -237,8 +237,9 @@ public final class SongPicker {
 
         // Weather
         currentSeaLevel = world.getSeaLevel();
-        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitationAt(playerPos, currentSeaLevel) == Biome.Precipitation.RAIN);
-        songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitationAt(playerPos, currentSeaLevel) == Biome.Precipitation.SNOW);
+        // vanilla only has one weather-active flag; snow is just how it renders in cold biomes,
+        // there's no separate "isSnowing" state, so RAIN covers both
+        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining());
 
         songpackEventMap.put(SongpackEventType.STORM, world.isThundering());
 
