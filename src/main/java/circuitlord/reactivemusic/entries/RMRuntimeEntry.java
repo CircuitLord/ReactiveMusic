@@ -19,9 +19,19 @@ import net.minecraft.world.level.biome.Biome;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 public class RMRuntimeEntry {
 
+    // entries using any of these bare tags force a quick fade once they become valid, regardless
+    // of the songpack's own forceStopMusicOnValid/musicSwitchSpeed settings - these are all
+    // "something just happened, react now" moments (danger, a menu/credits transition, a weather
+    // change) where waiting through the normal patient crossfade delay feels wrong
+    private static final Set<String> QUICK_FADE_TAGS = Set.of(
+            "combat", "low", "crit", "warden", "near_warden", "dragon", "near_dragon",
+            "wither", "near_wither", "guardian", "raid",
+            "end_portal_lit", "menu", "credits", "rain", "storm"
+    );
 
     public List<RMPredicate> conditions = new ArrayList<>();
 
@@ -33,6 +43,8 @@ public class RMRuntimeEntry {
     public boolean forceStopMusicOnInvalid = false;
 
     public boolean forceStartMusicOnValid = false;
+
+    public boolean forcesQuickFade = false;
 
     public float forceChance = 1.0f;
 
@@ -67,6 +79,8 @@ public class RMRuntimeEntry {
             Entry.eventString += songpackEntry.events[i] + "_";
         }
 
+        boolean mentionsUnder = false;
+
         for (String event : songpackEntry.events) {
 
             String cleanedEvent = event.replaceAll("\\s", "");
@@ -88,6 +102,9 @@ public class RMRuntimeEntry {
                 boolean negate = rawSection.startsWith("!");
                 String eventSection = negate ? rawSection.substring(1) : rawSection;
 
+                if (eventSection.equals("under")) mentionsUnder = true;
+                if (QUICK_FADE_TAGS.contains(eventSection)) Entry.forcesQuickFade = true;
+
                 RMPredicate predicate = resolveSegment(Entry, eventSection);
                 if (predicate == null) continue;
 
@@ -105,6 +122,12 @@ public class RMRuntimeEntry {
 
             Entry.conditions.add(combined);
 
+        }
+
+        // default to !UNDER unless the entry explicitly cares about UNDER one way or the other -
+        // UNDER is Overworld-only (see RMTagRegistry), so this is a no-op for Nether/End entries
+        if (!mentionsUnder) {
+            Entry.conditions.add(new RMNotPredicate(RMTagRegistry.resolve("under")));
         }
 
         return Entry;
