@@ -180,6 +180,11 @@ block) — using the shorthand or spelling it out yourself works identically.
 - `UNDER` — *shorthand* for Overworld, sky not visible
 - `DEEP` — *shorthand* for Overworld, below y=0
 
+`UNDER` checks for an actual solid block above you, not sky *light* — so
+swimming in open ocean doesn't count as `UNDER` even though water attenuates
+light (which would otherwise make it indistinguishable from a flooded cave).
+A genuine cave roof, even one that's flooded, still counts.
+
 **`UNDER` is restricted by default** — an entry that doesn't mention `UNDER`
 anywhere (positively or with `!`) implicitly gets `!UNDER` added to it, so it
 won't play while the player is underground unless you explicitly opt in with
@@ -189,7 +194,7 @@ same as doing nothing) yourself to override this.
 
 ### Combat
 - `BOSS` (whenever a boss bar is on-screen)
-- `COMBAT` (recently damaged, or damaged by, another entity)
+- `COMBAT` (recently damaged, or damaged by, a hostile mob or another player — not incidental damage like TNT, falling blocks, or thrown potions)
 - `LOW` — health below 10hp
 - `CRIT` — health below 4hp
 - `WARDEN` — *shorthand* for `ATTACKER=warden`

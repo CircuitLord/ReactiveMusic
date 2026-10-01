@@ -14,7 +14,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.boat.Boat;
 import net.minecraft.world.entity.vehicle.minecart.Minecart;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -161,7 +163,12 @@ public final class SongPicker {
             lastLoggedBiomeName = currentBiomeName;
         }
 
-        boolean underground = !world.canSeeSky(playerPos);
+        // NOT world.canSeeSky() here deliberately - that's a light-level check (sky light >= 15),
+        // and water attenuates skylight, so it reads "no sky" while swimming in open ocean at any
+        // real depth, indistinguishable from a flooded cave. This scans for an actual solid block
+        // above instead, ignoring fluids, so open ocean (sky, then water, then you) correctly
+        // counts as sky visible while a flooded cave (solid roof above) still doesn't.
+        boolean underground = hasSolidRoofAbove(world, playerPos);
         var indimension = world.dimension();
 
         currentDimName = indimension.identifier().toString();
@@ -266,11 +273,15 @@ public final class SongPicker {
         // remove past sources
         recentEntityDamageSources.entrySet().removeIf(entry -> entry.getKey() == null || !entry.getKey().isAlive() || world.getGameTime() - entry.getValue() > TIME_FOR_FORGET_DAMAGE_SOURCE);
 
-        // add new damage sources
+        // add new damage sources - getEntity() (not getDirectEntity()) so a ranged attack
+        // (skeleton's arrow, etc.) attributes to the actual attacker, not the projectile
         var recentDamage = player.getLastDamageSource();
+        var attacker = recentDamage == null ? null : recentDamage.getEntity();
 
-        if (recentDamage != null && recentDamage.getDirectEntity() != null) {
-            recentEntityDamageSources.put(recentDamage.getDirectEntity(), world.getGameTime());
+        // only hostile mobs and other players count as "combat" - excludes incidental
+        // entity-sourced damage like TNT, falling blocks, or thrown potions
+        if (attacker instanceof Enemy || attacker instanceof Player) {
+            recentEntityDamageSources.put(attacker, world.getGameTime());
         }
 
         songpackEventMap.put(SongpackEventType.COMBAT, !recentEntityDamageSources.isEmpty());
@@ -389,6 +400,21 @@ public final class SongPicker {
     private static boolean isMoving(Entity entity) {
         Vec3 delta = entity.getDeltaMovement();
         return (delta.x * delta.x + delta.z * delta.z) > 0.0025; // ~0.05 blocks/tick horizontally
+    }
+
+    // scans straight up from pos, ignoring air and fluids, for an actual solid block - unlike
+    // canSeeSky() (a light-level check), this doesn't count water itself as a roof
+    private static boolean hasSolidRoofAbove(Level world, BlockPos pos) {
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int y = pos.getY() + 1; y <= world.getMaxY(); y++) {
+            cursor.set(pos.getX(), y, pos.getZ());
+
+            var state = world.getBlockState(cursor);
+            if (state.isAir() || !state.getFluidState().isEmpty()) continue;
+
+            return true;
+        }
+        return false;
     }
 
 
