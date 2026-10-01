@@ -241,6 +241,12 @@ Biome tags can be used by specifying `TAG=BIOME_TAG`. They're good for automatic
 
 NOTE: putting the "IS_" in front of the tag is optional ("TAG=IS_MOUNTAIN" and "TAG=MOUNTAIN" are both valid)
 
+You can use either the field names from that list or the tag's actual id — they're
+not always the same. `TAG=IS_COLD_OVERWORLD` (field name) and `TAG=IS_COLD/OVERWORLD`
+(the real tag, `c:is_cold/overworld`) both work, as do `TAG=IS_VEGETATION_DENSE` and
+`TAG=IS_DENSE_VEGETATION`. Tags from other mods/datapacks that aren't in that list are
+matched by their id.
+
 ```
   - events: [ "DAY", "TAG=IS_HOT" ]
     songs:
