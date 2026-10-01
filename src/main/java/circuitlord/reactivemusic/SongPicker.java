@@ -325,7 +325,7 @@ public final class SongPicker {
                 villagerCount++;
             }
 
-            songpackEventMap.put(SongpackEventType.VILLAGE, villagerCount > 0);
+            songpackEventMap.put(SongpackEventType.VILLAGE, villagerCount >= 3);
 
         }
 

@@ -172,7 +172,7 @@ block) — using the shorthand or spelling it out yourself works identically.
 - `AFK` — hasn't moved in the last minute
 
 ### Location
-- `VILLAGE` (nearby villagers)
+- `VILLAGE` (3+ nearby villagers — that's about where an actual village starts, rather than a stray villager or two)
 - `ROOF` — *shorthand* for Nether, above y=128
 - `CLOUDS` — *shorthand* for Overworld, above y=320
 - `PEAKS` — *shorthand* for Overworld, above y=220
