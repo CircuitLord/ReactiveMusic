@@ -150,7 +150,10 @@ block) — using the shorthand or spelling it out yourself works identically.
 - `DIM=dimname` — see [Dimension Events](#dimension-events) below
 
 ### Time
-- `DAY`
+- `DAY` — true for everything that isn't `NIGHT`, which includes `SUNRISE`
+  and `SUNSET` (they're not their own separate slice of the day — they're
+  twilight windows inside `DAY`'s range). `DAY || SUNRISE` or
+  `DAY || SUNSET` is therefore redundant with plain `DAY`.
 - `NIGHT`
 - `SUNRISE`
 - `SUNSET`
