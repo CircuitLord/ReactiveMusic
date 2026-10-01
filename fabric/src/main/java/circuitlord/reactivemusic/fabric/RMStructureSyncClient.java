@@ -43,10 +43,11 @@ public class RMStructureSyncClient {
 
             if (++ticksSinceJoin > MISSING_SUPPORT_TIMEOUT_TICKS) {
                 loggedMissingServerSupport = true;
-                ReactiveMusic.LOGGER.error("[ReactiveMusic]: This server doesn't appear to have ReactiveMusic's "
-                        + "structure sync (either the mod isn't installed server-side, or the "
-                        + "reactivemusicStructureSync gamerule is disabled). STRUCT=/STRUCTTAG= and the structure "
-                        + "shorthand tags will not work this session.");
+                // the join-time presence ping fires regardless of the gamerule, so reaching this
+                // timeout specifically means the mod isn't installed server-side at all - a
+                // disabled gamerule would still have delivered that ping right on join
+                ReactiveMusic.LOGGER.error("[ReactiveMusic]: This server doesn't have ReactiveMusic installed. "
+                        + "STRUCT=/STRUCTTAG= and the structure shorthand tags will not work this session.");
             }
         });
     }
