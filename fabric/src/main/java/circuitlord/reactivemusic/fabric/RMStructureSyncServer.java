@@ -4,6 +4,7 @@ import circuitlord.reactivemusic.ReactiveMusic;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.gamerule.v1.GameRuleBuilder;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -68,6 +69,12 @@ public class RMStructureSyncServer {
         });
 
         ServerTickEvents.END_SERVER_TICK.register(RMStructureSyncServer::onEndTick);
+
+        // sent immediately on join, regardless of the gamerule - purely so the client can tell
+        // the mod is actually here (vs. the gamerule being off, which otherwise looks identical
+        // from the client's side: no structure data ever arrives either way)
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+                ServerPlayNetworking.send(handler.getPlayer(), new RMStructureSyncPayload(Set.of(), Set.of())));
     }
 
     private static void onEndTick(MinecraftServer server) {
